@@ -11,6 +11,7 @@ import com.sbr.sms.data.api.AuthResponse
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.first
 import java.text.SimpleDateFormat
 import java.util.*
 import javax.inject.Inject
@@ -150,7 +151,12 @@ class UserRepositoryImpl @Inject constructor(
     override suspend fun updateCustomer(customer: Customer) {
         try {
             val fields = userToFields(customer)
-            val response = apiService.updateUser(customer.id, fields)
+            val isSelf = customer.id == credentialManager.savedUserId.first()
+            val response = if (isSelf) {
+                apiService.updateProfile(fields)
+            } else {
+                apiService.updateUser(customer.id, fields)
+            }
             if (!response.isSuccessful) {
                 throw Exception("Failed to update customer: ${response.errorBody()?.string()}")
             }
@@ -163,7 +169,12 @@ class UserRepositoryImpl @Inject constructor(
     override suspend fun updateAgentDetails(agent: Agent) {
         try {
             val fields = userToFields(agent)
-            val response = apiService.updateUser(agent.id, fields)
+            val isSelf = agent.id == credentialManager.savedUserId.first()
+            val response = if (isSelf) {
+                apiService.updateProfile(fields)
+            } else {
+                apiService.updateUser(agent.id, fields)
+            }
             if (!response.isSuccessful) {
                 throw Exception("Failed to update agent details: ${response.errorBody()?.string()}")
             }
