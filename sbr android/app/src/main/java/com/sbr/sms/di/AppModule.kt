@@ -41,8 +41,8 @@ abstract class AppModule {
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
     
-    // Default URL pointing to local server from Android Emulator (10.0.2.2) on port 5006
-    private const val BASE_URL = "http://10.0.2.2:5006/"
+    // Point to live production server on the VPS
+    private const val BASE_URL = "https://sbr.sriddha.com/"
 
     @Provides
     @Singleton
