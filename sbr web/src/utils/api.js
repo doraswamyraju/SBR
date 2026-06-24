@@ -1,4 +1,7 @@
-const BASE_URL = 'http://localhost:5006';
+const BASE_URL = window.location.origin.includes('localhost') 
+  ? 'http://localhost:5006' 
+  : window.location.origin;
+
 
 const getHeaders = () => {
   const headers = {
