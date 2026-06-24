@@ -5,6 +5,12 @@ struct AdminDashboardView: View {
     @EnvironmentObject var authVM: AuthViewModel
     @StateObject var requestVM = RequestViewModel()
     @State private var selectedTab = 0
+    
+    // Admin action sheets
+    @State private var showingAddCustomerSheet = false
+    @State private var showingCreateJobSheet = false
+    @State private var showingMultiAgentMapSheet = false
+    @State private var selectedRequestDetail: ServiceRequest?
     @State private var trackingRequest: ServiceRequest?
     
     var body: some View {
@@ -13,6 +19,30 @@ struct AdminDashboardView: View {
             NavigationView {
                 ScrollView {
                     VStack(spacing: 20) {
+                        // Quick Action Bar
+                        HStack(spacing: 12) {
+                            Button(action: { showingCreateJobSheet = true }) {
+                                Label("New Job", systemImage: "plus.circle.fill")
+                                    .fontWeight(.bold)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(Color.indigo)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(10)
+                            }
+                            
+                            Button(action: { showingAddCustomerSheet = true }) {
+                                Label("Add Client", systemImage: "person.badge.plus.fill")
+                                    .fontWeight(.bold)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(Color.green)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(10)
+                            }
+                        }
+                        .padding(.horizontal)
+                        
                         // Stats Grid
                         let totalCollections = requestVM.requests.filter({ $0.paymentStatus == "Paid" }).reduce(0.0) { $0 + ($1.paymentAmount ?? 0.0) }
                         let pending = requestVM.requests.filter({ $0.status == .pending }).count
@@ -23,13 +53,36 @@ struct AdminDashboardView: View {
                                 SummaryCard(title: "Active Jobs", value: "\(active)", color: .blue)
                                 SummaryCard(title: "Pending", value: "\(pending)", color: .orange)
                             }
-                            SummaryCard(title: "Total Collections", value: "₹\(Int(totalCollections))", color: .green)
+                            
+                            NavigationLink(destination: PaymentsView(requestVM: requestVM)) {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("TOTAL LEDGER COLLECTIONS")
+                                            .font(.caption2)
+                                            .foregroundColor(.gray)
+                                        Text("₹\(Int(totalCollections))")
+                                            .font(.title2)
+                                            .fontWeight(.black)
+                                            .foregroundColor(.green)
+                                    }
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .foregroundColor(.gray)
+                                }
+                                .padding()
+                                .background(Color.green.opacity(0.1))
+                                .cornerRadius(12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.green.opacity(0.3), lineWidth: 1)
+                                )
+                            }
                         }
                         .padding(.horizontal)
                         
                         // Recent Assignments
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Recent Assignments Awaiting Agents")
+                            Text("Awaiting Technician Assignments")
                                 .font(.headline)
                                 .foregroundColor(.white)
                                 .padding(.horizontal)
@@ -43,9 +96,16 @@ struct AdminDashboardView: View {
                             } else {
                                 ForEach(unassigned) { req in
                                     VStack(alignment: .leading, spacing: 10) {
-                                        Text(req.serviceType)
-                                            .fontWeight(.bold)
-                                            .foregroundColor(.white)
+                                        HStack {
+                                            Text(req.serviceType)
+                                                .fontWeight(.bold)
+                                                .foregroundColor(.white)
+                                            Spacer()
+                                            Button(action: { selectedRequestDetail = req }) {
+                                                Image(systemName: "info.circle")
+                                                    .foregroundColor(.indigo)
+                                            }
+                                        }
                                         Text("Address: \(req.customerAddress)")
                                             .font(.caption)
                                             .foregroundColor(.gray)
@@ -83,7 +143,7 @@ struct AdminDashboardView: View {
                     .padding(.top)
                 }
                 .background(Color(red: 0.05, green: 0.05, blue: 0.08).ignoresSafeArea())
-                .navigationTitle("Admin Overview")
+                .navigationTitle("Admin Dispatch")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     Button(action: {
@@ -102,14 +162,22 @@ struct AdminDashboardView: View {
             }
             .tag(0)
             
-            // Tab 2: Tracking / Map View
+            // Tab 2: Dispatch / Map View
             NavigationView {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 15) {
-                        Text("Online Agents Live GPS Paths")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .padding([.horizontal, .top])
+                        HStack {
+                            Text("Online Agents Live GPS Paths")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                            Spacer()
+                            Button(action: { showingMultiAgentMapSheet = true }) {
+                                Label("Global Map", systemImage: "globe")
+                                    .font(.caption)
+                                    .foregroundColor(.green)
+                            }
+                        }
+                        .padding([.horizontal, .top])
                         
                         let trackingJobs = requestVM.requests.filter({ [.assigned, .accepted, .inProgress].contains($0.status) && $0.assignedAgentId != nil })
                         
@@ -135,7 +203,7 @@ struct AdminDashboardView: View {
                                     Button(action: {
                                         trackingRequest = job
                                     }) {
-                                        Label("Map Track", systemImage: "map")
+                                        Label("Track Route", systemImage: "map")
                                             .font(.caption)
                                             .foregroundColor(.white)
                                             .padding(.horizontal, 12)
@@ -153,7 +221,7 @@ struct AdminDashboardView: View {
                     }
                 }
                 .background(Color(red: 0.05, green: 0.05, blue: 0.08).ignoresSafeArea())
-                .navigationTitle("Live Dispatch")
+                .navigationTitle("Live Tracking")
                 .navigationBarTitleDisplayMode(.inline)
                 .sheet(item: $trackingRequest) { job in
                     VStack(spacing: 0) {
@@ -185,26 +253,9 @@ struct AdminDashboardView: View {
             }
             .tag(1)
             
-            // Tab 3: Service Agent Directory
+            // Tab 3: Roster Management
             NavigationView {
-                List(requestVM.users.filter({ $0.role == .agent })) { agent in
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text(agent.name)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                        Text(agent.email)
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                        Text("Specialization: \(agent.specialization ?? "General Maintenance")")
-                            .font(.footnote)
-                            .foregroundColor(.indigo)
-                    }
-                    .listRowBackground(Color.white.opacity(0.01))
-                }
-                .listStyle(PlainListStyle())
-                .background(Color(red: 0.05, green: 0.05, blue: 0.08).ignoresSafeArea())
-                .navigationTitle("Technician Roster")
-                .navigationBarTitleDisplayMode(.inline)
+                AgentManagementView(requestVM: requestVM)
             }
             .tabItem {
                 Image(systemName: "person.3")
@@ -214,20 +265,9 @@ struct AdminDashboardView: View {
             
             // Tab 4: Customers / Sign Out
             NavigationView {
-                VStack(spacing: 25) {
-                    List(requestVM.users.filter({ $0.role == .customer })) { cust in
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text(cust.name)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                            Text(cust.address ?? "No address listed")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                        }
-                        .listRowBackground(Color.white.opacity(0.01))
-                    }
-                    .listStyle(PlainListStyle())
-                    .frame(maxHeight: .infinity)
+                VStack(spacing: 0) {
+                    CustomerManagementView(requestVM: requestVM)
+                        .frame(maxHeight: .infinity)
                     
                     Button(action: {
                         Task { await authVM.logout() }
@@ -239,13 +279,10 @@ struct AdminDashboardView: View {
                             .padding()
                             .background(Color.red.opacity(0.1))
                             .cornerRadius(12)
-                            .padding(.horizontal)
+                            .padding()
                     }
-                    .padding(.bottom)
                 }
                 .background(Color(red: 0.05, green: 0.05, blue: 0.08).ignoresSafeArea())
-                .navigationTitle("Client Records")
-                .navigationBarTitleDisplayMode(.inline)
             }
             .tabItem {
                 Image(systemName: "person.2")
@@ -254,6 +291,18 @@ struct AdminDashboardView: View {
             .tag(3)
         }
         .accentColor(.indigo)
+        .sheet(isPresented: $showingAddCustomerSheet) {
+            AddEditCustomerView(customer: nil)
+        }
+        .sheet(isPresented: $showingCreateJobSheet) {
+            AdminCreateRequestView(customers: requestVM.users.filter({ $0.role == .customer }))
+        }
+        .sheet(isPresented: $showingMultiAgentMapSheet) {
+            AdminMultiAgentMapView(agents: requestVM.users.filter({ $0.role == .agent }))
+        }
+        .sheet(item: $selectedRequestDetail) { req in
+            RequestDetailView(request: req)
+        }
         .onAppear {
             Task {
                 await requestVM.fetchRequests()
@@ -262,39 +311,3 @@ struct AdminDashboardView: View {
         }
     }
 }
-
-struct AdminMapView: View {
-    let agentCoordinate: CLLocationCoordinate2D?
-    let pathCoordinates: [CLLocationCoordinate2D]
-    
-    @State private var region = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 12.9716, longitude: 77.5946),
-        span: MKCoordinateSpan(latitudeDelta: 0.03, longitudeDelta: 0.03)
-    )
-    
-    var body: some View {
-        Map(coordinateRegion: $region, annotationItems: getAnnotations()) { item in
-            MapMarker(coordinate: item.coordinate, tint: item.color)
-        }
-        .onAppear {
-            if let agent = agentCoordinate {
-                region.center = agent
-            }
-        }
-    }
-    
-    private func getAnnotations() -> [MapItem] {
-        var items: [MapItem] = []
-        if let agent = agentCoordinate {
-            items.append(MapItem(coordinate: agent, color: .red))
-        }
-        // Include seed path locations as annotations to simulate trail path trace
-        for idx in 0..<pathCoordinates.count {
-            items.append(MapItem(coordinate: pathCoordinates[idx], color: .blue))
-        }
-        return items
-    }
-}
-
-// Extends ServiceRequest so it can be handled by .sheet(item:)
-extension ServiceRequest: Identifiable {}

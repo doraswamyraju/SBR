@@ -6,9 +6,13 @@ struct AgentDashboardView: View {
     @State private var selectedTab = 0
     @State private var isGpsActive = false
     
-    // Payment Dialog State
+    // Sheets/Alerts State
     @State private var showingPaymentDialog = false
+    @State private var showingReviewPromptAlert = false
+    @State private var requestReviewForClose = false
     @State private var activeJobIdForPayment = ""
+    @State private var selectedRequestDetail: ServiceRequest?
+    
     @State private var collectAmount = ""
     @State private var paymentMethod = "Cash"
     
@@ -18,7 +22,7 @@ struct AgentDashboardView: View {
             NavigationView {
                 ScrollView {
                     VStack(spacing: 20) {
-                        // GPS broad casting control widget
+                        // GPS broadcasting control widget
                         VStack(alignment: .leading, spacing: 10) {
                             HStack {
                                 Image(systemName: "location.circle.fill")
@@ -32,7 +36,6 @@ struct AgentDashboardView: View {
                                     .labelsHidden()
                                     .onChange(of: isGpsActive) { active in
                                         if active {
-                                            // Start simulation on the first active job if any
                                             let activeJob = requestVM.requests.first(where: { $0.status == .accepted || $0.status == .inProgress })
                                             requestVM.startLocationSimulation(activeRequestId: activeJob?.id ?? "no_active_job")
                                         } else {
@@ -102,10 +105,9 @@ struct AgentDashboardView: View {
                                         }
                                     }, onComplete: {
                                         activeJobIdForPayment = job.id
-                                        showingPaymentDialog = true
+                                        showingReviewPromptAlert = true
                                     }, onUploadPhoto: { type in
                                         Task {
-                                            // Simulate capturing/attaching photo using systemic default image
                                             let mockData = UIImage(systemName: "wrench.and.screwdriver.fill")?.pngData() ?? Data()
                                             let success = await requestVM.uploadRequestImage(requestId: job.id, imageData: mockData, type: type)
                                             if success {
@@ -137,7 +139,12 @@ struct AgentDashboardView: View {
                     }, onSubmit: {
                         Task {
                             let amountVal = Double(collectAmount) ?? 0.0
-                            let success = await requestVM.completeJob(requestId: activeJobIdForPayment, amount: amountVal, method: paymentMethod)
+                            let success = await requestVM.completeJob(
+                                requestId: activeJobIdForPayment,
+                                amount: amountVal,
+                                method: paymentMethod,
+                                requestReview: requestReviewForClose
+                            )
                             if success {
                                 showingPaymentDialog = false
                                 collectAmount = ""
@@ -146,6 +153,19 @@ struct AgentDashboardView: View {
                         }
                     })
                 }
+                .alert("Request Customer Review?", isPresented: $showingReviewPromptAlert) {
+                    Button("Yes, Request Review") {
+                        requestReviewForClose = true
+                        showingPaymentDialog = true
+                    }
+                    Button("No, Complete Only") {
+                        requestReviewForClose = false
+                        showingPaymentDialog = true
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("Would you like to send a Google Maps review request to the customer via Email and Push Notification?")
+                }
             }
             .tabItem {
                 Image(systemName: "briefcase")
@@ -153,29 +173,33 @@ struct AgentDashboardView: View {
             }
             .tag(0)
             
-            // Tab 2: Completed Jobs
+            // Tab 2: Completed Logs
             NavigationView {
                 List(requestVM.requests.filter({ $0.status == .completed })) { job in
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text(job.serviceType)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                            Spacer()
-                            Text("Completed")
-                                .font(.caption2)
-                                .foregroundColor(.green)
-                        }
-                        
-                        Text("Resolved Address: \(job.customerAddress)")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                        
-                        if let amt = job.paymentAmount {
-                            Text("Collected: ₹\(Int(amt)) (\(job.paymentMethod ?? "Cash"))")
-                                .font(.footnote)
-                                .foregroundColor(.green)
-                                .fontWeight(.semibold)
+                    Button(action: {
+                        selectedRequestDetail = job
+                    }) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text(job.serviceType)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.white)
+                                Spacer()
+                                Text("Completed")
+                                    .font(.caption2)
+                                    .foregroundColor(.green)
+                            }
+                            
+                            Text("Resolved Address: \(job.customerAddress)")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                            
+                            if let amt = job.paymentAmount {
+                                Text("Collected: ₹\(Int(amt)) (\(job.paymentMethod ?? "Cash"))")
+                                    .font(.footnote)
+                                    .foregroundColor(.green)
+                                    .fontWeight(.semibold)
+                            }
                         }
                     }
                     .listRowBackground(Color.white.opacity(0.01))
@@ -193,7 +217,7 @@ struct AgentDashboardView: View {
             
             // Tab 3: Profile Settings
             NavigationView {
-                VStack(spacing: 25) {
+                VStack(spacing: 20) {
                     VStack(spacing: 8) {
                         Image(systemName: "person.crop.badge.checkmark")
                             .font(.system(size: 70))
@@ -209,35 +233,24 @@ struct AgentDashboardView: View {
                     }
                     .padding(.top)
                     
-                    VStack(alignment: .leading, spacing: 15) {
-                        HStack {
-                            Text("Contact:")
-                                .foregroundColor(.gray)
-                            Spacer()
-                            Text(authVM.user?.phone ?? "N/A")
-                                .foregroundColor(.white)
+                    List {
+                        NavigationLink(destination: AgentEditProfileView(authVM: authVM)) {
+                            Label("Edit My Profile Settings", systemImage: "person.text.rectangle")
                         }
+                        .listRowBackground(Color.white.opacity(0.02))
                         
-                        HStack {
-                            Text("Specialization:")
-                                .foregroundColor(.gray)
-                            Spacer()
-                            Text(authVM.user?.specialization ?? "General Field Service")
-                                .foregroundColor(.indigo)
+                        NavigationLink(destination: AgentScheduleView()) {
+                            Label("Duty & Roster Shift", systemImage: "calendar")
                         }
+                        .listRowBackground(Color.white.opacity(0.02))
                         
-                        HStack {
-                            Text("Assigned Zone:")
-                                .foregroundColor(.gray)
-                            Spacer()
-                            Text(authVM.user?.location ?? "Bangalore")
-                                .foregroundColor(.white)
+                        NavigationLink(destination: AgentAnalyticsView(requestVM: requestVM)) {
+                            Label("Performance Analytics & Logs", systemImage: "chart.bar.xaxis")
                         }
+                        .listRowBackground(Color.white.opacity(0.02))
                     }
-                    .padding()
-                    .background(Color.white.opacity(0.03))
-                    .cornerRadius(12)
-                    .padding(.horizontal)
+                    .listStyle(PlainListStyle())
+                    .frame(height: 180)
                     
                     Button(action: {
                         requestVM.stopLocationSimulation()
@@ -266,183 +279,15 @@ struct AgentDashboardView: View {
             .tag(2)
         }
         .accentColor(.indigo)
+        .sheet(item: $selectedRequestDetail) { job in
+            RequestDetailView(request: job)
+        }
         .onAppear {
             Task { await requestVM.fetchRequests() }
         }
     }
     
     private func alertMessage(msg: String) {
-        // UI notification wrapper
         print(msg)
-    }
-}
-
-struct AgentJobCard: View {
-    let job: ServiceRequest
-    var onAccept: (() -> Void)?
-    var onStart: (() -> Void)?
-    var onComplete: (() -> Void)?
-    var onUploadPhoto: ((String) -> Void)?
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Text(job.serviceType)
-                    .font(.headline)
-                    .foregroundColor(.white)
-                Spacer()
-                Text(job.status.rawValue)
-                    .font(.caption2)
-                    .foregroundColor(.indigo)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.indigo.opacity(0.15))
-                    .cornerRadius(10)
-            }
-            
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Address: \(job.customerAddress)")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                
-                if let desc = job.description {
-                    Text("Details: \(desc)")
-                        .font(.footnote)
-                        .foregroundColor(.white.opacity(0.8))
-                }
-            }
-            
-            // Photo Upload Documentation Row
-            if job.status == .accepted || job.status == .inProgress {
-                HStack(spacing: 12) {
-                    VStack(alignment: .leading) {
-                        Text("Before service photo")
-                            .font(.caption2)
-                            .foregroundColor(.gray)
-                        if job.beforeImageUrl != nil {
-                            Text("✓ Attached").foregroundColor(.green).font(.caption2)
-                        } else {
-                            Button(action: { onUploadPhoto?("before") }) {
-                                Label("Upload", systemImage: "arrow.up.doc")
-                                    .font(.caption)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 5)
-                                    .background(Color.white.opacity(0.05))
-                                    .cornerRadius(6)
-                            }
-                        }
-                    }
-                    
-                    Spacer()
-                    
-                    VStack(alignment: .leading) {
-                        Text("After service photo")
-                            .font(.caption2)
-                            .foregroundColor(.gray)
-                        if job.afterImageUrl != nil {
-                            Text("✓ Attached").foregroundColor(.green).font(.caption2)
-                        } else {
-                            Button(action: { onUploadPhoto?("after") }) {
-                                Label("Upload", systemImage: "arrow.up.doc")
-                                    .font(.caption)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 5)
-                                    .background(Color.white.opacity(0.05))
-                                    .cornerRadius(6)
-                            }
-                        }
-                    }
-                }
-                .padding(.vertical, 6)
-                .border(Color.white.opacity(0.03), width: 1)
-            }
-            
-            // Job Action buttons
-            HStack {
-                if let accept = onAccept {
-                    Button(action: accept) {
-                        Text("Accept Offer")
-                            .fontWeight(.bold)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                            .background(Color.green)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
-                    }
-                }
-                
-                if let start = onStart {
-                    Button(action: start) {
-                        Text("Start Execution")
-                            .fontWeight(.bold)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
-                    }
-                }
-                
-                if let complete = onComplete {
-                    Button(action: complete) {
-                        Text("Mark Completed")
-                            .fontWeight(.bold)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                            .background(Color.green)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
-                    }
-                }
-            }
-        }
-        .padding()
-        .background(Color.white.opacity(0.02))
-        .cornerRadius(14)
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(Color.white.opacity(0.05), lineWidth: 1)
-        )
-    }
-}
-
-// Complete Job Payment Dialogue View
-struct PaymentDialogView: View {
-    @Binding var amount: String
-    @Binding var method: String
-    let onCancel: () -> Void
-    let onSubmit: () -> Void
-    
-    var body: some View {
-        NavigationView {
-            Form {
-                Section(header: Text("Payment Details").foregroundColor(.gray)) {
-                    TextField("Amount Collected (INR)", text: $amount)
-                        .keyboardType(.numberPad)
-                    
-                    Picker("Method", selection: $method) {
-                        Text("Cash").tag("Cash")
-                        Text("UPI / Online").tag("UPI / Online")
-                        Text("Card").tag("Card")
-                    }
-                }
-                
-                Section {
-                    Button(action: onSubmit) {
-                        Text("Confirm & Close Job")
-                            .fontWeight(.bold)
-                            .foregroundColor(.green)
-                    }
-                    .disabled(amount.isEmpty)
-                    
-                    Button(action: onCancel) {
-                        Text("Cancel")
-                            .foregroundColor(.red)
-                    }
-                }
-            }
-            .navigationTitle("Job Closeout")
-            .navigationBarTitleDisplayMode(.inline)
-        }
     }
 }

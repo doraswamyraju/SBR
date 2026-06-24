@@ -5,17 +5,16 @@ struct CustomerDashboardView: View {
     @StateObject var requestVM = RequestViewModel()
     @State private var selectedTab = 0
     
+    // Sheets State
+    @State private var selectedRequestDetail: ServiceRequest?
+    @State private var trackingRequest: ServiceRequest?
+    
     // Booking Form State
     @State private var serviceType = "Solar Water Heaters"
     @State private var description = ""
     @State private var address = ""
     @State private var bookingStatusMessage = ""
     @State private var bookingStatusColor = Color.green
-    
-    // Profile Form State
-    @State private var phone = ""
-    @State private var billingAddress = ""
-    @State private var isRecurring = false
     
     let serviceCategories = [
         "Solar Water Heaters",
@@ -41,6 +40,44 @@ struct CustomerDashboardView: View {
                         }
                         .padding(.horizontal)
                         
+                        // Active Tracking Section
+                        let activeTrackable = requestVM.requests.first(where: { [.assigned, .accepted, .inProgress].contains($0.status) })
+                        if let activeJob = activeTrackable {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("Live Service Dispatch")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal)
+                                
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(activeJob.serviceType)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.white)
+                                        Text("Status: \(activeJob.status.rawValue)")
+                                            .font(.caption)
+                                            .foregroundColor(.indigo)
+                                    }
+                                    Spacer()
+                                    Button(action: {
+                                        trackingRequest = activeJob
+                                    }) {
+                                        Label("Track Live", systemImage: "location.fill")
+                                            .font(.caption)
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 6)
+                                            .background(Color.green)
+                                            .cornerRadius(8)
+                                    }
+                                }
+                                .padding()
+                                .background(Color.white.opacity(0.02))
+                                .cornerRadius(12)
+                                .padding(.horizontal)
+                            }
+                        }
+                        
                         // Latest Requests
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Latest Bookings")
@@ -55,7 +92,11 @@ struct CustomerDashboardView: View {
                                     .padding()
                             } else {
                                 ForEach(requestVM.requests.prefix(3)) { req in
-                                    RequestRow(request: req)
+                                    Button(action: {
+                                        selectedRequestDetail = req
+                                    }) {
+                                        RequestRow(request: req)
+                                    }
                                 }
                                 .padding(.horizontal)
                             }
@@ -106,7 +147,7 @@ struct CustomerDashboardView: View {
                                     }
                                 },
                                 alignment: .topLeading
-                            )
+                             )
                         
                         TextField("Service Address", text: $address)
                     }
@@ -165,8 +206,12 @@ struct CustomerDashboardView: View {
             // Tab 3: History
             NavigationView {
                 List(requestVM.requests) { req in
-                    RequestRow(request: req)
-                        .listRowBackground(Color.white.opacity(0.02))
+                    Button(action: {
+                        selectedRequestDetail = req
+                    }) {
+                        RequestRow(request: req)
+                    }
+                    .listRowBackground(Color.white.opacity(0.02))
                 }
                 .listStyle(PlainListStyle())
                 .background(Color(red: 0.05, green: 0.05, blue: 0.08).ignoresSafeArea())
@@ -181,7 +226,7 @@ struct CustomerDashboardView: View {
             
             // Tab 4: Profile
             NavigationView {
-                VStack(spacing: 25) {
+                VStack(spacing: 20) {
                     VStack(spacing: 8) {
                         Image(systemName: "person.crop.circle.fill")
                             .font(.system(size: 70))
@@ -197,36 +242,24 @@ struct CustomerDashboardView: View {
                     }
                     .padding(.top)
                     
-                    VStack(alignment: .leading, spacing: 15) {
-                        HStack {
-                            Text("Phone:")
-                                .foregroundColor(.gray)
-                            Spacer()
-                            Text(authVM.user?.phone ?? "N/A")
-                                .foregroundColor(.white)
+                    List {
+                        NavigationLink(destination: CustomerProfileView(authVM: authVM)) {
+                            Label("Edit Profile Details", systemImage: "person.text.rectangle")
                         }
+                        .listRowBackground(Color.white.opacity(0.02))
                         
-                        HStack {
-                            Text("Address:")
-                                .foregroundColor(.gray)
-                            Spacer()
-                            Text(authVM.user?.address ?? "None set")
-                                .foregroundColor(.white)
-                                .multilineTextAlignment(.trailing)
+                        NavigationLink(destination: CustomerPaymentsView(requestVM: requestVM)) {
+                            Label("My Invoices & Billing", systemImage: "creditcard")
                         }
+                        .listRowBackground(Color.white.opacity(0.02))
                         
-                        HStack {
-                            Text("Plan Type:")
-                                .foregroundColor(.gray)
-                            Spacer()
-                            Text((authVM.user?.isRecurring == true) ? "Recurring Contract" : "Pay As Go")
-                                .foregroundColor(.indigo)
+                        NavigationLink(destination: CustomerSupportView()) {
+                            Label("Helpline & FAQ Support", systemImage: "questionmark.bubble")
                         }
+                        .listRowBackground(Color.white.opacity(0.02))
                     }
-                    .padding()
-                    .background(Color.white.opacity(0.03))
-                    .cornerRadius(12)
-                    .padding(.horizontal)
+                    .listStyle(PlainListStyle())
+                    .frame(height: 180)
                     
                     Button(action: {
                         Task { await authVM.logout() }
@@ -258,8 +291,13 @@ struct CustomerDashboardView: View {
             .tag(3)
         }
         .accentColor(.indigo)
+        .sheet(item: $selectedRequestDetail) { req in
+            RequestDetailView(request: req)
+        }
+        .sheet(item: $trackingRequest) { req in
+            CustomerLiveTrackingView(request: req)
+        }
         .onAppear {
-            // Set fields and load requests
             if let user = authVM.user {
                 self.address = user.address ?? ""
             }
@@ -267,105 +305,5 @@ struct CustomerDashboardView: View {
                 await requestVM.fetchRequests()
             }
         }
-    }
-}
-
-// UI helper metrics card
-struct SummaryCard: View {
-    let title: String
-    let value: String
-    let color: Color
-    
-    var body: some View {
-        VStack(spacing: 8) {
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.gray)
-                .textCase(.uppercase)
-            Text(value)
-                .font(.title)
-                .fontWeight(.black)
-                .foregroundColor(.white)
-        }
-        .frame(maxWidth: .infinity)
-        .padding()
-        .background(color.opacity(0.1))
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(color.opacity(0.3), lineWidth: 1)
-        )
-    }
-}
-
-struct RequestRow: View {
-    let request: ServiceRequest
-    
-    var statusColor: Color {
-        switch request.status {
-        case .pending: return .orange
-        case .assigned: return .blue
-        case .accepted: return .cyan
-        case .inProgress: return .purple
-        case .completed: return .green
-        case .cancelled: return .red
-        }
-    }
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text(request.serviceType)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                
-                Spacer()
-                
-                Text(request.status.rawValue)
-                    .font(.caption2)
-                    .fontWeight(.bold)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(statusColor.opacity(0.15))
-                    .foregroundColor(statusColor)
-                    .cornerRadius(20)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(statusColor.opacity(0.3), lineWidth: 1)
-                    )
-            }
-            
-            if let desc = request.description {
-                Text(desc)
-                    .font(.footnote)
-                    .foregroundColor(.gray)
-                    .lineLimit(2)
-            }
-            
-            HStack {
-                Image(systemName: "map")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                Text(request.customerAddress)
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                    .lineLimit(1)
-                
-                Spacer()
-                
-                if let paymentStatus = request.paymentStatus, paymentStatus == "Paid" {
-                    Text("Paid")
-                        .font(.caption2)
-                        .foregroundColor(.green)
-                }
-            }
-        }
-        .padding()
-        .background(Color.white.opacity(0.01))
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.white.opacity(0.05), lineWidth: 1)
-        )
     }
 }

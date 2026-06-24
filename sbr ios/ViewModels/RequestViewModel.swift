@@ -85,10 +85,13 @@ class RequestViewModel: ObservableObject {
     }
     
     // Update Request Status (Agent)
-    func updateStatus(requestId: String, status: RequestStatus) async -> Bool {
-        let body = ["status": status.rawValue]
+    func updateStatus(requestId: String, status: RequestStatus, requestReview: Bool = false) async -> Bool {
+        let body: [String: AnyEncodable] = [
+            "status": AnyEncodable(status.rawValue),
+            "requestReview": AnyEncodable(requestReview)
+        ]
         do {
-            let res = try await APIClient.shared.put(endpoint: "endpoint: api/requests/\(requestId)/status", body: body, responseType: StandardResponse<ServiceRequest>.self)
+            let res = try await APIClient.shared.put(endpoint: "api/requests/\(requestId)/status", body: body, responseType: StandardResponse<ServiceRequest>.self)
             return res.success
         } catch {
             self.errorMessage = error.localizedDescription
@@ -97,7 +100,7 @@ class RequestViewModel: ObservableObject {
     }
     
     // Complete Job & Record Payment (Agent)
-    func completeJob(requestId: String, amount: Double, method: String) async -> Bool {
+    func completeJob(requestId: String, amount: Double, method: String, requestReview: Bool = false) async -> Bool {
         isLoading = true
         errorMessage = nil
         
@@ -106,7 +109,10 @@ class RequestViewModel: ObservableObject {
             "method": AnyEncodable(method)
         ]
         
-        let statusBody = ["status": RequestStatus.completed.rawValue]
+        let statusBody: [String: AnyEncodable] = [
+            "status": AnyEncodable(RequestStatus.completed.rawValue),
+            "requestReview": AnyEncodable(requestReview)
+        ]
         
         do {
             // 1. Record payment details
