@@ -7,7 +7,6 @@ import com.sbr.sms.data.models.Customer
 import com.sbr.sms.data.models.ServiceRequest
 import com.sbr.sms.data.repositories.ServiceRequestRepository
 import com.sbr.sms.data.repositories.UserRepository
-import com.google.firebase.Timestamp
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -95,7 +94,7 @@ class AdminCreateRequestViewModel @Inject constructor(
                     // Calculate next service date (3 months from now)
                     val calendar = Calendar.getInstance()
                     calendar.add(Calendar.MONTH, 3)
-                    val nextDateTimestamp = Timestamp(calendar.time)
+                    val nextDateTimestamp = calendar.time
 
                     // Create an updated customer object with the new date and save it
                     val updatedCustomer = customer.copy(

@@ -2,7 +2,6 @@ package com.sbr.sms.data.repositories
 
 import com.sbr.sms.data.models.AgentLocation
 import com.sbr.sms.data.models.ServiceRequest
-import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,7 +15,7 @@ class FakeServiceRequestRepository : ServiceRequestRepository {
 
     override suspend fun addRequest(request: ServiceRequest): String {
         val newId = UUID.randomUUID().toString()
-        val newRequest = request.copy(id = newId, createdAt = Timestamp(Date()))
+        val newRequest = request.copy(id = newId, createdAt = Date())
         _requests.value += newRequest
         return newId
     }

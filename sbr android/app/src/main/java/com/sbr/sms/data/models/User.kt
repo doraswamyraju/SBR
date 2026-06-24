@@ -1,74 +1,20 @@
 package com.sbr.sms.data.models
 
 import android.os.Parcelable
-import android.util.Log
-import com.google.firebase.Timestamp
-import com.google.firebase.firestore.DocumentSnapshot
-import com.google.firebase.firestore.IgnoreExtraProperties
 import kotlinx.parcelize.Parcelize
+import java.util.Date
 
 enum class UserRole {
     ADMIN, AGENT, CUSTOMER
 }
 
 @Parcelize
-@IgnoreExtraProperties
 sealed class User(
     open val id: String = "",
     open val name: String = "",
     open val email: String? = null,
     open val role: UserRole
-) : Parcelable {
-    companion object {
-        fun from(snapshot: DocumentSnapshot): User? {
-            try {
-                val roleName = snapshot.getString("role")
-                val baseId = snapshot.id
-                val baseName = snapshot.getString("name") ?: ""
-                val baseEmail = snapshot.getString("email")
-
-                return when (roleName) {
-                    UserRole.ADMIN.name -> Admin(
-                        id = baseId,
-                        name = baseName,
-                        email = baseEmail
-                    )
-                    UserRole.AGENT.name -> Agent(
-                        id = baseId,
-                        name = baseName,
-                        email = baseEmail,
-                        phone = snapshot.getString("phone"),
-                        isAvailable = snapshot.getBoolean("isAvailable") ?: true,
-                        specialization = snapshot.getString("specialization"),
-                        location = snapshot.getString("location"),
-                        status = snapshot.getString("status") ?: "Offline",
-                        rating = (snapshot.get("rating") as? Number)?.toFloat() ?: 0.0f,
-                        completedJobs = (snapshot.get("completedJobs") as? Number)?.toInt() ?: 0,
-                        currentLat = snapshot.getDouble("currentLat"),
-                        currentLng = snapshot.getDouble("currentLng")
-                    )
-                    UserRole.CUSTOMER.name -> Customer(
-                        id = baseId,
-                        name = baseName,
-                        email = baseEmail,
-                        phone = snapshot.getString("phone"),
-                        address = snapshot.getString("address"),
-                        photoUrl = snapshot.getString("photoUrl"),
-                        isRecurring = snapshot.getBoolean("isRecurring") ?: false,
-                        nextServiceDate = snapshot.getTimestamp("nextServiceDate")
-                    )
-                    else -> {
-                        Log.e("UserMapper", "Unknown or null role '$roleName' for user ${snapshot.id}")
-                        null
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("UserMapper", "Error deserializing user ${snapshot.id}", e)
-                return null
-            }
-        }
-    }
-}
+) : Parcelable
 
 @Parcelize
 data class Admin(
@@ -102,5 +48,5 @@ data class Customer(
     val address: String? = null,
     val photoUrl: String? = null,
     val isRecurring: Boolean = false,
-    val nextServiceDate: Timestamp? = null
+    val nextServiceDate: Date? = null
 ) : User(id, name, email, UserRole.CUSTOMER)

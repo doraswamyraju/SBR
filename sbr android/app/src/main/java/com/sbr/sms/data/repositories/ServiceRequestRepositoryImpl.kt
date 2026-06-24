@@ -6,7 +6,6 @@ import com.sbr.sms.data.models.ServiceRequest
 import com.sbr.sms.data.api.ApiService
 import com.sbr.sms.data.api.ServiceRequestDto
 import com.sbr.sms.data.api.AgentLocationDto
-import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import java.text.SimpleDateFormat
@@ -61,10 +60,7 @@ class ServiceRequestRepositoryImpl @Inject constructor(
             customerAddress = this.customerAddress,
             status = this.status,
             createdBy = this.createdBy,
-            createdAt = this.createdAt?.let {
-                val date = parseDate(it)
-                if (date != null) Timestamp(date) else null
-            },
+            createdAt = this.createdAt?.let { parseDate(it) },
             acceptedAt = this.acceptedAt?.let { parseDate(it) },
             completedAt = this.completedAt?.let { parseDate(it) },
             beforeImageUrl = this.beforeImageUrl,

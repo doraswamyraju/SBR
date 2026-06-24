@@ -9,8 +9,6 @@ import com.sbr.sms.data.api.LoginRequest
 import com.sbr.sms.data.api.RegisterRequest
 import com.sbr.sms.data.api.AuthResponse
 import com.sbr.sms.data.api.ApiResponse
-import kotlinx.coroutines.tasks.await
-import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import java.text.SimpleDateFormat
@@ -79,10 +77,7 @@ class UserRepositoryImpl @Inject constructor(
                 address = this.address,
                 photoUrl = this.photoUrl,
                 isRecurring = this.isRecurring,
-                nextServiceDate = this.nextServiceDate?.let {
-                    val date = parseDate(it)
-                    if (date != null) Timestamp(date) else null
-                }
+                nextServiceDate = this.nextServiceDate?.let { parseDate(it) }
             )
         }
     }

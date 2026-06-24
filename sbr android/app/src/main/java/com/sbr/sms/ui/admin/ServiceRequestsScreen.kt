@@ -20,7 +20,7 @@ import com.sbr.sms.ui.admin.viewmodels.ServiceRequestsViewModel
 import com.sbr.sms.ui.admin.viewmodels.UiRequest
 import java.text.SimpleDateFormat
 import java.util.Locale
-import com.google.firebase.Timestamp
+import java.util.Date
 // NEW: Import the common StatusChip composable
 import com.sbr.sms.ui.common.components.StatusChip
 
@@ -103,9 +103,9 @@ fun ServiceRequestsScreen(
     }
 }
 
-fun formatDate(timestamp: Timestamp?): String {
-    return if (timestamp == null) "N/A"
-    else SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()).format(timestamp.toDate())
+fun formatDate(date: Date?): String {
+    return if (date == null) "N/A"
+    else SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()).format(date)
 }
 
 @Composable
