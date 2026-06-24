@@ -56,7 +56,7 @@ interface ApiService {
     suspend fun assignRequest(@Path("id") id: String, @Body body: Map<String, String>): Response<ApiResponse<ServiceRequestDto>>
 
     @PUT("api/requests/{id}/status")
-    suspend fun updateRequestStatus(@Path("id") id: String, @Body body: Map<String, String>): Response<ApiResponse<ServiceRequestDto>>
+    suspend fun updateRequestStatus(@Path("id") id: String, @Body body: Map<String, Any>): Response<ApiResponse<ServiceRequestDto>>
 
     @PUT("api/requests/{id}/image")
     suspend fun updateRequestImage(@Path("id") id: String, @Body body: Map<String, String>): Response<ApiResponse<ServiceRequestDto>>

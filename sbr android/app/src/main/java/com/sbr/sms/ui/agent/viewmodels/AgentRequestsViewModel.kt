@@ -147,24 +147,24 @@ class AgentRequestsViewModel @Inject constructor(
         updateRequestStatus(requestId, "Accepted")
     }
 
-    fun updateRequestStatus(requestId: String, newStatus: String) {
+    fun updateRequestStatus(requestId: String, newStatus: String, requestReview: Boolean = false) {
         viewModelScope.launch {
             try {
-                serviceRequestRepository.updateRequestStatus(requestId, newStatus)
+                serviceRequestRepository.updateRequestStatus(requestId, newStatus, requestReview)
             } catch (e: Exception) {
                 Log.e("AgentRequestsVM", "Failed to update status for $requestId", e)
             }
         }
     }
 
-    fun handleImageUpload(requestId: String, imageUri: Uri, imageType: String) {
+    fun handleImageUpload(requestId: String, imageUri: Uri, imageType: String, requestReview: Boolean = false) {
         viewModelScope.launch {
             _isUploading.value = true
             try {
                 val imageUrl = storageRepository.uploadRequestImage(requestId, imageType, imageUri)
                 serviceRequestRepository.updateRequestImage(requestId, imageUrl, imageType)
                 if (imageType == "after") {
-                    updateRequestStatus(requestId, "Completed")
+                    updateRequestStatus(requestId, "Completed", requestReview)
                 }
                 refreshTrigger.value++
             } catch (e: Exception) {

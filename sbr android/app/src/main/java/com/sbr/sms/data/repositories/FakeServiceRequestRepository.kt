@@ -80,7 +80,7 @@ class FakeServiceRequestRepository : ServiceRequestRepository {
         }
     }
 
-    override suspend fun updateRequestStatus(requestId: String, newStatus: String) {
+    override suspend fun updateRequestStatus(requestId: String, newStatus: String, requestReview: Boolean) {
         val request = getRequestById(requestId)
         request?.let {
             val updatedRequest = when (newStatus) {

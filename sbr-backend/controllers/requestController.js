@@ -173,7 +173,7 @@ exports.assignRequest = async (req, res) => {
 // @access  Private (Agent or Admin)
 exports.updateRequestStatus = async (req, res) => {
   try {
-    const { status } = req.body;
+    const { status, requestReview } = req.body;
     if (!status) {
       return res.status(400).json({ success: false, error: 'Please provide request status' });
     }
@@ -202,6 +202,27 @@ exports.updateRequestStatus = async (req, res) => {
       title: 'Service Request Status Updated',
       body: `Your service request is now: ${status}`
     });
+
+    // If completed and requestReview is chosen, send review mail + push notification
+    if (status === 'Completed' && (requestReview === true || requestReview === 'true')) {
+      const customer = await User.findById(request.customerId);
+      if (customer) {
+        // Send email
+        if (customer.email) {
+          const { sendReviewEmail } = require('../utils/emailHelper');
+          await sendReviewEmail(customer.email, customer.name, request.serviceType);
+        }
+        // Send review request notification
+        sendNotificationToUser(request.customerId, {
+          title: 'Share Your Feedback',
+          body: 'Thank you for choosing Sri Balaji Renewables! Tap to review us on Google.',
+          data: {
+            type: 'review_request',
+            url: 'https://g.page/r/CbdJS-IzWTe2EBE/review'
+          }
+        });
+      }
+    }
 
     res.status(200).json({ success: true, data: request });
   } catch (error) {

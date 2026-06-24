@@ -216,9 +216,12 @@ class ServiceRequestRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun updateRequestStatus(requestId: String, newStatus: String) {
+    override suspend fun updateRequestStatus(requestId: String, newStatus: String, requestReview: Boolean) {
         try {
-            val response = apiService.updateRequestStatus(requestId, mapOf("status" to newStatus))
+            val response = apiService.updateRequestStatus(
+                requestId,
+                mapOf("status" to newStatus, "requestReview" to requestReview)
+            )
             if (!response.isSuccessful) {
                 throw Exception("Failed to update status: ${response.errorBody()?.string()}")
             }

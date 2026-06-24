@@ -54,6 +54,7 @@ fun AgentActiveRequestsScreen(
     val context = LocalContext.current
 
     var showPaymentDialog by remember { mutableStateOf(false) }
+    var showReviewDialog by remember { mutableStateOf(false) }
     var tempImageUri by remember { mutableStateOf<Uri?>(null) }
 
     // CHANGED: Variable now holds the full details object.
@@ -70,6 +71,48 @@ fun AgentActiveRequestsScreen(
         )
     }
 
+    if (showReviewDialog && activeRequestDetails != null && tempImageUri != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showReviewDialog = false
+                tempImageUri = null
+            },
+            title = { Text("Complete Service") },
+            text = { Text("Would you like to send a Google Maps review request to the customer via Email and Push Notification?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.handleImageUpload(activeRequestDetails.request.id, tempImageUri!!, "after", requestReview = true)
+                        showReviewDialog = false
+                    }
+                ) {
+                    Text("Yes, Request Review")
+                }
+            },
+            dismissButton = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(
+                        onClick = {
+                            viewModel.handleImageUpload(activeRequestDetails.request.id, tempImageUri!!, "after", requestReview = false)
+                            showReviewDialog = false
+                        }
+                    ) {
+                        Text("No, Complete Only")
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    TextButton(
+                        onClick = {
+                            showReviewDialog = false
+                            tempImageUri = null
+                        }
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+            }
+        )
+    }
+
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
@@ -77,7 +120,11 @@ fun AgentActiveRequestsScreen(
             tempImageUri?.let { uri ->
                 val imageTypeToUpload = viewModel.imageTypeToUpload.value
                 if (activeRequestDetails != null && imageTypeToUpload != null) {
-                    viewModel.handleImageUpload(activeRequestDetails.request.id, uri, imageTypeToUpload)
+                    if (imageTypeToUpload == "after") {
+                        showReviewDialog = true
+                    } else {
+                        viewModel.handleImageUpload(activeRequestDetails.request.id, uri, imageTypeToUpload)
+                    }
                 }
             }
         }

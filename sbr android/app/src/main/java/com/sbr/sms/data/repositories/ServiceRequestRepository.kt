@@ -18,7 +18,7 @@ interface ServiceRequestRepository {
     fun getTodaysCollectionsStream(agentId: String): Flow<List<ServiceRequest>>
     fun getPaymentHistoryStream(agentId: String): Flow<List<ServiceRequest>>
     suspend fun assignRequest(requestId: String, agentId: String)
-    suspend fun updateRequestStatus(requestId: String, newStatus: String)
+    suspend fun updateRequestStatus(requestId: String, newStatus: String, requestReview: Boolean = false)
     suspend fun updateRequestImage(requestId: String, imageUrl: String, imageType: String)
     suspend fun updatePaymentDetails(requestId: String, amount: Double, method: String)
     suspend fun updateAgentLocation(requestId: String, location: AgentLocation)
