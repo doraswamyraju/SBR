@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Example of a custom text style -->
+    <style name="CustomTextLarge">
+        <item name="android:textSize">20sp</item>
+        <item name="android:textColor">@color/colorPrimary</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- Example of a custom button style -->
+    <style name="CustomButton">
+        <item name="android:background">@color/colorSecondary</item>
+        <item name="android:textColor">@color/colorOnSecondary</item>
+        <item name="android:padding">12dp</item>
+    </style>
+</resources>

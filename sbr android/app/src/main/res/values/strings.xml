@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SBR</string>
+    <string name="login">Login</string>
+    <string name="logout">Logout</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="submit">Submit</string>
+    <string name="cancel">Cancel</string>
+    <string name="service_request">Service Request</string>
+    <string name="assign_agent">Assign Agent</string>
+    <string name="status">Status</string>
+    <string name="dashboard">Dashboard</string>
+    <string name="requests">Requests</string>
+    <string name="agents">Agents</string>
+    <string name="users">Users</string>
+    <string name="profile">Profile</string>
+    <string name="settings">Settings</string>
+    <string name="live_tracking">Live Tracking</string>
+    <string name="payments">Payments</string>
+    <string name="reports">Reports</string>
+    <string name="description">Description</string>
+    <string name="before_photo">Before Photo</string>
+    <string name="after_photo">After Photo</string>
+    <string name="update_status">Update Status</string>
+    <!-- Add more strings as needed -->
+</resources>

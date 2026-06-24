@@ -1,0 +1,113 @@
+package com.sbr.sms.ui.customer
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
+import com.sbr.sms.navigation.AppRoutes
+import com.sbr.sms.ui.auth.AuthViewModel
+import kotlinx.coroutines.launch
+
+enum class CustomerSection(val title: String) {
+    Dashboard("Dashboard"),
+    Requests("My Requests"),
+    Payments("Payments"),
+    Support("Contact Support"),
+    Profile("My Profile")
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CustomerPanelScreen(
+    navController: NavHostController,
+    authViewModel: AuthViewModel = hiltViewModel()
+) {
+    var selectedSection by remember { mutableStateOf(CustomerSection.Dashboard) }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+    var showNewRequestDialog by remember { mutableStateOf(false) }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet {
+                Column(Modifier.fillMaxHeight().padding(top = 24.dp)) {
+                    Text("Customer Panel", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(16.dp))
+                    Divider()
+                    CustomerSection.values().forEach { section ->
+                        NavigationDrawerItem(
+                            label = { Text(section.title) },
+                            selected = section == selectedSection,
+                            onClick = {
+                                selectedSection = section
+                                scope.launch { drawerState.close() }
+                            },
+                            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                        )
+                    }
+                    Spacer(Modifier.weight(1f))
+                    NavigationDrawerItem(
+                        label = { Text("Logout") },
+                        icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Logout") },
+                        selected = false,
+                        onClick = {
+                            authViewModel.logout()
+                            navController.navigate(AppRoutes.AuthFlow.route) {
+                                popUpTo(AppRoutes.CustomerPanel.route) { inclusive = true }
+                            }
+                        }
+                    )
+                }
+            }
+        }
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text(selectedSection.title) },
+                    navigationIcon = {
+                        // FIXED: The onClick was set to .close(), now it correctly calls .open()
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(Icons.Default.Menu, contentDescription = "Menu")
+                        }
+                    },
+                    actions = {},
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                )
+            },
+            floatingActionButton = {
+                FloatingActionButton(onClick = { showNewRequestDialog = true }) {
+                    Icon(Icons.Default.Add, contentDescription = "New Request")
+                }
+            }
+        ) { padding ->
+            Box(Modifier.padding(padding).fillMaxSize()) {
+                when (selectedSection) {
+                    CustomerSection.Dashboard -> CustomerDashboardScreen(
+                        showDialog = showNewRequestDialog,
+                        onShowDialogChange = { showNewRequestDialog = it },
+                        onNavigateToSection = { newSection -> selectedSection = newSection },
+                        onNavigate = { route ->
+                            navController.navigate(route)
+                        }
+                    )
+                    CustomerSection.Requests -> CustomerRequestsScreen(navController)
+                    CustomerSection.Profile -> CustomerProfileScreen(navController)
+                    CustomerSection.Payments -> CustomerPaymentsScreen(navController)
+                    CustomerSection.Support -> CustomerSupportScreen(navController)
+                }
+            }
+        }
+    }
+}

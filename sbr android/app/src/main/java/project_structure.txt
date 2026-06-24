@@ -1,0 +1,165 @@
+Folder PATH listing for volume New Volume
+Volume serial number is 3082-A871
+D:.
+�   project_structure.txt
+�   
+����com
+    �   project_structure.txt
+    �   
+    ����SBR
+        ����sms
+            �   SBRApp.kt
+            �   MainActivity.kt
+            �   
+            ����data
+            �   �   CredentialManager.kt
+            �   �   
+            �   ����models
+            �   �       AdminModels.kt
+            �   �       AgentDashboardStats.kt
+            �   �       AgentLocation.kt
+            �   �       AgentLocationViewModel.kt
+            �   �       AgentPerformance.kt
+            �   �       Assignment.kt
+            �   �       CustomerDashboardStats.kt
+            �   �       ServiceRequest.kt
+            �   �       User.kt
+            �   �       
+            �   ����repositories
+            �           DummyServiceRequestRepository.kt
+            �           FakeServiceRequestRepository.kt
+            �           FakeUserRepository.kt
+            �           ServiceRequestRepository.kt
+            �           ServiceRequestRepositoryImpl.kt
+            �           StorageRepository.kt
+            �           StorageRepositoryImpl.kt
+            �           UserRepository.kt
+            �           UserRepositoryImpl.kt
+            �           
+            ����di
+            �       AppModule.kt
+            �       
+            ����navigation
+            �       AppEntryPoint.kt
+            �       AppNavHost.kt
+            �       
+            ����ui
+                ����admin
+                �   �   AddEditCustomerScreen.kt
+                �   �   AdminCreateRequestScreen.kt
+                �   �   AdminDashboardScreen.kt
+                �   �   AdminMultiAgentMapScreen.kt
+                �   �   AdminPanelScreen.kt
+                �   �   AgentDetailsScreen.kt
+                �   �   AgentManagementScreen.kt
+                �   �   AssignRequestCard.kt
+                �   �   CreateRequestScreen.kt
+                �   �   CustomerManagementScreen.kt
+                �   �   CustomerSelectionScreen.kt
+                �   �   LiveTrackingScreen.kt
+                �   �   PaymentsScreen.kt
+                �   �   ReportsScreen.kt
+                �   �   ServiceRequestsScreen.kt
+                �   �   SettingsScreen.kt
+                �   �   
+                �   ����components
+                �   �       AgentPerformanceSection.kt
+                �   �       AssignableRequestCard.kt
+                �   �       DashboardStatsCards.kt
+                �   �       RecentActivities.kt
+                �   �       TrendChart.kt
+                �   �       
+                �   ����viewmodels
+                �           AddAgentViewModel.kt
+                �           AddEditCustomerViewModel.kt
+                �           AdminCreateRequestViewModel.kt
+                �           AdminDashboardViewModel.kt
+                �           AdminLiveTrackingViewModel.kt
+                �           AdminMultiAgentMapViewModel.kt
+                �           AdminPaymentsViewModel.kt
+                �           AgentManagementViewModel.kt
+                �           CreateRequestViewModel.kt
+                �           CustomerManagementViewModel.kt
+                �           CustomerSelectionViewModel.kt
+                �           ServiceRequestsViewModel.kt
+                �           
+                ����agent
+                �   �   AgentActiveRequestsScreen.kt
+                �   �   AgentAnalyticsScreen.kt
+                �   �   AgentDashboardScreen.kt
+                �   �   AgentEditProfileScreen.kt
+                �   �   AgentLocationMap.kt
+                �   �   AgentLocationUpdater.kt
+                �   �   AgentPanelScreen.kt
+                �   �   AgentPaymentsScreen.kt
+                �   �   AgentProfileScreen.kt
+                �   �   AgentProfileSetupScreen.kt
+                �   �   AgentRequestsScreen.kt
+                �   �   AgentScheduleScreen.kt
+                �   �   
+                �   ����viewmodels
+                �           AgentPaymentsViewModel.kt
+                �           AgentProfileSetupViewModel.kt
+                �           AgentProfileViewModel.kt
+                �           AgentRequestsViewModel.kt
+                �           
+                ����auth
+                �       AuthScreen.kt
+                �       AuthViewModel.kt
+                �       
+                ����common
+                �   �   EmptyState.kt
+                �   �   ErrorState.kt
+                �   �   InfoRow.kt
+                �   �   MainWithPermissionCheck.kt
+                �   �   PaymentDialog.kt
+                �   �   RequestLocationPermission.kt
+                �   �   ServiceDetailItem.kt
+                �   �   UiState.kt
+                �   �   
+                �   ����components
+                �           AgentSelectionDialog.kt
+                �           EmptyState.kt
+                �           ErrorState.kt
+                �           FullScreenLoader.kt
+                �           JobTimer.kt
+                �           LoadingIndicator.kt
+                �           LoadingState.kt
+                �           PaymentDetailsDialog.kt
+                �           RequestList.kt
+                �           RequestSummaryCard.kt
+                �           ServiceRequestsList.kt
+                �           SharedComposables.kt
+                �           StatusChip.kt
+                �           
+                ����customer
+                �   �   CustomerDashboardScreen.kt
+                �   �   CustomerLiveTrackingScreen.kt
+                �   �   CustomerPanelScreen.kt
+                �   �   CustomerPaymentsScreen.kt
+                �   �   CustomerProfileScreen.kt
+                �   �   CustomerRequestCard.kt
+                �   �   CustomerRequestsScreen.kt
+                �   �   CustomerSupportScreen.kt
+                �   �   NewRequestDialog.kt
+                �   �   
+                �   ����viewmodels
+                �           CustomerDashboardViewModel.kt
+                �           CustomerLiveTrackingViewModel.kt
+                �           CustomerPaymentsViewModel.kt
+                �           CustomerProfileViewModel.kt
+                �           CustomerRequestDetailScreen.kt
+                �           CustomerRequestsViewModel.kt
+                �           NewRequestViewModel.kt
+                �           
+                ����details
+                �       CustomerRequestDetailScreen.kt
+                �       CustomerRequestDetailViewModel.kt
+                �       RequestDetailScreen.kt
+                �       RequestDetailViewModel.kt
+                �       
+                ����theme
+                        Shapes.kt
+                        Theme.kt
+                        Typography.kt
+                        

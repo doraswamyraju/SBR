@@ -1,0 +1,37 @@
+# Portable Node.js
+node-portable/
+
+# Dependency directories
+node_modules/
+**/node_modules/
+
+# OS metadata
+.DS_Store
+**/.DS_Store
+
+# React/Node build artifacts
+build/
+dist/
+**/build/
+**/dist/
+
+# Android build outputs and caches
+.gradle/
+**/build/
+local.properties
+.navigation/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aar
+*.jar
+
+# Logs and system generated
+*.log
+.system_generated/
+.gemini/
+brain/
+.idea/
+.vscode/
+.env
