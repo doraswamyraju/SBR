@@ -157,7 +157,7 @@ private fun RequestCard(details: RequestWithCustomerDetails, viewModel: AgentReq
             Text("Service: ${request.serviceType}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Text("Customer: ${details.customerName}", style = MaterialTheme.typography.bodyMedium)
             Text("Address: ${request.customerAddress}", style = MaterialTheme.typography.bodyMedium)
-            Text("Received: ${request.createdAt?.toDate()?.let { dateFormatter.format(it) } ?: "N/A"}", style = MaterialTheme.typography.bodySmall)
+            Text("Received: ${request.createdAt?.let { dateFormatter.format(it) } ?: "N/A"}", style = MaterialTheme.typography.bodySmall)
 
             Spacer(modifier = Modifier.height(8.dp))
 

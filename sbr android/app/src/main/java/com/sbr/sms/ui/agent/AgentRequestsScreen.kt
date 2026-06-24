@@ -111,7 +111,7 @@ private fun RequestAcceptanceList(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Received: ${request.createdAt?.toDate()?.let { dateFormatter.format(it) } ?: "N/A"}",
+                        text = "Received: ${request.createdAt?.let { dateFormatter.format(it) } ?: "N/A"}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

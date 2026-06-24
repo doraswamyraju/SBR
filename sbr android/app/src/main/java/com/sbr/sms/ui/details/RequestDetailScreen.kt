@@ -164,7 +164,7 @@ private fun DetailsCard(request: ServiceRequest, customerName: String?, agentNam
             }
             Divider(modifier = Modifier.padding(horizontal = 16.dp))
             ListItem(
-                headlineContent = { Text(request.createdAt?.toDate()?.let { dateFormatter.format(it) } ?: "N/A") },
+                headlineContent = { Text(request.createdAt?.let { dateFormatter.format(it) } ?: "N/A") },
                 leadingContent = { Icon(Icons.Default.Event, contentDescription = null) },
                 supportingContent = { Text("Created At") }
             )

@@ -96,7 +96,7 @@ class UserRepositoryImpl @Inject constructor(
                 user.photoUrl?.let { fields["photoUrl"] = it }
                 fields["isRecurring"] = user.isRecurring
                 user.nextServiceDate?.let { 
-                    formatDate(it.toDate())?.let { dateStr ->
+                    formatDate(it)?.let { dateStr ->
                         fields["nextServiceDate"] = dateStr
                     }
                 }

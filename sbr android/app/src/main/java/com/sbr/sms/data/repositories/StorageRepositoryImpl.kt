@@ -5,9 +5,9 @@ import android.net.Uri
 import android.util.Log
 import com.sbr.sms.data.api.ApiService
 import dagger.hilt.android.qualifiers.ApplicationContext
-import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
-import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -26,7 +26,7 @@ class StorageRepositoryImpl @Inject constructor(
             val mimeType = contentResolver.getType(imageUri) ?: "image/jpeg"
             val bytes = inputStream.use { it.readBytes() }
 
-            val requestBody = RequestBody.create(MediaType.parse(mimeType), bytes)
+            val requestBody = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
             
             val extension = when (mimeType) {
                 "image/png" -> ".png"

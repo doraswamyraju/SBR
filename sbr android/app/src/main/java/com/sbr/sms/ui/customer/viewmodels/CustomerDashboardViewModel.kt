@@ -88,7 +88,7 @@ class CustomerDashboardViewModel @Inject constructor(
             val user = userRepository.getUser(uid)
             if (user != null) {
                 _userName.value = user.name
-                _nextServiceDate.value = (user as? Customer)?.nextServiceDate?.toDate()
+                _nextServiceDate.value = (user as? Customer)?.nextServiceDate
             } else {
                 _userName.value = "Valued Customer"
                 _nextServiceDate.value = null

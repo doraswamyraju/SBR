@@ -250,7 +250,7 @@ private fun QuickActionCard(title: String, icon: ImageVector, onClick: () -> Uni
 private fun RecentActivityItem(request: ServiceRequest, onClick: () -> Unit) {
     val formattedDate = remember(request.createdAt) {
         request.createdAt?.let { timestamp ->
-            SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()).format(timestamp.toDate())
+            SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()).format(timestamp)
         } ?: "Date not available"
     }
 

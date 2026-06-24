@@ -138,7 +138,7 @@ fun StatusDropdownFilter(selected: String, onChange: (String) -> Unit) {
 @Composable
 fun CustomerRequestRow(request: ServiceRequest, navController: NavHostController) {
     val formattedDate = remember(request.createdAt) {
-        request.createdAt?.let { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(it.toDate()) } ?: "N/A"
+        request.createdAt?.let { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(it) } ?: "N/A"
     }
 
     Row(
