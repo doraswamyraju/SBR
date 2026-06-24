@@ -40,7 +40,7 @@ class FirebaseAuth @Inject constructor(
         }
     }
 
-    interface AuthStateListener {
+    fun interface AuthStateListener {
         fun onAuthStateChanged(auth: FirebaseAuth)
     }
 

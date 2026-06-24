@@ -40,6 +40,7 @@ data class UserDto(
     val name: String,
     val email: String,
     val role: String,
+    val isAvailable: Boolean = true,
     val phone: String? = null,
     val address: String? = null,
     val photoUrl: String? = null,
