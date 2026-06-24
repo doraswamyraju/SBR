@@ -45,8 +45,7 @@ class AdminMultiAgentMapViewModel @Inject constructor(
                     val trackedAgentInfoList = activeRequests.mapNotNull { request ->
                         val agent = usersMap[request.assignedAgentId] as? Agent
                         val customer = usersMap[request.customerId] as? Customer
-                        // FIXED: Check if the 'locationPath' list is not empty.
-                        if (agent != null && customer != null && request.locationPath.isNotEmpty()) {
+                        if (agent != null && customer != null) {
                             TrackedAgentInfo(request, agent, customer)
                         } else {
                             null

@@ -48,24 +48,25 @@ fun AdminMultiAgentMapScreen(
     // State for the Bottom Sheet
     val scaffoldState = rememberBottomSheetScaffoldState()
 
-    // NEW: Improved camera logic
+    // NEW: Improved camera logic with agent coordinate fallbacks
     LaunchedEffect(uiState) {
         if (uiState is MultiAgentUiState.Success) {
             val agents = (uiState as MultiAgentUiState.Success).trackedAgents
-            if (agents.isNotEmpty()) {
-                // If only one agent is active, zoom directly to them.
-                if (agents.size == 1) {
-                    val singleAgentPath = agents.first().request.locationPath
-                    if (singleAgentPath.isNotEmpty()) {
-                        val lastLocation = singleAgentPath.last()
-                        cameraPositionState.animate(
-                            CameraUpdateFactory.newLatLngZoom(LatLng(lastLocation.latitude, lastLocation.longitude), 15f),
-                            1000
-                        )
-                    }
+            val validPositions = agents.mapNotNull { agentInfo ->
+                val path = agentInfo.request.locationPath
+                val lat = path.lastOrNull()?.latitude ?: agentInfo.agent.currentLat
+                val lng = path.lastOrNull()?.longitude ?: agentInfo.agent.currentLng
+                if (lat != null && lng != null) LatLng(lat, lng) else null
+            }
+            if (validPositions.isNotEmpty()) {
+                if (validPositions.size == 1) {
+                    cameraPositionState.animate(
+                        CameraUpdateFactory.newLatLngZoom(validPositions.first(), 15f),
+                        1000
+                    )
                 } else {
-                    // If multiple agents are active, zoom to show all of them.
                     val boundsBuilder = LatLngBounds.builder()
+                    validPositions.forEach { boundsBuilder.include(it) }
                     agents.forEach { agentInfo ->
                         agentInfo.request.locationPath.forEach { location ->
                             boundsBuilder.include(LatLng(location.latitude, location.longitude))
@@ -89,12 +90,13 @@ fun AdminMultiAgentMapScreen(
             ActiveAgentsSheetContent(
                 uiState = uiState,
                 onAgentClick = { agentInfo ->
-                    val lastLocation = agentInfo.request.locationPath.lastOrNull()
-                    if (lastLocation != null) {
+                    val lat = agentInfo.request.locationPath.lastOrNull()?.latitude ?: agentInfo.agent.currentLat
+                    val lng = agentInfo.request.locationPath.lastOrNull()?.longitude ?: agentInfo.agent.currentLng
+                    if (lat != null && lng != null) {
                         coroutineScope.launch {
                             // When an agent is clicked, focus the map and collapse the sheet
                             cameraPositionState.animate(
-                                CameraUpdateFactory.newLatLngZoom(LatLng(lastLocation.latitude, lastLocation.longitude), 16f)
+                                CameraUpdateFactory.newLatLngZoom(LatLng(lat, lng), 16f)
                             )
                             scaffoldState.bottomSheetState.partialExpand()
                         }
@@ -116,14 +118,18 @@ fun AdminMultiAgentMapScreen(
                     ) {
                         state.trackedAgents.forEach { agentInfo ->
                             val path = agentInfo.request.locationPath
-                            if (path.isNotEmpty()) {
-                                Polyline(
-                                    points = path.map { LatLng(it.latitude, it.longitude) },
-                                    color = Color.Yellow,
-                                    width = 10f
-                                )
+                            val lat = path.lastOrNull()?.latitude ?: agentInfo.agent.currentLat
+                            val lng = path.lastOrNull()?.longitude ?: agentInfo.agent.currentLng
+                            if (lat != null && lng != null) {
+                                if (path.isNotEmpty()) {
+                                    Polyline(
+                                        points = path.map { LatLng(it.latitude, it.longitude) },
+                                        color = Color.Yellow,
+                                        width = 10f
+                                    )
+                                }
                                 Marker(
-                                    state = MarkerState(position = LatLng(path.last().latitude, path.last().longitude)),
+                                    state = MarkerState(position = LatLng(lat, lng)),
                                     title = agentInfo.agent.name,
                                     icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE),
                                 )

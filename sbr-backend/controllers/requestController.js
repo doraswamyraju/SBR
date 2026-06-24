@@ -311,6 +311,12 @@ exports.appendAgentLocation = async (req, res) => {
 
     await request.save();
 
+    // Sync agent profile live coordinates
+    await User.findByIdAndUpdate(req.user.id, {
+      currentLat: latitude,
+      currentLng: longitude
+    });
+
     res.status(200).json({ success: true, data: request.locationPath });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
