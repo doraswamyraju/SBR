@@ -66,6 +66,9 @@ interface ApiService {
     @POST("api/requests/{id}/location")
     suspend fun appendAgentLocation(@Path("id") id: String, @Body coordinates: Map<String, Double>): Response<ApiResponse<List<AgentLocationDto>>>
 
+    @DELETE("api/requests/{id}")
+    suspend fun deleteRequest(@Path("id") id: String): Response<ApiResponse<Map<String, Any>>>
+
     // Upload endpoints
     @Multipart
     @POST("api/upload")
