@@ -1,8 +1,7 @@
 package com.sbr.sms.data.repositories
 
-import com.sbr.sms.data.models.Agent
-import com.sbr.sms.data.models.Customer
-import com.sbr.sms.data.models.User
+import com.sbr.sms.data.models.*
+import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -53,5 +52,40 @@ class FakeUserRepository : UserRepository {
     override suspend fun deleteUser(userId: String) {
         users.removeAll { it.id == userId }
         usersFlow.value = users.toList()
+    }
+
+    override suspend fun login(email: String, password: String): User? {
+        return users.find { it.email == email }
+    }
+
+    override suspend fun signup(name: String, email: String, password: String, role: String): User? {
+        val userRole = when (role.uppercase()) {
+            "ADMIN" -> UserRole.ADMIN
+            "AGENT" -> UserRole.AGENT
+            else -> UserRole.CUSTOMER
+        }
+        val newUser = when (userRole) {
+            UserRole.ADMIN -> Admin(
+                id = UUID.randomUUID().toString(),
+                name = name,
+                email = email
+            )
+            UserRole.AGENT -> Agent(
+                id = UUID.randomUUID().toString(),
+                name = name,
+                email = email
+            )
+            UserRole.CUSTOMER -> Customer(
+                id = UUID.randomUUID().toString(),
+                name = name,
+                email = email
+            )
+        }
+        createUser(newUser)
+        return newUser
+    }
+
+    override suspend fun logout() {
+        // No-op for mock repository session
     }
 }
