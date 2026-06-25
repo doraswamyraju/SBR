@@ -117,7 +117,9 @@ exports.updateRequest = async (req, res) => {
     request = await ServiceRequest.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true
-    });
+    })
+      .populate('customerId', 'name email role phone address photoUrl isRecurring nextServiceDate')
+      .populate('assignedAgentId', 'name email role phone specialization location status rating completedJobs');
 
     res.status(200).json({ success: true, data: request });
   } catch (error) {
@@ -144,7 +146,9 @@ exports.assignRequest = async (req, res) => {
       req.params.id,
       { assignedAgentId: agentId, status: 'Assigned' },
       { new: true }
-    );
+    )
+      .populate('customerId', 'name email role phone address photoUrl isRecurring nextServiceDate')
+      .populate('assignedAgentId', 'name email role phone specialization location status rating completedJobs');
 
     if (!request) {
       return res.status(404).json({ success: false, error: 'Service request not found' });
@@ -195,7 +199,9 @@ exports.updateRequestStatus = async (req, res) => {
       updates.completedAt = Date.now();
     }
 
-    request = await ServiceRequest.findByIdAndUpdate(req.params.id, updates, { new: true });
+    request = await ServiceRequest.findByIdAndUpdate(req.params.id, updates, { new: true })
+      .populate('customerId', 'name email role phone address photoUrl isRecurring nextServiceDate')
+      .populate('assignedAgentId', 'name email role phone specialization location status rating completedJobs');
 
     // Notify Customer of status update
     sendNotificationToUser(request.customerId, {
@@ -255,7 +261,9 @@ exports.updateRequestImage = async (req, res) => {
       req.params.id,
       { [fieldToUpdate]: imageUrl },
       { new: true }
-    );
+    )
+      .populate('customerId', 'name email role phone address photoUrl isRecurring nextServiceDate')
+      .populate('assignedAgentId', 'name email role phone specialization location status rating completedJobs');
 
     res.status(200).json({ success: true, data: request });
   } catch (error) {
@@ -292,7 +300,9 @@ exports.updatePaymentDetails = async (req, res) => {
         paymentTimestamp: Date.now()
       },
       { new: true }
-    );
+    )
+      .populate('customerId', 'name email role phone address photoUrl isRecurring nextServiceDate')
+      .populate('assignedAgentId', 'name email role phone specialization location status rating completedJobs');
 
     res.status(200).json({ success: true, data: request });
   } catch (error) {
