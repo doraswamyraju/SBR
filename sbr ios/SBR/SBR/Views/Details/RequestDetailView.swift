@@ -8,6 +8,9 @@ struct RequestDetailView: View {
     @State private var currentRequest: ServiceRequest
     @State private var showingLiveTracking = false
     @State private var showingAgentSelection = false
+    @State private var showingImagePicker = false
+    @State private var pickerImageType = "before"
+    @State private var reviewUrl = ""
     
     init(request: ServiceRequest, requestVM: RequestViewModel) {
         _currentRequest = State(initialValue: request)
@@ -180,41 +183,73 @@ struct RequestDetailView: View {
                             .foregroundColor(SBRColors.primaryBlue)
                         
                         HStack(spacing: 20) {
-                            VStack(spacing: 8) {
-                                Text("Before Photo").font(.caption2).foregroundColor(.gray)
-                                if let beforeUrl = currentRequest.beforeImageUrl, let url = URL(string: beforeUrl) {
-                                    AsyncImage(url: url) { image in
-                                        image.resizable().scaledToFill()
-                                    } placeholder: {
-                                        ProgressView()
-                                    }
-                                    .frame(height: 120)
-                                    .cornerRadius(8)
-                                } else {
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color(red: 0.95, green: 0.96, blue: 0.98))
+                            Button(action: {
+                                if authVM.user?.role == .agent {
+                                    self.pickerImageType = "before"
+                                    self.showingImagePicker = true
+                                }
+                            }) {
+                                VStack(spacing: 8) {
+                                    Text("Before Photo").font(.caption2).foregroundColor(.gray)
+                                    if let beforeUrl = currentRequest.beforeImageUrl, let url = URL(string: beforeUrl) {
+                                        AsyncImage(url: url) { image in
+                                            image.resizable().scaledToFill()
+                                        } placeholder: {
+                                            ProgressView()
+                                        }
                                         .frame(height: 120)
-                                        .overlay(Image(systemName: "photo").foregroundColor(.gray))
+                                        .cornerRadius(8)
+                                    } else {
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(Color(red: 0.95, green: 0.96, blue: 0.98))
+                                            .frame(height: 120)
+                                            .overlay(
+                                                VStack(spacing: 4) {
+                                                    Image(systemName: "camera.fill").foregroundColor(.gray)
+                                                    if authVM.user?.role == .agent {
+                                                        Text("Tap to upload").font(.caption2).foregroundColor(.gray)
+                                                    }
+                                                }
+                                            )
+                                    }
                                 }
                             }
+                            .buttonStyle(PlainButtonStyle())
+                            .disabled(authVM.user?.role != .agent || currentRequest.status == .completed)
                             
-                            VStack(spacing: 8) {
-                                Text("After Photo").font(.caption2).foregroundColor(.gray)
-                                if let afterUrl = currentRequest.afterImageUrl, let url = URL(string: afterUrl) {
-                                    AsyncImage(url: url) { image in
-                                        image.resizable().scaledToFill()
-                                    } placeholder: {
-                                        ProgressView()
-                                    }
-                                    .frame(height: 120)
-                                    .cornerRadius(8)
-                                } else {
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color(red: 0.95, green: 0.96, blue: 0.98))
+                            Button(action: {
+                                if authVM.user?.role == .agent {
+                                    self.pickerImageType = "after"
+                                    self.showingImagePicker = true
+                                }
+                            }) {
+                                VStack(spacing: 8) {
+                                    Text("After Photo").font(.caption2).foregroundColor(.gray)
+                                    if let afterUrl = currentRequest.afterImageUrl, let url = URL(string: afterUrl) {
+                                        AsyncImage(url: url) { image in
+                                            image.resizable().scaledToFill()
+                                        } placeholder: {
+                                            ProgressView()
+                                        }
                                         .frame(height: 120)
-                                        .overlay(Image(systemName: "photo").foregroundColor(.gray))
+                                        .cornerRadius(8)
+                                    } else {
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(Color(red: 0.95, green: 0.96, blue: 0.98))
+                                            .frame(height: 120)
+                                            .overlay(
+                                                VStack(spacing: 4) {
+                                                    Image(systemName: "camera.fill").foregroundColor(.gray)
+                                                    if authVM.user?.role == .agent {
+                                                        Text("Tap to upload").font(.caption2).foregroundColor(.gray)
+                                                    }
+                                                }
+                                            )
+                                    }
                                 }
                             }
+                            .buttonStyle(PlainButtonStyle())
+                            .disabled(authVM.user?.role != .agent || currentRequest.status == .completed)
                         }
                     }
                     .padding()
@@ -295,6 +330,23 @@ struct RequestDetailView: View {
                         .padding(.top, 10)
                     }
                     
+                    if authVM.user?.role == .customer && currentRequest.status == .completed && currentRequest.requestReview == true {
+                        Button(action: {
+                            openReviewURL()
+                        }) {
+                            Label("Leave Sri Balaji Renewables Review", systemImage: "star.bubble.fill")
+                                .font(.subheadline)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(Color.green)
+                                .cornerRadius(8)
+                        }
+                        .padding(.horizontal)
+                        .padding(.top, 10)
+                    }
+                    
                     Spacer()
                 }
                 .padding(.top)
@@ -323,6 +375,9 @@ struct RequestDetailView: View {
             Task {
                 await requestVM.fetchUsers()
             }
+            if currentRequest.status == .completed && currentRequest.requestReview == true {
+                fetchReviewUrl()
+            }
         }
         .sheet(isPresented: $showingLiveTracking) {
             CustomerLiveTrackingView(request: currentRequest)
@@ -333,6 +388,11 @@ struct RequestDetailView: View {
                 Task {
                     await requestVM.fetchRequests()
                 }
+            }
+        }
+        .sheet(isPresented: $showingImagePicker) {
+            ImagePicker(sourceType: .camera) { image in
+                uploadImageForDetails(image: image, type: pickerImageType)
             }
         }
     }
@@ -346,6 +406,40 @@ struct RequestDetailView: View {
         return currentRequest.status == .assigned ||
                currentRequest.status == .accepted ||
                currentRequest.status == .inProgress
+    }
+    
+    private func uploadImageForDetails(image: UIImage, type: String) {
+        Task {
+            guard let imageData = image.jpegData(compressionQuality: 0.7) else { return }
+            let success = await requestVM.uploadRequestImage(requestId: currentRequest.id, imageData: imageData, type: type)
+            if success {
+                if let res = try? await APIClient.shared.get(endpoint: "api/requests/\(currentRequest.id)", responseType: RequestViewModel.StandardResponse<ServiceRequest>.self),
+                   res.success, let updatedReq = res.data {
+                    self.currentRequest = updatedReq
+                }
+                await requestVM.fetchRequests()
+            }
+        }
+    }
+    
+    private func fetchReviewUrl() {
+        Task {
+            struct SettingsResponse: Decodable {
+                let success: Bool
+                let data: [String: String]
+            }
+            if let res = try? await APIClient.shared.get(endpoint: "api/settings", responseType: SettingsResponse.self),
+               res.success, let url = res.data["reviewUrl"] {
+                self.reviewUrl = url
+            }
+        }
+    }
+    
+    private func openReviewURL() {
+        let targetUrlStr = reviewUrl.isEmpty ? "https://g.page/r/CbdJS-IzWTe2EBE/review" : reviewUrl
+        if let url = URL(string: targetUrlStr) {
+            UIApplication.shared.open(url)
+        }
     }
 }
 

@@ -15,6 +15,10 @@ struct AgentDashboardView: View {
     @State private var selectedSection: AgentSection = .dashboard
     @State private var isDrawerOpen = false
     @State private var selectedRequestDetail: ServiceRequest?
+    @State private var showingCompletedRequestsSheet = false
+    @State private var showingImagePicker = false
+    @State private var pickerImageType = "before"
+    @State private var activeJobForUpload: ServiceRequest? = nil
     
     private var activeJob: ServiceRequest? {
         requestVM.requests.first(where: { $0.status == .accepted || $0.status == .inProgress })
@@ -42,12 +46,18 @@ struct AgentDashboardView: View {
                         requestVM: requestVM,
                         authVM: authVM,
                         onNavigateToSection: { selectedSection = $0 },
-                        selectedRequestDetail: $selectedRequestDetail
+                        selectedRequestDetail: $selectedRequestDetail,
+                        onShowCompletedRequests: { showingCompletedRequestsSheet = true }
                     )
                 case .newRequests:
                     AgentNewRequestsView(requestVM: requestVM)
                 case .activeService:
-                    AgentActiveServiceView(requestVM: requestVM)
+                    AgentActiveServiceView(
+                        requestVM: requestVM,
+                        showingImagePicker: $showingImagePicker,
+                        pickerImageType: $pickerImageType,
+                        activeJobForUpload: $activeJobForUpload
+                    )
                 case .payments:
                     AgentPaymentsView(requestVM: requestVM, selectedRequestDetail: $selectedRequestDetail)
                 case .profile:
@@ -83,6 +93,36 @@ struct AgentDashboardView: View {
                 requestVM.stopLocationTracking()
             }
         }
+        .sheet(isPresented: $showingCompletedRequestsSheet) {
+            AgentCompletedRequestsSheet(requestVM: requestVM, onSelectRequest: { req in
+                showingCompletedRequestsSheet = false
+                selectedRequestDetail = req
+            })
+        }
+        .sheet(isPresented: $showingImagePicker) {
+            ImagePicker(sourceType: .camera) { image in
+                if let job = activeJobForUpload {
+                    uploadImageForJob(job, image: image, type: pickerImageType)
+                }
+            }
+        }
+    }
+
+    private func uploadImageForJob(_ job: ServiceRequest, image: UIImage, type: String) {
+        Task {
+            guard let imageData = image.jpegData(compressionQuality: 0.7) else { return }
+            let uploadSuccess = await requestVM.uploadRequestImage(requestId: job.id, imageData: imageData, type: type)
+            if uploadSuccess {
+                if type == "before" && job.status == .accepted {
+                    let statusSuccess = await requestVM.updateStatus(requestId: job.id, status: .inProgress)
+                    if statusSuccess {
+                        await requestVM.fetchRequests()
+                    }
+                } else {
+                    await requestVM.fetchRequests()
+                }
+            }
+        }
     }
     
     private func sectionTitle(_ section: AgentSection) -> String {
@@ -112,6 +152,7 @@ struct AgentDashboardContent: View {
     @ObservedObject var authVM: AuthViewModel
     let onNavigateToSection: (AgentSection) -> Void
     @Binding var selectedRequestDetail: ServiceRequest?
+    var onShowCompletedRequests: (() -> Void)? = nil
     
     private var offers: [ServiceRequest] {
         requestVM.requests.filter({ $0.status == .assigned })
@@ -161,11 +202,15 @@ struct AgentDashboardContent: View {
                         }
                         .buttonStyle(PlainButtonStyle())
                         
-                        SummaryCard(title: "Completed Today", value: "\(completedTodayCount)", isPrimary: false)
+                        SummaryCard(title: "Completed Today", value: "\(completedTodayCount)", isPrimary: false, action: {
+                            onShowCompletedRequests?()
+                        })
                     }
                     
                     // Today's Earnings container card
-                    SummaryCard(title: "Today's Earnings", value: "₹\(Int(todaysEarningsSum))", isPrimary: true)
+                    SummaryCard(title: "Today's Earnings", value: "₹\(Int(todaysEarningsSum))", isPrimary: true, action: {
+                        onNavigateToSection(.payments)
+                    })
                 }
                 .padding(.horizontal)
                 
@@ -383,6 +428,9 @@ struct AgentNewRequestsView: View {
 // Active service details and action handlers
 struct AgentActiveServiceView: View {
     @ObservedObject var requestVM: RequestViewModel
+    @Binding var showingImagePicker: Bool
+    @Binding var pickerImageType: String
+    @Binding var activeJobForUpload: ServiceRequest?
     
     @State private var showingPaymentDialog = false
     @State private var collectAmount = ""
@@ -500,7 +548,11 @@ struct AgentActiveServiceView: View {
                             // Status specific Action buttons matching restructured flow
                             switch job.status {
                             case .accepted:
-                                Button(action: { uploadBeforeAndStartWork(job) }) {
+                                Button(action: {
+                                    self.activeJobForUpload = job
+                                    self.pickerImageType = "before"
+                                    self.showingImagePicker = true
+                                }) {
                                     Label("Upload Before Image & Start Work", systemImage: "camera.fill")
                                         .font(.subheadline)
                                         .fontWeight(.bold)
@@ -512,7 +564,11 @@ struct AgentActiveServiceView: View {
                                 }
                             case .inProgress:
                                 if job.beforeImageUrl == nil {
-                                    Button(action: { uploadBeforeAndStartWork(job) }) {
+                                    Button(action: {
+                                        self.activeJobForUpload = job
+                                        self.pickerImageType = "before"
+                                        self.showingImagePicker = true
+                                    }) {
                                         Label("Upload Before Image", systemImage: "camera.fill")
                                             .font(.subheadline)
                                             .fontWeight(.bold)
@@ -523,7 +579,11 @@ struct AgentActiveServiceView: View {
                                             .cornerRadius(8)
                                     }
                                 } else if job.afterImageUrl == nil {
-                                    Button(action: { uploadAfterImageOnly(job) }) {
+                                    Button(action: {
+                                        self.activeJobForUpload = job
+                                        self.pickerImageType = "after"
+                                        self.showingImagePicker = true
+                                    }) {
                                         Label("Upload After Image", systemImage: "camera.fill")
                                             .font(.subheadline)
                                             .fontWeight(.bold)
@@ -883,6 +943,53 @@ struct PaymentDialogView: View {
             }
             .navigationTitle("Job Closeout")
             .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}
+
+struct AgentCompletedRequestsSheet: View {
+    @ObservedObject var requestVM: RequestViewModel
+    let onSelectRequest: (ServiceRequest) -> Void
+    @Environment(\.dismiss) var dismiss
+    
+    private var completedRequests: [ServiceRequest] {
+        requestVM.requests.filter({ $0.status == .completed })
+    }
+    
+    var body: some View {
+        NavigationView {
+            VStack {
+                if completedRequests.isEmpty {
+                    Spacer()
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 60))
+                        .foregroundColor(Color.gray.opacity(0.4))
+                        .padding(.bottom, 8)
+                    Text("No completed services yet.")
+                        .foregroundColor(.gray)
+                        .font(.subheadline)
+                    Spacer()
+                } else {
+                    List(completedRequests) { req in
+                        Button(action: { onSelectRequest(req) }) {
+                            RequestRow(request: req)
+                        }
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .padding(.horizontal)
+                        .padding(.vertical, 6)
+                    }
+                    .listStyle(PlainListStyle())
+                }
+            }
+            .navigationTitle("Completed Services")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Close") { dismiss() }
+                }
+            }
+            .background(Color(red: 0.97, green: 0.98, blue: 1.0))
         }
     }
 }

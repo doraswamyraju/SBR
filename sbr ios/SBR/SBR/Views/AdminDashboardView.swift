@@ -9,6 +9,7 @@ enum AdminSection: Hashable {
     case reports
     case payments
     case liveTracking
+    case settings
 }
 
 struct AdminDashboardView: View {
@@ -28,7 +29,7 @@ struct AdminDashboardView: View {
         SidebarNavigationLayout(
             title: sectionTitle(selectedSection),
             drawerHeader: "Welcome Admin",
-            sections: [.dashboard, .agents, .customers, .requests, .reports, .payments, .liveTracking],
+            sections: [.dashboard, .agents, .customers, .requests, .reports, .payments, .liveTracking, .settings],
             selectedSection: $selectedSection,
             sectionTitle: { sectionTitle($0) },
             sectionIcon: { sectionIcon($0) },
@@ -63,6 +64,8 @@ struct AdminDashboardView: View {
                     PaymentsView(requestVM: requestVM)
                 case .liveTracking:
                     AdminMultiAgentMapView(requestVM: requestVM)
+                case .settings:
+                    AdminSettingsView(requestVM: requestVM)
                 }
             }
         }
@@ -95,6 +98,7 @@ struct AdminDashboardView: View {
         case .reports: return "Reports"
         case .payments: return "Payments"
         case .liveTracking: return "All Active Agents"
+        case .settings: return "Settings"
         }
     }
     
@@ -107,6 +111,7 @@ struct AdminDashboardView: View {
         case .reports: return "doc.text.below.ecg.fill"
         case .payments: return "creditcard.fill"
         case .liveTracking: return "map.fill"
+        case .settings: return "gearshape.fill"
         }
     }
 }
