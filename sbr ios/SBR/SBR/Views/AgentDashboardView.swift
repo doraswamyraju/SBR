@@ -45,7 +45,7 @@ struct AgentDashboardView: View {
                 case .activeService:
                     AgentActiveServiceView(requestVM: requestVM)
                 case .payments:
-                    AgentAnalyticsView(requestVM: requestVM)
+                    AgentPaymentsView(requestVM: requestVM, selectedRequestDetail: $selectedRequestDetail)
                 case .profile:
                     AgentProfileScreenView(authVM: authVM, requestVM: requestVM)
                 }
@@ -663,48 +663,181 @@ struct AgentActiveServiceView: View {
 }
 
 // Side list item shell for Agent My Profile view
+// Side list item shell for Agent My Profile view (matched with Android screen)
 struct AgentProfileScreenView: View {
     @ObservedObject var authVM: AuthViewModel
     @ObservedObject var requestVM: RequestViewModel
     
+    @State private var isAvailable: Bool = true
+    @State private var isUpdatingAvailability = false
+    
     var body: some View {
-        VStack(spacing: 24) {
-            VStack(spacing: 8) {
-                Image(systemName: "person.crop.badge.checkmark")
-                    .font(.system(size: 70))
-                    .foregroundColor(SBRColors.primaryBlue)
-                
-                Text(authVM.user?.name ?? "Agent Specialist")
+        ScrollView {
+            VStack(spacing: 20) {
+                Text("My Profile")
                     .font(.title2)
                     .fontWeight(.bold)
                     .foregroundColor(SBRColors.textPrimary)
+                    .padding(.top)
                 
-                Text(authVM.user?.email ?? "")
+                if let user = authVM.user {
+                    // Profile Info Card
+                    VStack(alignment: .leading, spacing: 0) {
+                        ProfileInfoRow(title: user.name, subtitle: "Name", icon: "person.fill")
+                        Divider().padding(.leading, 50)
+                        ProfileInfoRow(title: user.email, subtitle: "Email", icon: "envelope.fill")
+                        Divider().padding(.leading, 50)
+                        ProfileInfoRow(title: user.phone ?? "N/A", subtitle: "Phone", icon: "phone.fill")
+                    }
+                    .background(Color.white)
+                    .cornerRadius(12)
+                    .shadow(color: Color.black.opacity(0.02), radius: 5, x: 0, y: 1)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.gray.opacity(0.12), lineWidth: 1)
+                    )
+                    .padding(.horizontal)
+                    
+                    // Agent Stats & Availability Card
+                    VStack(alignment: .leading, spacing: 0) {
+                        ProfileStatRow(title: "\(user.completedJobs ?? 0) Jobs Completed", icon: "briefcase.fill")
+                        Divider().padding(.leading, 50)
+                        ProfileStatRow(title: String(format: "%.1f / 5.0", user.rating ?? 0.0), icon: "star.fill")
+                        Divider().padding(.leading, 50)
+                        
+                        // Availability Toggle Row
+                        HStack(spacing: 12) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.title3)
+                                .foregroundColor(SBRColors.primaryBlue)
+                                .frame(width: 36, height: 36)
+                                .background(SBRColors.primaryBlue.opacity(0.08))
+                                .cornerRadius(8)
+                            
+                            Toggle(isOn: $isAvailable) {
+                                Text(isAvailable ? "Available for new jobs" : "Not available")
+                                    .fontWeight(.medium)
+                                    .foregroundColor(SBRColors.textPrimary)
+                            }
+                            .disabled(isUpdatingAvailability)
+                            .onChange(of: isAvailable) { newValue in
+                                updateAvailability(to: newValue)
+                            }
+                        }
+                        .padding(.vertical, 12)
+                        .padding(.horizontal)
+                    }
+                    .background(Color.white)
+                    .cornerRadius(12)
+                    .shadow(color: Color.black.opacity(0.02), radius: 5, x: 0, y: 1)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.gray.opacity(0.12), lineWidth: 1)
+                    )
+                    .padding(.horizontal)
+                    
+                    NavigationLink(destination: AgentEditProfileView(authVM: authVM)) {
+                        Text("Edit Profile")
+                            .font(.subheadline)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(SBRColors.primaryBlue)
+                            .cornerRadius(8)
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 10)
+                } else {
+                    ProgressView()
+                }
+                
+                Spacer()
+            }
+        }
+        .background(Color(red: 0.97, green: 0.98, blue: 1.0).ignoresSafeArea())
+        .onAppear {
+            if let user = authVM.user {
+                isAvailable = user.isAvailable ?? true
+            }
+        }
+    }
+    
+    private func updateAvailability(to newValue: Bool) {
+        isUpdatingAvailability = true
+        let body = ["isAvailable": AnyEncodable(newValue)]
+        Task {
+            struct ProfileResponse: Decodable {
+                let success: Bool
+                let data: User?
+                let error: String?
+            }
+            do {
+                let res = try await APIClient.shared.put(endpoint: "api/users/profile", body: body, responseType: ProfileResponse.self)
+                if res.success, let updatedUser = res.data {
+                    authVM.user = updatedUser
+                    if let encodedUser = try? JSONEncoder().encode(updatedUser) {
+                        UserDefaults.standard.set(encodedUser, forKey: "auth_user")
+                    }
+                }
+            } catch {
+                print("Failed to update availability status: \(error)")
+            }
+            isUpdatingAvailability = false
+        }
+    }
+}
+
+// Helpers for matched UI
+struct ProfileInfoRow: View {
+    let title: String
+    let subtitle: String
+    let icon: String
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundColor(SBRColors.primaryBlue)
+                .frame(width: 36, height: 36)
+                .background(SBRColors.primaryBlue.opacity(0.08))
+                .cornerRadius(8)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .fontWeight(.bold)
+                    .foregroundColor(SBRColors.textPrimary)
+                Text(subtitle)
+                    .font(.caption2)
                     .foregroundColor(.gray)
             }
-            .padding(.top)
-            
-            List {
-                NavigationLink(destination: AgentEditProfileView(authVM: authVM)) {
-                    Label("Edit My Profile Settings", systemImage: "person.text.rectangle")
-                }
-                .listRowBackground(Color.white)
-                
-                NavigationLink(destination: AgentScheduleView()) {
-                    Label("Duty & Roster Shift", systemImage: "calendar")
-                }
-                .listRowBackground(Color.white)
-                
-                NavigationLink(destination: AgentAnalyticsView(requestVM: requestVM)) {
-                    Label("Performance Analytics & Logs", systemImage: "chart.bar.xaxis")
-                }
-                .listRowBackground(Color.white)
-            }
-            .listStyle(GroupedListStyle())
-            
             Spacer()
         }
-        .background(Color(red: 0.97, green: 0.98, blue: 1.0))
+        .padding(.vertical, 12)
+        .padding(.horizontal)
+    }
+}
+
+struct ProfileStatRow: View {
+    let title: String
+    let icon: String
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundColor(SBRColors.primaryBlue)
+                .frame(width: 36, height: 36)
+                .background(SBRColors.primaryBlue.opacity(0.08))
+                .cornerRadius(8)
+            
+            Text(title)
+                .fontWeight(.medium)
+                .foregroundColor(SBRColors.textPrimary)
+            Spacer()
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal)
     }
 }
 

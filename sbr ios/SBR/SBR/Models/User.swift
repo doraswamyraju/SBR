@@ -23,11 +23,12 @@ struct User: Codable, Identifiable {
     let completedJobs: Int?
     let currentLat: Double?
     let currentLng: Double?
+    let isAvailable: Bool?
     
     enum CodingKeys: String, CodingKey {
         case id
         case _id
-        case name, email, role, phone, address, photoUrl, isRecurring, nextServiceDate, specialization, location, status, rating, completedJobs, currentLat, currentLng
+        case name, email, role, phone, address, photoUrl, isRecurring, nextServiceDate, specialization, location, status, rating, completedJobs, currentLat, currentLng, isAvailable
     }
     
     init(from decoder: Decoder) throws {
@@ -60,6 +61,7 @@ struct User: Codable, Identifiable {
         self.completedJobs = try container.decodeIfPresent(Int.self, forKey: .completedJobs)
         self.currentLat = try container.decodeIfPresent(Double.self, forKey: .currentLat)
         self.currentLng = try container.decodeIfPresent(Double.self, forKey: .currentLng)
+        self.isAvailable = try container.decodeIfPresent(Bool.self, forKey: .isAvailable)
     }
     
     func encode(to encoder: Encoder) throws {
@@ -80,5 +82,6 @@ struct User: Codable, Identifiable {
         try container.encodeIfPresent(completedJobs, forKey: .completedJobs)
         try container.encodeIfPresent(currentLat, forKey: .currentLat)
         try container.encodeIfPresent(currentLng, forKey: .currentLng)
+        try container.encodeIfPresent(isAvailable, forKey: .isAvailable)
     }
 }

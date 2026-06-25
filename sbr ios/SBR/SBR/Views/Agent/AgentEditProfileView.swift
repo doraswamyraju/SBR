@@ -50,7 +50,7 @@ struct AgentEditProfileView: View {
                 .disabled(isLoading || phone.isEmpty || specialization.isEmpty || location.isEmpty)
             }
         }
-        .background(Color(red: 0.05, green: 0.05, blue: 0.08).ignoresSafeArea())
+        .background(Color(red: 0.97, green: 0.98, blue: 1.0).ignoresSafeArea())
         .navigationTitle("Edit Profile")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
