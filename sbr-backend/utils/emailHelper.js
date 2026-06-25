@@ -5,10 +5,12 @@ const nodemailer = require('nodemailer');
  * @param {string} toEmail - Customer email address
  * @param {string} customerName - Customer name
  * @param {string} serviceType - Service request type
+ * @param {string} [reviewUrl] - Custom Google Review URL
  */
-const sendReviewEmail = async (toEmail, customerName, serviceType) => {
+const sendReviewEmail = async (toEmail, customerName, serviceType, reviewUrl) => {
   try {
     let transporter;
+    const finalReviewUrl = reviewUrl || 'https://g.page/r/CbdJS-IzWTe2EBE/review';
 
     // Check if SMTP details are defined in .env
     if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
@@ -25,7 +27,7 @@ const sendReviewEmail = async (toEmail, customerName, serviceType) => {
       console.log('Notice: SMTP credentials not set in .env. Logging email request details in console fallback mode.');
       console.log(`[Email Fallback] To: ${toEmail}`);
       console.log(`[Email Fallback] Subject: Please leave a review for Sri Balaji Renewables`);
-      console.log(`[Email Fallback] Body: Hello ${customerName}, please leave a review at https://g.page/r/CbdJS-IzWTe2EBE/review`);
+      console.log(`[Email Fallback] Body: Hello ${customerName}, please leave a review at ${finalReviewUrl}`);
       return;
     }
 
@@ -39,7 +41,7 @@ Thank you for choosing Sri Balaji Renewables!
 Your service request for ${serviceType} has been completed.
 
 We would appreciate it if you could take a moment to leave us a review on Google Maps (GMB) using this link:
-https://g.page/r/CbdJS-IzWTe2EBE/review
+${finalReviewUrl}
 
 Best regards,
 Sri Balaji Renewables Team`,
@@ -47,7 +49,7 @@ Sri Balaji Renewables Team`,
 <p>Thank you for choosing Sri Balaji Renewables!</p>
 <p>Your service request for <strong>${serviceType}</strong> has been completed.</p>
 <p>We would appreciate it if you could take a moment to leave us a review on Google Maps (GMB) by clicking the link below:</p>
-<p><a href="https://g.page/r/CbdJS-IzWTe2EBE/review" style="display:inline-block;padding:10px 20px;background-color:#4CAF50;color:white;text-decoration:none;border-radius:5px;font-weight:bold;">Leave a Review</a></p>
+<p><a href="${finalReviewUrl}" style="display:inline-block;padding:10px 20px;background-color:#4CAF50;color:white;text-decoration:none;border-radius:5px;font-weight:bold;">Leave a Review</a></p>
 <p>Best regards,<br>Sri Balaji Renewables Team</p>`
     };
 
@@ -59,3 +61,4 @@ Sri Balaji Renewables Team`,
 };
 
 module.exports = { sendReviewEmail };
+

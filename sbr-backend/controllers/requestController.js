@@ -219,10 +219,22 @@ exports.updateRequestStatus = async (req, res) => {
     if (status === 'Completed' && (requestReview === true || requestReview === 'true')) {
       const customer = await User.findById(request.customerId);
       if (customer) {
+        // Query custom review URL from settings
+        let reviewUrl = 'https://g.page/r/CbdJS-IzWTe2EBE/review';
+        try {
+          const Settings = require('../models/Settings');
+          const setting = await Settings.findOne({ key: 'reviewUrl' });
+          if (setting && setting.value) {
+            reviewUrl = setting.value;
+          }
+        } catch (err) {
+          console.error('Error fetching review URL from settings:', err.message);
+        }
+
         // Send email
         if (customer.email) {
           const { sendReviewEmail } = require('../utils/emailHelper');
-          await sendReviewEmail(customer.email, customer.name, request.serviceType);
+          await sendReviewEmail(customer.email, customer.name, request.serviceType, reviewUrl);
         }
         // Send review request notification
         sendNotificationToUser(request.customerId, {
@@ -230,7 +242,7 @@ exports.updateRequestStatus = async (req, res) => {
           body: 'Thank you for choosing Sri Balaji Renewables! Tap to review us on Google.',
           data: {
             type: 'review_request',
-            url: 'https://g.page/r/CbdJS-IzWTe2EBE/review'
+            url: reviewUrl
           }
         });
       }
