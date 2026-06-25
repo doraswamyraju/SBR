@@ -3,7 +3,7 @@ import Foundation
 struct LocationPoint: Codable {
     let latitude: Double
     let longitude: Double
-    let timestamp: Date?
+    let timestamp: String?
 }
 
 enum RequestStatus: String, Codable {
