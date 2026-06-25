@@ -9,10 +9,8 @@ class RequestViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String? = nil
     
-    // Core Location Simulation timer
-    private var trackingTimer: Timer?
-    private var simulatedLat: Double = 12.9716
-    private var simulatedLng: Double = 77.5946
+    // Real Location Manager
+    @Published var locationManager = LocationManager()
     
     struct StandardResponse<T: Decodable>: Decodable {
         let success: Bool
@@ -156,34 +154,13 @@ class RequestViewModel: ObservableObject {
         }
     }
     
-    // Mock Location Broadcaster Simulation
-    func startLocationSimulation(activeRequestId: String) {
-        stopLocationSimulation()
-        
-        self.simulatedLat = 12.9716 // Bangalore center seed
-        self.simulatedLng = 77.5946
-        
-        trackingTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            Task { @MainActor in
-                self.simulatedLat += (Double.random(in: -0.5...0.5)) * 0.002
-                self.simulatedLng += (Double.random(in: -0.5...0.5)) * 0.002
-                
-                // 1. Update overall agent coordinates
-                let agentBody = ["latitude": self.simulatedLat, "longitude": self.simulatedLng]
-                struct LocationResponse: Decodable { let success: Bool }
-                _ = try? await APIClient.shared.put(endpoint: "api/users/agent/location", body: agentBody, responseType: LocationResponse.self)
-                
-                // 2. Append request coordinates trace path
-                let requestBody = ["latitude": self.simulatedLat, "longitude": self.simulatedLng]
-                _ = try? await APIClient.shared.post(endpoint: "api/requests/\(activeRequestId)/location", body: requestBody, responseType: LocationResponse.self)
-            }
-        }
+    // Real Location Broadcaster
+    func startLocationTracking(activeRequestId: String) {
+        locationManager.startTracking(activeRequestId: activeRequestId)
     }
     
-    func stopLocationSimulation() {
-        trackingTimer?.invalidate()
-        trackingTimer = nil
+    func stopLocationTracking() {
+        locationManager.stopTracking()
     }
     
     // Delete service request (Admin)

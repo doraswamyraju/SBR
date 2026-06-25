@@ -160,6 +160,9 @@ class UserRepositoryImpl @Inject constructor(
             if (!response.isSuccessful) {
                 throw Exception("Failed to update customer: ${response.errorBody()?.string()}")
             }
+            if (isSelf) {
+                credentialManager.saveUserPhone(customer.phone ?: "")
+            }
         } catch (e: Exception) {
             Log.e(tag, "Error updating customer ${customer.id}", e)
             throw e
@@ -177,6 +180,9 @@ class UserRepositoryImpl @Inject constructor(
             }
             if (!response.isSuccessful) {
                 throw Exception("Failed to update agent details: ${response.errorBody()?.string()}")
+            }
+            if (isSelf) {
+                credentialManager.saveUserPhone(agent.phone ?: "")
             }
         } catch (e: Exception) {
             Log.e(tag, "Error updating agent details ${agent.id}", e)
@@ -239,7 +245,8 @@ class UserRepositoryImpl @Inject constructor(
                         userId = user.id,
                         name = user.name,
                         role = authBody.user.role,
-                        email = user.email ?: email
+                        email = user.email ?: email,
+                        phone = authBody.user.phone ?: ""
                     )
                     return user
                 }
@@ -269,7 +276,8 @@ class UserRepositoryImpl @Inject constructor(
                         userId = user.id,
                         name = user.name,
                         role = authBody.user.role,
-                        email = user.email ?: email
+                        email = user.email ?: email,
+                        phone = authBody.user.phone ?: ""
                     )
                     return user
                 }

@@ -46,16 +46,17 @@ class AuthViewModel @Inject constructor(
         credentialManager.savedToken,
         credentialManager.savedUserId,
         credentialManager.savedUserName,
-        credentialManager.savedUserRole
-    ) { token, userId, name, roleStr ->
+        credentialManager.savedUserRole,
+        credentialManager.savedUserPhone
+    ) { token, userId, name, roleStr, phone ->
         if (token.isNullOrBlank() || userId.isBlank()) {
             AuthState.Unauthenticated
         } else {
             val roleEnum = try { UserRole.valueOf(roleStr.uppercase()) } catch (e: Exception) { UserRole.CUSTOMER }
             val tempUser: User = when (roleEnum) {
                 UserRole.ADMIN -> Admin(id = userId, name = name)
-                UserRole.AGENT -> Agent(id = userId, name = name)
-                UserRole.CUSTOMER -> Customer(id = userId, name = name)
+                UserRole.AGENT -> Agent(id = userId, name = name, phone = phone)
+                UserRole.CUSTOMER -> Customer(id = userId, name = name, phone = phone)
             }
             AuthState.Authenticated(tempUser)
         }

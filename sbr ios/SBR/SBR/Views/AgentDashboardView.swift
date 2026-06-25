@@ -26,7 +26,7 @@ struct AgentDashboardView: View {
             sectionIcon: { sectionIcon($0) },
             isDrawerOpen: $isDrawerOpen,
             onLogout: {
-                Task { await requestVM.stopLocationSimulation(); await authVM.logout() }
+                Task { requestVM.stopLocationTracking(); await authVM.logout() }
             },
             hasFab: false
         ) {
@@ -423,28 +423,55 @@ struct AgentActiveServiceView: View {
                                 }
                             }
                             
-                            // Mock live GPS tracking control panel inside Active Service card
+                            // Live GPS tracking control panel inside Active Service card
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("Mock Live GPS Broadcast")
-                                    .fontWeight(.bold)
-                                    .foregroundColor(SBRColors.textPrimary)
-                                    .font(.subheadline)
+                                HStack {
+                                    Text("Live GPS Tracking")
+                                        .fontWeight(.bold)
+                                        .foregroundColor(SBRColors.textPrimary)
+                                        .font(.subheadline)
+                                    
+                                    if requestVM.locationManager.isTracking {
+                                        Circle()
+                                            .fill(Color.green)
+                                            .frame(width: 8, height: 8)
+                                            .opacity(0.8)
+                                    }
+                                }
+                                
+                                if requestVM.locationManager.authorizationStatus == .denied || requestVM.locationManager.authorizationStatus == .restricted {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "exclamationmark.triangle.fill")
+                                            .foregroundColor(.red)
+                                            .font(.caption)
+                                        Text("Location permission is denied. Enable it in iOS Settings to allow tracking.")
+                                            .font(.caption)
+                                            .foregroundColor(.red)
+                                            .lineLimit(nil)
+                                    }
+                                    .padding(.top, 2)
+                                }
                                 
                                 Button(action: {
-                                    requestVM.startLocationSimulation(activeRequestId: job.id)
+                                    if requestVM.locationManager.isTracking {
+                                        requestVM.stopLocationTracking()
+                                    } else {
+                                        requestVM.locationManager.requestPermission()
+                                        requestVM.startLocationTracking(activeRequestId: job.id)
+                                    }
                                 }) {
-                                    Text("Start Mock GPS Tracking")
+                                    Text(requestVM.locationManager.isTracking ? "Stop GPS Tracking" : "Start Live GPS Tracking")
                                         .font(.footnote)
                                         .fontWeight(.bold)
                                         .foregroundColor(.white)
                                         .padding(.vertical, 8)
                                         .padding(.horizontal, 14)
-                                        .background(Color.green)
+                                        .background(requestVM.locationManager.isTracking ? Color.red : Color.green)
                                         .cornerRadius(6)
                                 }
                             }
                             .padding()
-                            .background(Color.green.opacity(0.08))
+                            .background((requestVM.locationManager.isTracking ? Color.green : Color.gray).opacity(0.08))
                             .cornerRadius(10)
                             
                             if job.paymentStatus == "Paid" {
@@ -628,7 +655,7 @@ struct AgentActiveServiceView: View {
             if success {
                 showingPaymentDialog = false
                 collectAmount = ""
-                requestVM.stopLocationSimulation()
+                requestVM.stopLocationTracking()
                 await requestVM.fetchRequests()
             }
         }

@@ -26,6 +26,7 @@ class CredentialManager @Inject constructor(@ApplicationContext context: Context
         private val KEY_USER_ID = stringPreferencesKey("user_id")
         private val KEY_USER_ROLE = stringPreferencesKey("user_role")
         private val KEY_USER_NAME = stringPreferencesKey("user_name")
+        private val KEY_USER_PHONE = stringPreferencesKey("user_phone")
     }
 
     // Flows to observe saved credentials
@@ -49,6 +50,10 @@ class CredentialManager @Inject constructor(@ApplicationContext context: Context
         preferences[KEY_USER_NAME] ?: ""
     }
 
+    val savedUserPhone = credentialDataStore.data.map { preferences ->
+        preferences[KEY_USER_PHONE] ?: ""
+    }
+
     // Save functions
     suspend fun saveEmail(email: String) {
         credentialDataStore.edit { preferences ->
@@ -56,13 +61,20 @@ class CredentialManager @Inject constructor(@ApplicationContext context: Context
         }
     }
 
-    suspend fun saveAuthSession(token: String, userId: String, name: String, role: String, email: String) {
+    suspend fun saveAuthSession(token: String, userId: String, name: String, role: String, email: String, phone: String = "") {
         credentialDataStore.edit { preferences ->
             preferences[KEY_TOKEN] = token
             preferences[KEY_USER_ID] = userId
             preferences[KEY_USER_NAME] = name
             preferences[KEY_USER_ROLE] = role
             preferences[KEY_EMAIL] = email
+            preferences[KEY_USER_PHONE] = phone
+        }
+    }
+
+    suspend fun saveUserPhone(phone: String) {
+        credentialDataStore.edit { preferences ->
+            preferences[KEY_USER_PHONE] = phone
         }
     }
 
@@ -72,6 +84,7 @@ class CredentialManager @Inject constructor(@ApplicationContext context: Context
             preferences.remove(KEY_USER_ID)
             preferences.remove(KEY_USER_NAME)
             preferences.remove(KEY_USER_ROLE)
+            preferences.remove(KEY_USER_PHONE)
         }
     }
 }
