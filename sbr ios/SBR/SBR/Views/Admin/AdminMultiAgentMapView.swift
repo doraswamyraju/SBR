@@ -182,6 +182,7 @@ struct MKMultiAgentMapViewRepresentable: UIViewRepresentable {
     
     class Coordinator: NSObject, MKMapViewDelegate {
         var parent: MKMultiAgentMapViewRepresentable
+        var lastSetCenter: CLLocationCoordinate2D? = nil
         
         init(_ parent: MKMultiAgentMapViewRepresentable) {
             self.parent = parent
@@ -226,6 +227,12 @@ struct MKMultiAgentMapViewRepresentable: UIViewRepresentable {
         return mapView
     }
     
+    private func isValidCoordinate(_ coord: CLLocationCoordinate2D) -> Bool {
+        return coord.latitude >= -90.0 && coord.latitude <= 90.0 &&
+               coord.longitude >= -180.0 && coord.longitude <= 180.0 &&
+               coord.latitude != 0.0 && coord.longitude != 0.0
+    }
+    
     func updateUIView(_ uiView: MKMapView, context: Context) {
         uiView.removeOverlays(uiView.overlays)
         uiView.removeAnnotations(uiView.annotations)
@@ -236,8 +243,11 @@ struct MKMultiAgentMapViewRepresentable: UIViewRepresentable {
             // Draw tracking history line
             if pathPoints.count >= 2 {
                 let coords = pathPoints.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
-                let polyline = MKPolyline(coordinates: coords, count: coords.count)
-                uiView.addOverlay(polyline)
+                    .filter { isValidCoordinate($0) }
+                if coords.count >= 2 {
+                    let polyline = MKPolyline(coordinates: coords, count: coords.count)
+                    uiView.addOverlay(polyline)
+                }
             }
             
             // Setup pin annotation
@@ -250,7 +260,7 @@ struct MKMultiAgentMapViewRepresentable: UIViewRepresentable {
                 lastCoord = nil
             }
             
-            if let coord = lastCoord {
+            if let coord = lastCoord, isValidCoordinate(coord) {
                 let annotation = MKPointAnnotation()
                 annotation.title = agentInfo.agent.name
                 annotation.subtitle = "On duty for: \(agentInfo.request.serviceType)"
@@ -259,7 +269,20 @@ struct MKMultiAgentMapViewRepresentable: UIViewRepresentable {
             }
         }
         
-        let region = MKCoordinateRegion(center: center, span: span)
-        uiView.setRegion(region, animated: true)
+        if isValidCoordinate(center) {
+            let shouldUpdateRegion: Bool
+            if let lastCenter = context.coordinator.lastSetCenter {
+                shouldUpdateRegion = abs(lastCenter.latitude - center.latitude) > 0.0001 ||
+                                     abs(lastCenter.longitude - center.longitude) > 0.0001
+            } else {
+                shouldUpdateRegion = true
+            }
+            
+            if shouldUpdateRegion {
+                context.coordinator.lastSetCenter = center
+                let region = MKCoordinateRegion(center: center, span: span)
+                uiView.setRegion(region, animated: true)
+            }
+        }
     }
 }

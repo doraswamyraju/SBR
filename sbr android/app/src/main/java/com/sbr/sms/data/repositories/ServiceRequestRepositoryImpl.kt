@@ -80,7 +80,14 @@ class ServiceRequestRepositoryImpl @Inject constructor(
     }
 
     override fun getRequestStreamById(requestId: String): Flow<ServiceRequest?> = flow {
-        emit(getRequestById(requestId))
+        while (true) {
+            try {
+                emit(getRequestById(requestId))
+            } catch (e: Exception) {
+                Log.e(tag, "Error fetching request stream", e)
+            }
+            kotlinx.coroutines.delay(10000)
+        }
     }
 
     override suspend fun addRequest(request: ServiceRequest): String {

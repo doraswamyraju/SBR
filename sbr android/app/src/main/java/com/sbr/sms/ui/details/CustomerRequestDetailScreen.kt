@@ -116,7 +116,7 @@ fun CustomerRequestDetailsContent(
         item {
             Button(
                 onClick = onTrackAgent,
-                enabled = request.assignedAgentId != null && request.status == "In Progress",
+                enabled = request.assignedAgentId != null && (request.status == "Assigned" || request.status == "Accepted" || request.status == "In Progress"),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(Icons.Default.TrackChanges, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))

@@ -48,7 +48,7 @@ struct RequestDetailView: View {
                     .padding(.horizontal)
                     
                     // Track Agent Live Button (Customer tracking)
-                    if request.assignedAgentId != nil && request.status == .inProgress {
+                    if request.assignedAgentId != nil && (request.status == .assigned || request.status == .accepted || request.status == .inProgress) {
                         Button(action: { showingLiveTracking = true }) {
                             Label("Track Agent Live", systemImage: "location.circle.fill")
                                 .font(.subheadline)

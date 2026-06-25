@@ -293,7 +293,7 @@ private fun ActionsCard(
             Text("Actions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Button(
                 onClick = onTrackAgent,
-                enabled = request.assignedAgentId != null && request.status == "In Progress",
+                enabled = request.assignedAgentId != null && (request.status == "Assigned" || request.status == "Accepted" || request.status == "In Progress"),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Track Agent Live")
