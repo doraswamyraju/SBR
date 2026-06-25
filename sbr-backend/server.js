@@ -28,6 +28,7 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/requests', require('./routes/requestRoutes'));
 app.use('/api/upload', require('./routes/uploadRoutes'));
+app.use('/api/settings', require('./routes/settingsRoutes'));
 
 // Basic health check route
 app.get('/', (req, res) => {

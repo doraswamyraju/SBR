@@ -75,6 +75,10 @@ const ServiceRequestSchema = new mongoose.Schema(
     paymentTimestamp: {
       type: Date
     },
+    requestReview: {
+      type: Boolean,
+      default: false
+    },
     locationPath: {
       type: [LocationPointSchema],
       default: []

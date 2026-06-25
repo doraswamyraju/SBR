@@ -200,6 +200,9 @@ exports.updateRequestStatus = async (req, res) => {
       updates.acceptedAt = Date.now();
     } else if (status === 'Completed') {
       updates.completedAt = Date.now();
+      if (requestReview === true || requestReview === 'true') {
+        updates.requestReview = true;
+      }
     }
 
     request = await ServiceRequest.findByIdAndUpdate(req.params.id, updates, { new: true })
