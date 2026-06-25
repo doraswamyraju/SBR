@@ -1,6 +1,7 @@
 package com.sbr.sms.ui.admin
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
@@ -10,6 +11,7 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -65,7 +67,7 @@ fun AdminPanelScreen(
                                 selectedSection = section
                                 scope.launch { drawerState.close() }
                             },
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                         )
                     }
                     Spacer(Modifier.weight(1f))
@@ -78,7 +80,8 @@ fun AdminPanelScreen(
                             navController.navigate(AppRoutes.AuthFlow.route) {
                                 popUpTo(AppRoutes.AdminPanel.route) { inclusive = true }
                             }
-                        }
+                        },
+                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                     )
                 }
             }
@@ -89,11 +92,12 @@ fun AdminPanelScreen(
                 TopAppBar(
                     title = { Text(selectedSection.title) },
                     navigationIcon = {
-                        if (selectedSection != AdminSection.Dashboard) {
-                            IconButton(onClick = { selectedSection = AdminSection.Dashboard }) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (selectedSection != AdminSection.Dashboard) {
+                                IconButton(onClick = { selectedSection = AdminSection.Dashboard }) {
+                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                                }
                             }
-                        } else {
                             IconButton(onClick = { scope.launch { drawerState.open() } }) {
                                 Icon(Icons.Default.Menu, contentDescription = "Menu")
                             }
