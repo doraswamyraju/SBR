@@ -60,9 +60,9 @@ struct AgentDashboardView: View {
         }
         .onAppear {
             Task {
+                requestVM.locationManager.requestPermission()
                 await requestVM.fetchRequests()
                 if let job = activeJob {
-                    requestVM.locationManager.requestPermission()
                     requestVM.startLocationTracking(activeRequestId: job.id)
                 }
             }
@@ -380,17 +380,16 @@ struct AgentNewRequestsView: View {
 }
 
 // Active service details and action handlers
+// Active service details and action handlers
 struct AgentActiveServiceView: View {
     @ObservedObject var requestVM: RequestViewModel
     
     @State private var showingPaymentDialog = false
-    @State private var showingReviewPromptAlert = false
-    @State private var requestReviewForClose = false
     @State private var collectAmount = ""
     @State private var paymentMethod = "Cash"
     
     private var activeJob: ServiceRequest? {
-        requestVM.requests.first(where: { $0.status == .accepted || $0.status == .inProgress || $0.status == .completed })
+        requestVM.requests.first(where: { $0.status == .accepted || $0.status == .inProgress })
     }
     
     var body: some View {
@@ -447,57 +446,6 @@ struct AgentActiveServiceView: View {
                                 }
                             }
                             
-                            // Live GPS tracking control panel inside Active Service card
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    Text("Live GPS Tracking")
-                                        .fontWeight(.bold)
-                                        .foregroundColor(SBRColors.textPrimary)
-                                        .font(.subheadline)
-                                    
-                                    if requestVM.locationManager.isTracking {
-                                        Circle()
-                                            .fill(Color.green)
-                                            .frame(width: 8, height: 8)
-                                            .opacity(0.8)
-                                    }
-                                }
-                                
-                                if requestVM.locationManager.authorizationStatus == .denied || requestVM.locationManager.authorizationStatus == .restricted {
-                                    HStack(spacing: 6) {
-                                        Image(systemName: "exclamationmark.triangle.fill")
-                                            .foregroundColor(.red)
-                                            .font(.caption)
-                                        Text("Location permission is denied. Enable it in iOS Settings to allow tracking.")
-                                            .font(.caption)
-                                            .foregroundColor(.red)
-                                            .lineLimit(nil)
-                                    }
-                                    .padding(.top, 2)
-                                }
-                                
-                                Button(action: {
-                                    if requestVM.locationManager.isTracking {
-                                        requestVM.stopLocationTracking()
-                                    } else {
-                                        requestVM.locationManager.requestPermission()
-                                        requestVM.startLocationTracking(activeRequestId: job.id)
-                                    }
-                                }) {
-                                    Text(requestVM.locationManager.isTracking ? "Stop GPS Tracking" : "Start Live GPS Tracking")
-                                        .font(.footnote)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.white)
-                                        .padding(.vertical, 8)
-                                        .padding(.horizontal, 14)
-                                        .background(requestVM.locationManager.isTracking ? Color.red : Color.green)
-                                        .cornerRadius(6)
-                                }
-                            }
-                            .padding()
-                            .background((requestVM.locationManager.isTracking ? Color.green : Color.gray).opacity(0.08))
-                            .cornerRadius(10)
-                            
                             if job.paymentStatus == "Paid" {
                                 HStack {
                                     Image(systemName: "checkmark.circle.fill")
@@ -534,11 +482,11 @@ struct AgentActiveServiceView: View {
                             
                             Spacer().frame(height: 8)
                             
-                            // Status specific Action buttons matching Android flow
+                            // Status specific Action buttons matching restructured flow
                             switch job.status {
                             case .accepted:
-                                Button(action: { markJobInProgress(job) }) {
-                                    Text("Start Work / Mark as Arrived")
+                                Button(action: { uploadBeforeAndStartWork(job) }) {
+                                    Label("Upload Before Image & Start Work", systemImage: "camera.fill")
                                         .font(.subheadline)
                                         .fontWeight(.bold)
                                         .foregroundColor(.white)
@@ -548,45 +496,76 @@ struct AgentActiveServiceView: View {
                                         .cornerRadius(8)
                                 }
                             case .inProgress:
-                                HStack(spacing: 12) {
-                                    Button(action: { uploadBeforeImage(job) }) {
-                                        Text("Before Image")
-                                            .font(.caption)
+                                if job.beforeImageUrl == nil {
+                                    Button(action: { uploadBeforeAndStartWork(job) }) {
+                                        Label("Upload Before Image", systemImage: "camera.fill")
+                                            .font(.subheadline)
                                             .fontWeight(.bold)
                                             .foregroundColor(.white)
                                             .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 11)
-                                            .background(job.beforeImageUrl == nil ? Color.orange : Color.gray)
+                                            .padding(.vertical, 12)
+                                            .background(Color.orange)
                                             .cornerRadius(8)
-                                            .disabled(job.beforeImageUrl != nil)
                                     }
-                                    
+                                } else if job.afterImageUrl == nil {
+                                    Button(action: { uploadAfterImageOnly(job) }) {
+                                        Label("Upload After Image", systemImage: "camera.fill")
+                                            .font(.subheadline)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.white)
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 12)
+                                            .background(Color.green)
+                                            .cornerRadius(8)
+                                    }
+                                } else if job.paymentStatus != "Paid" {
                                     Button(action: {
-                                        showingReviewPromptAlert = true
+                                        showingPaymentDialog = true
                                     }) {
-                                        Text("After Image & Complete")
-                                            .font(.caption)
+                                        Label("Update Payment Details", systemImage: "creditcard.fill")
+                                            .font(.subheadline)
                                             .fontWeight(.bold)
                                             .foregroundColor(.white)
                                             .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 11)
-                                            .background(job.beforeImageUrl != nil ? Color.green : Color.gray)
+                                            .padding(.vertical, 12)
+                                            .background(Color.orange)
                                             .cornerRadius(8)
-                                            .disabled(job.beforeImageUrl == nil)
                                     }
-                                }
-                            case .completed:
-                                Button(action: {
-                                    showingPaymentDialog = true
-                                }) {
-                                    Text("Update Payment Details")
-                                        .font(.subheadline)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.white)
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 12)
-                                        .background(Color.green)
-                                        .cornerRadius(8)
+                                } else {
+                                    VStack(spacing: 12) {
+                                        Text("Payment Collected: ₹\(Int(job.paymentAmount ?? 0))")
+                                            .font(.footnote)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.green)
+                                            .frame(maxWidth: .infinity, alignment: .center)
+                                            .padding(.vertical, 4)
+                                        
+                                        Button(action: {
+                                            closeService(job, requestReview: true)
+                                        }) {
+                                            Label("Close Service & Request Review", systemImage: "checkmark.seal.fill")
+                                                .font(.subheadline)
+                                                .fontWeight(.bold)
+                                                .foregroundColor(.white)
+                                                .frame(maxWidth: .infinity)
+                                                .padding(.vertical, 12)
+                                                .background(SBRColors.primaryBlue)
+                                                .cornerRadius(8)
+                                        }
+                                        
+                                        Button(action: {
+                                            closeService(job, requestReview: false)
+                                        }) {
+                                            Label("Close Service (No Review)", systemImage: "checkmark.circle.fill")
+                                                .font(.subheadline)
+                                                .fontWeight(.bold)
+                                                .foregroundColor(.white)
+                                                .frame(maxWidth: .infinity)
+                                                .padding(.vertical, 12)
+                                                .background(Color.gray)
+                                                .cornerRadius(8)
+                                        }
+                                    }
                                 }
                             default:
                                 Text("This job is complete.")
@@ -620,65 +599,52 @@ struct AgentActiveServiceView: View {
                 PaymentDialogView(amount: $collectAmount, method: $paymentMethod, onCancel: {
                     showingPaymentDialog = false
                 }, onSubmit: {
-                    handlePaymentSubmit(jobId: job.id)
+                    handlePaymentOnlySubmit(jobId: job.id)
                 })
             }
-        }
-        .alert("Request Customer Review?", isPresented: $showingReviewPromptAlert) {
-            Button("Yes, Request Review") {
-                handleRequestReview(yesRequest: true)
-            }
-            Button("No, Complete Only") {
-                handleRequestReview(yesRequest: false)
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Would you like to send a Google Maps review request to the customer via Email and Push Notification?")
         }
     }
     
     // Extracted helper actions to speed up compiler type-checking
-    private func markJobInProgress(_ job: ServiceRequest) {
-        Task {
-            let success = await requestVM.updateStatus(requestId: job.id, status: .inProgress)
-            if success { await requestVM.fetchRequests() }
-        }
-    }
-    
-    private func uploadBeforeImage(_ job: ServiceRequest) {
+    private func uploadBeforeAndStartWork(_ job: ServiceRequest) {
         Task {
             let mockData = UIImage(systemName: "camera.fill")?.pngData() ?? Data()
-            _ = await requestVM.uploadRequestImage(requestId: job.id, imageData: mockData, type: "before")
-            await requestVM.fetchRequests()
-        }
-    }
-    
-    private func handleRequestReview(yesRequest: Bool) {
-        requestReviewForClose = yesRequest
-        Task {
-            guard let jobId = activeJob?.id else { return }
-            let mockData = UIImage(systemName: "camera.fill")?.pngData() ?? Data()
-            let success = await requestVM.uploadRequestImage(requestId: jobId, imageData: mockData, type: "after")
-            if success {
-                _ = await requestVM.updateStatus(requestId: jobId, status: .completed, requestReview: yesRequest)
-                await requestVM.fetchRequests()
-                showingPaymentDialog = true
+            let uploadSuccess = await requestVM.uploadRequestImage(requestId: job.id, imageData: mockData, type: "before")
+            if uploadSuccess {
+                let statusSuccess = await requestVM.updateStatus(requestId: job.id, status: .inProgress)
+                if statusSuccess {
+                    await requestVM.fetchRequests()
+                }
             }
         }
     }
     
-    private func handlePaymentSubmit(jobId: String) {
+    private func uploadAfterImageOnly(_ job: ServiceRequest) {
+        Task {
+            let mockData = UIImage(systemName: "camera.fill")?.pngData() ?? Data()
+            let uploadSuccess = await requestVM.uploadRequestImage(requestId: job.id, imageData: mockData, type: "after")
+            if uploadSuccess {
+                await requestVM.fetchRequests()
+            }
+        }
+    }
+    
+    private func handlePaymentOnlySubmit(jobId: String) {
         Task {
             let amountVal = Double(collectAmount) ?? 0.0
-            let success = await requestVM.completeJob(
-                requestId: jobId,
-                amount: amountVal,
-                method: paymentMethod,
-                requestReview: requestReviewForClose
-            )
+            let success = await requestVM.recordPayment(requestId: jobId, amount: amountVal, method: paymentMethod)
             if success {
                 showingPaymentDialog = false
                 collectAmount = ""
+                await requestVM.fetchRequests()
+            }
+        }
+    }
+    
+    private func closeService(_ job: ServiceRequest, requestReview: Bool) {
+        Task {
+            let success = await requestVM.updateStatus(requestId: job.id, status: .completed, requestReview: requestReview)
+            if success {
                 requestVM.stopLocationTracking()
                 await requestVM.fetchRequests()
             }

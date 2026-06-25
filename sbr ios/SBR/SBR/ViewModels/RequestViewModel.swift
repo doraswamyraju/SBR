@@ -134,6 +134,27 @@ class RequestViewModel: ObservableObject {
         }
     }
     
+    // Record Payment Details Only (Agent)
+    func recordPayment(requestId: String, amount: Double, method: String) async -> Bool {
+        isLoading = true
+        errorMessage = nil
+        
+        let body: [String: AnyEncodable] = [
+            "amount": AnyEncodable(amount),
+            "method": AnyEncodable(method)
+        ]
+        
+        do {
+            let res = try await APIClient.shared.put(endpoint: "api/requests/\(requestId)/payment", body: body, responseType: StandardResponse<ServiceRequest>.self)
+            isLoading = false
+            return res.success
+        } catch {
+            self.errorMessage = error.localizedDescription
+            isLoading = false
+            return false
+        }
+    }
+    
     // Upload image documentation (Agent)
     func uploadRequestImage(requestId: String, imageData: Data, type: String) async -> Bool {
         isLoading = true
