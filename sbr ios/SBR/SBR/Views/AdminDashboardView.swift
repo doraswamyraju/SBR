@@ -73,7 +73,7 @@ struct AdminDashboardView: View {
             AdminCreateRequestView(customers: requestVM.users.filter({ $0.role == .customer }))
         }
         .sheet(item: $selectedRequestDetail) { req in
-            RequestDetailView(request: req)
+            RequestDetailView(request: req, requestVM: requestVM)
         }
         .sheet(item: $assigningRequest) { req in
             AgentSelectionSheet(request: req, requestVM: requestVM)

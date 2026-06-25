@@ -84,7 +84,7 @@ struct CustomerDashboardView: View {
             )
         }
         .sheet(item: $selectedRequestDetail) { req in
-            RequestDetailView(request: req)
+            RequestDetailView(request: req, requestVM: requestVM)
         }
         .onAppear {
             if let user = authVM.user {

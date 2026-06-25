@@ -72,7 +72,7 @@ struct ServiceRequestsView: View {
         }
         .background(SBRColors.background.ignoresSafeArea())
         .sheet(item: $selectedRequest) { req in
-            RequestDetailView(request: req)
+            RequestDetailView(request: req, requestVM: requestVM)
         }
         .onAppear {
             Task {

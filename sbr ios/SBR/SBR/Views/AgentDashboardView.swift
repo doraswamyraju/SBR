@@ -56,7 +56,7 @@ struct AgentDashboardView: View {
             }
         }
         .sheet(item: $selectedRequestDetail) { job in
-            RequestDetailView(request: job)
+            RequestDetailView(request: job, requestVM: requestVM)
         }
         .onAppear {
             Task {

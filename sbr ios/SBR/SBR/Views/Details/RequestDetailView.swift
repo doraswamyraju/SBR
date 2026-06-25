@@ -3,14 +3,15 @@ import SwiftUI
 struct RequestDetailView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authVM: AuthViewModel
-    @StateObject private var requestVM = RequestViewModel()
+    @ObservedObject var requestVM: RequestViewModel
     
     @State private var currentRequest: ServiceRequest
     @State private var showingLiveTracking = false
     @State private var showingAgentSelection = false
     
-    init(request: ServiceRequest) {
+    init(request: ServiceRequest, requestVM: RequestViewModel) {
         _currentRequest = State(initialValue: request)
+        self.requestVM = requestVM
     }
     
     var statusColor: Color {
@@ -329,6 +330,9 @@ struct RequestDetailView: View {
         .sheet(isPresented: $showingAgentSelection) {
             DetailAgentSelectionSheet(request: currentRequest, requestVM: requestVM) { updatedReq in
                 self.currentRequest = updatedReq
+                Task {
+                    await requestVM.fetchRequests()
+                }
             }
         }
     }
