@@ -38,6 +38,12 @@ const ServiceRequestSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Please add the customer address']
     },
+    latitude: {
+      type: Number
+    },
+    longitude: {
+      type: Number
+    },
     status: {
       type: String,
       enum: ['Pending', 'Assigned', 'Accepted', 'In Progress', 'Completed', 'Cancelled'],

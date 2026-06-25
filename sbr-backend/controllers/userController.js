@@ -43,7 +43,7 @@ exports.updateProfile = async (req, res) => {
 
     // Allowed customer update fields
     if (req.user.role === 'CUSTOMER') {
-      const customerFields = ['address', 'photoUrl', 'isRecurring', 'nextServiceDate'];
+      const customerFields = ['address', 'photoUrl', 'isRecurring', 'nextServiceDate', 'latitude', 'longitude', 'addresses'];
       customerFields.forEach(field => {
         if (req.body[field] !== undefined) fieldsToUpdate[field] = req.body[field];
       });

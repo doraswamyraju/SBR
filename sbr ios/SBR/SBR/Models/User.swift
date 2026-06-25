@@ -6,6 +6,31 @@ enum UserRole: String, Codable {
     case customer = "CUSTOMER"
 }
 
+struct UserAddress: Codable, Identifiable, Hashable {
+    var id: String {
+        return _id ?? "\(title)-\(addressLine)"
+    }
+    var _id: String?
+    var title: String // e.g. "Home", "Work", "Office"
+    var addressLine: String
+    var latitude: Double?
+    var longitude: Double?
+    
+    init(
+        _id: String? = nil,
+        title: String,
+        addressLine: String,
+        latitude: Double? = nil,
+        longitude: Double? = nil
+    ) {
+        self._id = _id
+        self.title = title
+        self.addressLine = addressLine
+        self.latitude = latitude
+        self.longitude = longitude
+    }
+}
+
 struct User: Codable, Identifiable {
     let id: String
     let name: String
@@ -13,6 +38,9 @@ struct User: Codable, Identifiable {
     let role: UserRole
     let phone: String?
     let address: String?
+    let latitude: Double?
+    let longitude: Double?
+    var addresses: [UserAddress]?
     let photoUrl: String?
     let isRecurring: Bool?
     let nextServiceDate: String?
@@ -28,7 +56,7 @@ struct User: Codable, Identifiable {
     enum CodingKeys: String, CodingKey {
         case id
         case _id
-        case name, email, role, phone, address, photoUrl, isRecurring, nextServiceDate, specialization, location, status, rating, completedJobs, currentLat, currentLng, isAvailable
+        case name, email, role, phone, address, latitude, longitude, addresses, photoUrl, isRecurring, nextServiceDate, specialization, location, status, rating, completedJobs, currentLat, currentLng, isAvailable
     }
     
     init(
@@ -38,6 +66,9 @@ struct User: Codable, Identifiable {
         role: UserRole = .customer,
         phone: String? = nil,
         address: String? = nil,
+        latitude: Double? = nil,
+        longitude: Double? = nil,
+        addresses: [UserAddress]? = nil,
         photoUrl: String? = nil,
         isRecurring: Bool? = nil,
         nextServiceDate: String? = nil,
@@ -56,6 +87,9 @@ struct User: Codable, Identifiable {
         self.role = role
         self.phone = phone
         self.address = address
+        self.latitude = latitude
+        self.longitude = longitude
+        self.addresses = addresses
         self.photoUrl = photoUrl
         self.isRecurring = isRecurring
         self.nextServiceDate = nextServiceDate
@@ -89,6 +123,9 @@ struct User: Codable, Identifiable {
         // Optional fields
         self.phone = try container.decodeIfPresent(String.self, forKey: .phone)
         self.address = try container.decodeIfPresent(String.self, forKey: .address)
+        self.latitude = try container.decodeIfPresent(Double.self, forKey: .latitude)
+        self.longitude = try container.decodeIfPresent(Double.self, forKey: .longitude)
+        self.addresses = try container.decodeIfPresent([UserAddress].self, forKey: .addresses)
         self.photoUrl = try container.decodeIfPresent(String.self, forKey: .photoUrl)
         self.isRecurring = try container.decodeIfPresent(Bool.self, forKey: .isRecurring)
         self.nextServiceDate = try container.decodeIfPresent(String.self, forKey: .nextServiceDate)
@@ -110,6 +147,9 @@ struct User: Codable, Identifiable {
         try container.encode(role, forKey: .role)
         try container.encodeIfPresent(phone, forKey: .phone)
         try container.encodeIfPresent(address, forKey: .address)
+        try container.encodeIfPresent(latitude, forKey: .latitude)
+        try container.encodeIfPresent(longitude, forKey: .longitude)
+        try container.encodeIfPresent(addresses, forKey: .addresses)
         try container.encodeIfPresent(photoUrl, forKey: .photoUrl)
         try container.encodeIfPresent(isRecurring, forKey: .isRecurring)
         try container.encodeIfPresent(nextServiceDate, forKey: .nextServiceDate)

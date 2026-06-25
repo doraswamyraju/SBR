@@ -7,6 +7,10 @@ struct CustomerProfileView: View {
     @State private var name = ""
     @State private var phone = ""
     @State private var address = ""
+    @State private var latitude: Double? = nil
+    @State private var longitude: Double? = nil
+    @State private var addresses: [UserAddress] = []
+    
     @State private var selectedItem: PhotosPickerItem? = nil
     @State private var photoData: Data? = nil
     @State private var photoUrl: String? = nil
@@ -14,6 +18,12 @@ struct CustomerProfileView: View {
     @State private var isLoading = false
     @State private var statusMessage = ""
     @State private var statusColor = Color.green
+    
+    // Address Sheets control
+    @State private var showingPrimaryPinPicker = false
+    @State private var showingAddAddressSheet = false
+    @State private var selectedAddressForEdit: UserAddress? = nil
+    @State private var showingEditAddressSheet = false
     
     var body: some View {
         ScrollView {
@@ -118,18 +128,145 @@ struct CustomerProfileView: View {
                             .font(.caption)
                             .fontWeight(.bold)
                             .foregroundColor(SBRColors.textSecondary)
-                        TextField("Enter address", text: $address)
+                        
+                        HStack(spacing: 8) {
+                            TextField("Enter address", text: $address)
+                                .padding()
+                                .background(Color.white)
+                                .cornerRadius(10)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                                )
+                                .foregroundColor(SBRColors.textPrimary)
+                            
+                            Button(action: {
+                                showingPrimaryPinPicker = true
+                            }) {
+                                Image(systemName: latitude != nil ? "mappin.and.ellipse" : "mappin")
+                                    .foregroundColor(latitude != nil ? .green : .gray)
+                                    .frame(width: 50, height: 50)
+                                    .background(Color.white)
+                                    .cornerRadius(10)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                                    )
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                        
+                        if let lat = latitude, let lng = longitude, lat != 0, lng != 0 {
+                            Text(String(format: "Primary Pin: %.5f, %.5f", lat, lng))
+                                .font(.system(.caption2, design: .monospaced))
+                                .foregroundColor(.green)
+                                .padding(.leading, 4)
+                        }
+                    }
+                }
+                .padding(.horizontal)
+                
+                // Saved Addresses Section
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("Saved Addresses")
+                            .font(.title3)
+                            .fontWeight(.bold)
+                            .foregroundColor(SBRColors.textPrimary)
+                        
+                        Spacer()
+                        
+                        Button(action: {
+                            showingAddAddressSheet = true
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "plus.circle.fill")
+                                Text("Add Address")
+                            }
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(SBRColors.primaryBlue)
+                        }
+                    }
+                    .padding(.horizontal)
+                    
+                    if addresses.isEmpty {
+                        Text("No saved addresses yet.")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
                             .padding()
+                            .frame(maxWidth: .infinity, alignment: .center)
                             .background(Color.white)
                             .cornerRadius(10)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                                    .stroke(Color.gray.opacity(0.15), lineWidth: 1)
                             )
-                            .foregroundColor(SBRColors.textPrimary)
+                            .padding(.horizontal)
+                    } else {
+                        VStack(spacing: 12) {
+                            ForEach(addresses) { item in
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        HStack(spacing: 6) {
+                                            Image(systemName: addressIcon(for: item.title))
+                                                .foregroundColor(SBRColors.primaryBlue)
+                                            Text(item.title)
+                                                .font(.subheadline)
+                                                .fontWeight(.bold)
+                                                .foregroundColor(SBRColors.textPrimary)
+                                            
+                                            if let lat = item.latitude, let lng = item.longitude, lat != 0, lng != 0 {
+                                                Image(systemName: "mappin.and.ellipse")
+                                                    .foregroundColor(.green)
+                                                    .font(.caption)
+                                            }
+                                        }
+                                        
+                                        Text(item.addressLine)
+                                            .font(.caption)
+                                            .foregroundColor(SBRColors.textSecondary)
+                                            .lineLimit(2)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Button(action: {
+                                        selectedAddressForEdit = item
+                                        showingEditAddressSheet = true
+                                    }) {
+                                        Image(systemName: "pencil")
+                                            .foregroundColor(.blue)
+                                            .padding(6)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    
+                                    Button(action: {
+                                        if let index = addresses.firstIndex(where: { $0.id == item.id }) {
+                                            addresses.remove(at: index)
+                                            saveProfile()
+                                        }
+                                    }) {
+                                        Image(systemName: "trash")
+                                            .foregroundColor(.red)
+                                            .padding(6)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                }
+                                .padding()
+                                .background(Color.white)
+                                .cornerRadius(12)
+                                .shadow(color: Color.black.opacity(0.02), radius: 3, x: 0, y: 1)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.gray.opacity(0.1), lineWidth: 1)
+                                )
+                                .padding(.horizontal)
+                            }
+                        }
                     }
                 }
-                .padding(.horizontal)
+                .padding(.top, 8)
                 
                 if !statusMessage.isEmpty {
                     Text(statusMessage)
@@ -140,14 +277,14 @@ struct CustomerProfileView: View {
                 }
                 
                 // Save Button
-                Button(action: saveProfile) {
+                Button(action: { saveProfile() }) {
                     HStack {
                         Spacer()
                         if isLoading {
                             ProgressView()
                                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
                         } else {
-                            Text("Save Changes")
+                            Text("Save Profile Changes")
                                 .fontWeight(.bold)
                                 .foregroundColor(.white)
                         }
@@ -173,9 +310,40 @@ struct CustomerProfileView: View {
                 name = user.name
                 phone = user.phone ?? ""
                 address = user.address ?? ""
+                latitude = user.latitude
+                longitude = user.longitude
+                addresses = user.addresses ?? []
                 photoUrl = user.photoUrl
             }
         }
+        .sheet(isPresented: $showingPrimaryPinPicker) {
+            MapPinPickerSheet(
+                latitude: $latitude,
+                longitude: $longitude,
+                addressString: address
+            )
+        }
+        .sheet(isPresented: $showingAddAddressSheet) {
+            AddEditAddressSheet(addressToEdit: nil) { newAddress in
+                addresses.append(newAddress)
+                saveProfile()
+            }
+        }
+        .sheet(item: $selectedAddressForEdit) { item in
+            AddEditAddressSheet(addressToEdit: item) { updatedAddress in
+                if let index = addresses.firstIndex(where: { $0.id == updatedAddress.id }) {
+                    addresses[index] = updatedAddress
+                    saveProfile()
+                }
+            }
+        }
+    }
+    
+    private func addressIcon(for title: String) -> String {
+        let lower = title.lowercased()
+        if lower.contains("home") { return "house.fill" }
+        if lower.contains("work") || lower.contains("office") { return "briefcase.fill" }
+        return "mappin.circle.fill"
     }
     
     private func uploadProfileImage(data: Data) async {
@@ -201,9 +369,16 @@ struct CustomerProfileView: View {
         var body: [String: AnyEncodable] = [
             "name": AnyEncodable(name),
             "phone": AnyEncodable(phone),
-            "address": AnyEncodable(address)
+            "address": AnyEncodable(address),
+            "addresses": AnyEncodable(addresses)
         ]
         
+        if let latitude = latitude {
+            body["latitude"] = AnyEncodable(latitude)
+        }
+        if let longitude = longitude {
+            body["longitude"] = AnyEncodable(longitude)
+        }
         if let photoUrl = photoUrl {
             body["photoUrl"] = AnyEncodable(photoUrl)
         }

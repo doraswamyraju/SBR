@@ -22,6 +22,8 @@ struct ServiceRequest: Codable, Identifiable {
     let serviceType: String
     let description: String?
     let customerAddress: String
+    let latitude: Double?
+    let longitude: Double?
     let status: RequestStatus
     let createdBy: String
     let acceptedAt: String?
@@ -68,7 +70,7 @@ struct ServiceRequest: Codable, Identifiable {
     enum CodingKeys: String, CodingKey {
         case id
         case _id
-        case customerId, assignedAgentId, serviceType, description, customerAddress, status, createdBy, acceptedAt, completedAt, beforeImageUrl, afterImageUrl, paymentAmount, paymentStatus, paymentMethod, paymentTimestamp, locationPath, requestReview, createdAt, updatedAt
+        case customerId, assignedAgentId, serviceType, description, customerAddress, latitude, longitude, status, createdBy, acceptedAt, completedAt, beforeImageUrl, afterImageUrl, paymentAmount, paymentStatus, paymentMethod, paymentTimestamp, locationPath, requestReview, createdAt, updatedAt
     }
     
     private static func decodeDate(from container: KeyedDecodingContainer<CodingKeys>, key: CodingKeys) -> String? {
@@ -135,6 +137,8 @@ struct ServiceRequest: Codable, Identifiable {
         self.serviceType = try container.decodeIfPresent(String.self, forKey: .serviceType) ?? ""
         self.description = try container.decodeIfPresent(String.self, forKey: .description)
         self.customerAddress = try container.decodeIfPresent(String.self, forKey: .customerAddress) ?? ""
+        self.latitude = try container.decodeIfPresent(Double.self, forKey: .latitude)
+        self.longitude = try container.decodeIfPresent(Double.self, forKey: .longitude)
         self.status = try container.decodeIfPresent(RequestStatus.self, forKey: .status) ?? .pending
         self.createdBy = try container.decodeIfPresent(String.self, forKey: .createdBy) ?? "CUSTOMER"
         
@@ -161,6 +165,8 @@ struct ServiceRequest: Codable, Identifiable {
         try container.encode(serviceType, forKey: .serviceType)
         try container.encodeIfPresent(description, forKey: .description)
         try container.encode(customerAddress, forKey: .customerAddress)
+        try container.encodeIfPresent(latitude, forKey: .latitude)
+        try container.encodeIfPresent(longitude, forKey: .longitude)
         try container.encode(status, forKey: .status)
         try container.encode(createdBy, forKey: .createdBy)
         try container.encodeIfPresent(acceptedAt, forKey: .acceptedAt)

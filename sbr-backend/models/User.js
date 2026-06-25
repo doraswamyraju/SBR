@@ -34,6 +34,21 @@ const UserSchema = new mongoose.Schema(
     address: {
       type: String
     },
+    latitude: {
+      type: Number
+    },
+    longitude: {
+      type: Number
+    },
+    addresses: {
+      type: [{
+        title: { type: String, required: true },
+        addressLine: { type: String, required: true },
+        latitude: { type: Number },
+        longitude: { type: Number }
+      }],
+      default: []
+    },
     photoUrl: {
       type: String
     },

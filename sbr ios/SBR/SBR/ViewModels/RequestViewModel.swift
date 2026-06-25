@@ -52,15 +52,21 @@ class RequestViewModel: ObservableObject {
         isLoading = false
     }
     
-    // Book a new service request (Customer)
-    func bookRequest(serviceType: String, description: String, address: String) async -> Bool {
+    func bookRequest(serviceType: String, description: String, address: String, latitude: Double? = nil, longitude: Double? = nil) async -> Bool {
         isLoading = true
         errorMessage = nil
-        let body = [
-            "serviceType": serviceType,
-            "description": description,
-            "customerAddress": address
+        var body: [String: AnyEncodable] = [
+            "serviceType": AnyEncodable(serviceType),
+            "description": AnyEncodable(description),
+            "customerAddress": AnyEncodable(address)
         ]
+        
+        if let latitude = latitude {
+            body["latitude"] = AnyEncodable(latitude)
+        }
+        if let longitude = longitude {
+            body["longitude"] = AnyEncodable(longitude)
+        }
         
         do {
             let res = try await APIClient.shared.post(endpoint: "api/requests", body: body, responseType: StandardResponse<ServiceRequest>.self)

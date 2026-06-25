@@ -74,13 +74,12 @@ struct CustomerDashboardView: View {
         }
         .sheet(isPresented: $showingBookRequestSheet) {
             NewRequestDialogSheet(
+                requestVM: requestVM,
                 serviceType: $serviceType,
                 description: $description,
                 address: $address,
                 bookingStatusMessage: $bookingStatusMessage,
-                bookingStatusColor: $bookingStatusColor,
-                serviceCategories: serviceCategories,
-                requestVM: requestVM
+                bookingStatusColor: $bookingStatusColor
             )
         }
         .sheet(item: $selectedRequestDetail) { req in
@@ -297,92 +296,382 @@ struct QuickActionItem: View {
 
 // Booking Dialog/Sheet replicating NewRequestDialog
 struct NewRequestDialogSheet: View {
+    @EnvironmentObject var authVM: AuthViewModel
+    @ObservedObject var requestVM: RequestViewModel
+    @Environment(\.dismiss) var dismiss
+    
     @Binding var serviceType: String
     @Binding var description: String
     @Binding var address: String
     @Binding var bookingStatusMessage: String
     @Binding var bookingStatusColor: Color
     
-    let serviceCategories: [String]
-    @ObservedObject var requestVM: RequestViewModel
-    @Environment(\.dismiss) var dismiss
+    // Internal state for selection
+    @State private var selectedAddressId: String = ""
+    @State private var customAddressLine: String = ""
+    @State private var customLatitude: Double? = nil
+    @State private var customLongitude: Double? = nil
+    
+    @State private var showingPinPicker = false
+    
+    struct SelectableAddress: Identifiable, Hashable {
+        let id: String
+        let label: String
+        let addressLine: String
+        let latitude: Double?
+        let longitude: Double?
+    }
+    
+    private var selectableAddresses: [SelectableAddress] {
+        var list: [SelectableAddress] = []
+        
+        // Primary Address
+        if let primaryAddr = authVM.user?.address, !primaryAddr.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            list.append(SelectableAddress(
+                id: "primary",
+                label: "Primary Address",
+                addressLine: primaryAddr,
+                latitude: authVM.user?.latitude,
+                longitude: authVM.user?.longitude
+            ))
+        }
+        
+        // Saved Addresses
+        if let savedList = authVM.user?.addresses {
+            for addr in savedList {
+                list.append(SelectableAddress(
+                    id: addr.id,
+                    label: addr.title,
+                    addressLine: addr.addressLine,
+                    latitude: addr.latitude,
+                    longitude: addr.longitude
+                ))
+            }
+        }
+        
+        return list
+    }
     
     var body: some View {
         NavigationView {
-            Form {
-                Section(header: Text("Service Selection")) {
-                    Picker("Category", selection: $serviceType) {
-                        ForEach(serviceCategories, id: \.self) { cat in
-                            Text(cat).tag(cat)
-                        }
-                    }
-                }
-                
-                Section(header: Text("Appointment Details")) {
-                    TextEditor(text: $description)
-                        .frame(height: 100)
-                        .overlay(
-                            Group {
-                                if description.isEmpty {
-                                    Text("Describe the symptoms or maintenance required...")
-                                        .foregroundColor(.gray.opacity(0.7))
-                                        .padding(.top, 8)
-                                        .padding(.leading, 5)
-                                }
-                            },
-                            alignment: .topLeading
-                        )
+            ScrollView {
+                VStack(spacing: 24) {
                     
-                    TextField("Service Address", text: $address)
-                }
-                
-                Section {
-                    Button(action: {
-                        Task {
-                            let success = await requestVM.bookRequest(serviceType: serviceType, description: description, address: address)
-                            if success {
-                                bookingStatusColor = .green
-                                bookingStatusMessage = "Request submitted successfully!"
-                                description = ""
-                                await requestVM.fetchRequests()
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                                    dismiss()
+                    // Service Type Input Field
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Service Required")
+                            .font(.headline)
+                            .foregroundColor(SBRColors.textPrimary)
+                        
+                        TextField("e.g. Solar Heater Leak Repair", text: $serviceType)
+                            .padding()
+                            .background(Color.white)
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.gray.opacity(0.15), lineWidth: 1)
+                            )
+                            .foregroundColor(SBRColors.textPrimary)
+                            .shadow(color: Color.black.opacity(0.01), radius: 3)
+                    }
+                    .padding(.horizontal)
+                    
+                    // Symptoms / Details Editor
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Symptoms & Details")
+                            .font(.headline)
+                            .foregroundColor(SBRColors.textPrimary)
+                        
+                        TextEditor(text: $description)
+                            .frame(height: 100)
+                            .padding(8)
+                            .background(Color.white)
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.gray.opacity(0.15), lineWidth: 1)
+                            )
+                            .foregroundColor(SBRColors.textPrimary)
+                            .overlay(
+                                Group {
+                                    if description.isEmpty {
+                                        Text("Describe what needs maintenance or repair...")
+                                            .foregroundColor(.gray.opacity(0.6))
+                                            .font(.body)
+                                            .padding(.top, 16)
+                                            .padding(.leading, 12)
+                                    }
+                                },
+                                alignment: .topLeading
+                            )
+                    }
+                    .padding(.horizontal)
+                    
+                    // Address Selection Section
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Service Address")
+                            .font(.headline)
+                            .foregroundColor(SBRColors.textPrimary)
+                        
+                        let options = selectableAddresses
+                        if !options.isEmpty {
+                            // Picker for addresses
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Select Location")
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(SBRColors.textSecondary)
+                                
+                                Picker("Select Location", selection: $selectedAddressId) {
+                                    ForEach(options) { opt in
+                                        Text("\(opt.label) (\(opt.addressLine.prefix(20))...)")
+                                            .tag(opt.id)
+                                    }
+                                    Text("Use Custom / New Address...").tag("custom")
                                 }
-                            } else {
-                                bookingStatusColor = .red
-                                bookingStatusMessage = requestVM.errorMessage ?? "Booking failed"
+                                .pickerStyle(MenuPickerStyle())
+                                .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color.white)
+                                .cornerRadius(12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.gray.opacity(0.15), lineWidth: 1)
+                                )
+                            }
+                        } else {
+                            // If nothing is saved, force Custom/New address view directly
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("No saved addresses found. Please enter details below:")
+                                    .font(.caption)
+                                    .foregroundColor(.orange)
+                                    .fontWeight(.semibold)
+                            }
+                            .onAppear {
+                                selectedAddressId = "custom"
                             }
                         }
-                    }) {
+                        
+                        // Show Address input fields depending on selection
+                        if selectedAddressId == "custom" || options.isEmpty {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Enter Custom Address")
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(SBRColors.textSecondary)
+                                
+                                TextField("Street Address, Landmark, City", text: $customAddressLine)
+                                    .padding()
+                                    .background(Color.white)
+                                    .cornerRadius(12)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(Color.gray.opacity(0.15), lineWidth: 1)
+                                    )
+                                    .foregroundColor(SBRColors.textPrimary)
+                                
+                                // Coordinates pin status
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        if let lat = customLatitude, let lng = customLongitude {
+                                            Label("Location Pin Placed", systemImage: "checkmark.circle.fill")
+                                                .foregroundColor(.green)
+                                                .font(.caption)
+                                                .fontWeight(.semibold)
+                                            Text(String(format: "%.5f, %.5f", lat, lng))
+                                                .font(.system(.caption2, design: .monospaced))
+                                                .foregroundColor(.gray)
+                                        } else {
+                                            Label("No Location Pin", systemImage: "info.circle.fill")
+                                                .foregroundColor(.orange)
+                                                .font(.caption)
+                                                .fontWeight(.semibold)
+                                            Text("A precise pin helps representative locate you.")
+                                                .font(.caption2)
+                                                .foregroundColor(.gray)
+                                        }
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Button(action: {
+                                        showingPinPicker = true
+                                    }) {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "mappin.and.ellipse")
+                                            Text(customLatitude != nil ? "Edit Pin" : "Set Pin")
+                                        }
+                                        .font(.caption)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.white)
+                                        .padding(.vertical, 8)
+                                        .padding(.horizontal, 12)
+                                        .background(SBRColors.primaryBlue)
+                                        .cornerRadius(8)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                }
+                                .padding()
+                                .background(Color.white)
+                                .cornerRadius(12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.gray.opacity(0.1), lineWidth: 1)
+                                )
+                            }
+                            .padding(.top, 4)
+                        } else {
+                            // Display the selected address info nicely
+                            if let selectedOpt = options.first(where: { $0.id == selectedAddressId }) {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        Image(systemName: "mappin.circle.fill")
+                                            .foregroundColor(SBRColors.primaryBlue)
+                                        Text(selectedOpt.label)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(SBRColors.textPrimary)
+                                        
+                                        Spacer()
+                                        
+                                        if selectedOpt.latitude != nil {
+                                            Text("Pin Saved")
+                                                .font(.caption2)
+                                                .foregroundColor(.green)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 2)
+                                                .background(Color.green.opacity(0.1))
+                                                .cornerRadius(6)
+                                        }
+                                    }
+                                    
+                                    Text(selectedOpt.addressLine)
+                                        .font(.subheadline)
+                                        .foregroundColor(SBRColors.textSecondary)
+                                        .lineLimit(3)
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color(red: 0.96, green: 0.97, blue: 0.99))
+                                .cornerRadius(12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.gray.opacity(0.15), lineWidth: 1)
+                                )
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                    
+                    if !bookingStatusMessage.isEmpty {
+                        Text(bookingStatusMessage)
+                            .foregroundColor(bookingStatusColor)
+                            .font(.subheadline)
+                            .fontWeight(.bold)
+                            .padding(.horizontal)
+                    }
+                    
+                    // Book Appointment Button
+                    Button(action: submitBooking) {
                         HStack {
                             Spacer()
                             if requestVM.isLoading {
                                 ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
                             } else {
                                 Text("Book Appointment")
                                     .fontWeight(.bold)
+                                    .foregroundColor(.white)
                             }
                             Spacer()
                         }
+                        .padding()
+                        .background(isSubmitDisabled ? SBRColors.primaryBlue.opacity(0.6) : SBRColors.primaryBlue)
+                        .cornerRadius(12)
+                        .shadow(color: SBRColors.primaryBlue.opacity(0.15), radius: 4, x: 0, y: 2)
                     }
-                    .foregroundColor(SBRColors.primaryBlue)
-                    .disabled(requestVM.isLoading || address.isEmpty)
+                    .padding(.horizontal)
+                    .disabled(isSubmitDisabled)
+                    
                 }
-                
-                if !bookingStatusMessage.isEmpty {
-                    Section {
-                        Text(bookingStatusMessage)
-                            .foregroundColor(bookingStatusColor)
-                            .font(.footnote)
-                    }
-                }
+                .padding(.top)
+                .padding(.bottom, 24)
             }
-            .navigationTitle("New Request")
+            .background(SBRColors.background.ignoresSafeArea())
+            .navigationTitle("New Service Request")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") { dismiss() }
                 }
+            }
+            .sheet(isPresented: $showingPinPicker) {
+                MapPinPickerSheet(
+                    latitude: $customLatitude,
+                    longitude: $customLongitude,
+                    addressString: customAddressLine
+                )
+            }
+            .onAppear {
+                // Pre-populate with first available address if exists
+                let options = selectableAddresses
+                if let first = options.first {
+                    selectedAddressId = first.id
+                } else {
+                    selectedAddressId = "custom"
+                }
+            }
+        }
+    }
+    
+    private var isSubmitDisabled: Bool {
+        if requestVM.isLoading || serviceType.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return true
+        }
+        
+        if selectedAddressId == "custom" {
+            return customAddressLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        } else {
+            return selectableAddresses.first(where: { $0.id == selectedAddressId }) == nil
+        }
+    }
+    
+    private func submitBooking() {
+        var finalAddress = ""
+        var finalLatitude: Double? = nil
+        var finalLongitude: Double? = nil
+        
+        if selectedAddressId == "custom" {
+            finalAddress = customAddressLine
+            finalLatitude = customLatitude
+            finalLongitude = customLongitude
+        } else if let matched = selectableAddresses.first(where: { $0.id == selectedAddressId }) {
+            finalAddress = matched.addressLine
+            finalLatitude = matched.latitude
+            finalLongitude = matched.longitude
+        }
+        
+        Task {
+            let success = await requestVM.bookRequest(
+                serviceType: serviceType,
+                description: description,
+                address: finalAddress,
+                latitude: finalLatitude,
+                longitude: finalLongitude
+            )
+            if success {
+                bookingStatusColor = .green
+                bookingStatusMessage = "Service request placed successfully!"
+                description = ""
+                serviceType = ""
+                await requestVM.fetchRequests()
+                
+                // Dismiss sheet on success delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                    dismiss()
+                }
+            } else {
+                bookingStatusColor = .red
+                bookingStatusMessage = requestVM.errorMessage ?? "Failed to book request"
             }
         }
     }

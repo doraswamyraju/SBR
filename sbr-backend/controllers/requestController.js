@@ -7,13 +7,15 @@ const { sendNotificationToUser } = require('../utils/notificationHelper');
 // @access  Private (Customer or Admin)
 exports.createRequest = async (req, res) => {
   try {
-    const { serviceType, description, customerAddress } = req.body;
+    const { serviceType, description, customerAddress, latitude, longitude } = req.body;
 
     const requestData = {
       customerId: req.user.role === 'ADMIN' ? req.body.customerId : req.user.id,
       serviceType,
       description,
       customerAddress,
+      latitude,
+      longitude,
       createdBy: req.user.role === 'ADMIN' ? 'ADMIN' : 'CUSTOMER'
     };
 
