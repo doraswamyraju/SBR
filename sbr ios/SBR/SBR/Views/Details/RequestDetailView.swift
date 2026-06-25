@@ -331,17 +331,11 @@ struct RequestDetailView: View {
                     }
                     
                     if authVM.user?.role == .customer && currentRequest.status == .completed && currentRequest.requestReview == true {
-                        Button(action: {
+                        GeminiGlowOutlineButton(
+                            title: "Leave Sri Balaji Renewables Review",
+                            icon: "star.bubble.fill"
+                        ) {
                             openReviewURL()
-                        }) {
-                            Label("Leave Sri Balaji Renewables Review", systemImage: "star.bubble.fill")
-                                .font(.subheadline)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(Color.green)
-                                .cornerRadius(8)
                         }
                         .padding(.horizontal)
                         .padding(.top, 10)

@@ -336,3 +336,66 @@ struct RequestRow: View {
         return String(dateString.prefix(10))
     }
 }
+
+struct GeminiGlowOutlineButton: View {
+    let title: String
+    let icon: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 0.25, green: 0.45, blue: 0.95),
+                                Color(red: 0.58, green: 0.35, blue: 0.95),
+                                Color(red: 0.88, green: 0.35, blue: 0.65)
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                
+                Text(title)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 0.25, green: 0.45, blue: 0.95),
+                                Color(red: 0.58, green: 0.35, blue: 0.95),
+                                Color(red: 0.88, green: 0.35, blue: 0.65)
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+            }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 20)
+            .frame(maxWidth: .infinity)
+            .background(Color.white)
+            .cornerRadius(10)
+            .shadow(color: Color(red: 0.58, green: 0.35, blue: 0.95).opacity(0.35), radius: 6, x: 0, y: 3)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 0.25, green: 0.45, blue: 0.95),
+                                Color(red: 0.58, green: 0.35, blue: 0.95),
+                                Color(red: 0.88, green: 0.35, blue: 0.65)
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        ),
+                        lineWidth: 2
+                    )
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+

@@ -124,6 +124,8 @@ struct CustomerDashboardContent: View {
     let onNavigateToSection: (CustomerSection) -> Void
     let onSelectRequest: (ServiceRequest) -> Void
     
+    @State private var reviewUrl = ""
+    
     private var activeRequestsCount: Int {
         requestVM.requests.filter({ [.assigned, .accepted, .inProgress].contains($0.status) }).count
     }
@@ -131,6 +133,26 @@ struct CustomerDashboardContent: View {
     private var pendingPaymentsSum: Double {
         // Calculate unpaid completed requests sum
         requestVM.requests.filter({ $0.status == .completed && ($0.paymentStatus == nil || $0.paymentStatus != "Paid") }).reduce(0.0) { $0 + ($1.paymentAmount ?? 0.0) }
+    }
+    
+    private func fetchReviewUrl() {
+        Task {
+            struct SettingsResponse: Decodable {
+                let success: Bool
+                let data: [String: String]
+            }
+            if let res = try? await APIClient.shared.get(endpoint: "api/settings", responseType: SettingsResponse.self),
+               res.success, let url = res.data["reviewUrl"] {
+                self.reviewUrl = url
+            }
+        }
+    }
+    
+    private func openReviewURL() {
+        let targetUrlStr = reviewUrl.isEmpty ? "https://g.page/r/CbdJS-IzWTe2EBE/review" : reviewUrl
+        if let url = URL(string: targetUrlStr) {
+            UIApplication.shared.open(url)
+        }
     }
     
     var body: some View {
@@ -206,10 +228,22 @@ struct CustomerDashboardContent: View {
                         .padding(.horizontal)
                     } else {
                         ForEach(requestVM.requests.prefix(3)) { req in
-                            Button(action: { onSelectRequest(req) }) {
-                                RequestRow(request: req)
+                            VStack(spacing: 8) {
+                                Button(action: { onSelectRequest(req) }) {
+                                    RequestRow(request: req)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                
+                                if req.status == .completed && req.requestReview == true {
+                                    GeminiGlowOutlineButton(
+                                        title: "Leave Sri Balaji Renewables Review",
+                                        icon: "star.bubble.fill"
+                                    ) {
+                                        openReviewURL()
+                                    }
+                                    .padding(.top, 2)
+                                }
                             }
-                            .buttonStyle(PlainButtonStyle())
                             .padding(.horizontal)
                         }
                     }
@@ -218,6 +252,9 @@ struct CustomerDashboardContent: View {
                 Spacer()
             }
             .padding(.top)
+        }
+        .onAppear {
+            fetchReviewUrl()
         }
     }
 }
