@@ -8,6 +8,8 @@
 	<string>Your location is used to track your progress and share real-time updates with the customer, even when the app is in the background.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>Your location is used to track your progress and share real-time updates with the customer, even when the app is in the background.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Camera access is required to capture before and after service images for job documentation.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

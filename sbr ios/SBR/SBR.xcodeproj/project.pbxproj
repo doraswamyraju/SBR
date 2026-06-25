@@ -283,6 +283,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SBR/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access is required to capture before and after service images for job documentation.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Your location is used to track your progress and share real-time updates with the customer, even when the app is in the background.";
 				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Your location is used to track your progress and share real-time updates with the customer, even when the app is in the background.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Your location is used to track your progress and share real-time updates with the customer while working on a request.";
@@ -320,6 +321,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SBR/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access is required to capture before and after service images for job documentation.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Your location is used to track your progress and share real-time updates with the customer, even when the app is in the background.";
 				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Your location is used to track your progress and share real-time updates with the customer, even when the app is in the background.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Your location is used to track your progress and share real-time updates with the customer while working on a request.";
