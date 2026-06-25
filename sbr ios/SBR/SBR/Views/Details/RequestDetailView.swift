@@ -191,7 +191,7 @@ struct RequestDetailView: View {
                             }) {
                                 VStack(spacing: 8) {
                                     Text("Before Photo").font(.caption2).foregroundColor(.gray)
-                                    if let beforeUrl = currentRequest.beforeImageUrl, let url = URL(string: beforeUrl) {
+                                    if let url = currentRequest.resolvedBeforeImageUrl {
                                         AsyncImage(url: url) { image in
                                             image.resizable().scaledToFill()
                                         } placeholder: {
@@ -225,7 +225,7 @@ struct RequestDetailView: View {
                             }) {
                                 VStack(spacing: 8) {
                                     Text("After Photo").font(.caption2).foregroundColor(.gray)
-                                    if let afterUrl = currentRequest.afterImageUrl, let url = URL(string: afterUrl) {
+                                    if let url = currentRequest.resolvedAfterImageUrl {
                                         AsyncImage(url: url) { image in
                                             image.resizable().scaledToFill()
                                         } placeholder: {

@@ -36,6 +36,34 @@ struct ServiceRequest: Codable, Identifiable {
     let requestReview: Bool?
     let createdAt: String
     let updatedAt: String
+
+    var resolvedBeforeImageUrl: URL? {
+        resolveUrl(beforeImageUrl)
+    }
+    
+    var resolvedAfterImageUrl: URL? {
+        resolveUrl(afterImageUrl)
+    }
+    
+    private func resolveUrl(_ urlStr: String?) -> URL? {
+        guard let urlStr = urlStr, !urlStr.isEmpty else { return nil }
+        var correctedStr = urlStr
+        if correctedStr.contains("localhost") || correctedStr.contains("127.0.0.1") {
+            if let regex = try? NSRegularExpression(pattern: "https?://(localhost|127\\.0\\.0\\.1)(:\\d+)?", options: .caseInsensitive) {
+                let range = NSRange(location: 0, length: correctedStr.utf16.count)
+                correctedStr = regex.stringByReplacingMatches(in: correctedStr, options: [], range: range, withTemplate: "https://sbr.sriddha.com")
+            }
+        }
+        if !correctedStr.lowercased().hasPrefix("http://") && !correctedStr.lowercased().hasPrefix("https://") {
+            let base = "https://sbr.sriddha.com"
+            if correctedStr.hasPrefix("/") {
+                correctedStr = base + correctedStr
+            } else {
+                correctedStr = base + "/" + correctedStr
+            }
+        }
+        return URL(string: correctedStr)
+    }
     
     enum CodingKeys: String, CodingKey {
         case id

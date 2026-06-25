@@ -12,6 +12,9 @@ connectDB();
 
 const app = express();
 
+// Enable trust proxy for reverse proxy configuration (Nginx)
+app.set('trust proxy', true);
+
 // Body parser middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

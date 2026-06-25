@@ -13,8 +13,14 @@ router.post('/', protect, upload.single('image'), (req, res) => {
       return res.status(400).json({ success: false, error: 'Please upload a file' });
     }
 
-    // Build public URL
-    const fileUrl = `${req.protocol}://${req.get('host')}/${process.env.UPLOAD_PATH || 'uploads'}/${req.file.filename}`;
+    // Build public URL using BASE_URL env variable, or proxy headers, or request fallbacks
+    let baseUrl = process.env.BASE_URL;
+    if (!baseUrl) {
+      const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+      const host = req.headers['x-forwarded-host'] || req.get('host');
+      baseUrl = `${protocol}://${host}`;
+    }
+    const fileUrl = `${baseUrl}/${process.env.UPLOAD_PATH || 'uploads'}/${req.file.filename}`;
 
     res.status(200).json({
       success: true,
