@@ -21,7 +21,10 @@ exports.createRequest = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Please specify customer ID' });
     }
 
-    const request = await ServiceRequest.create(requestData);
+    let request = await ServiceRequest.create(requestData);
+    request = await ServiceRequest.findById(request._id)
+      .populate('customerId', 'name email role phone address photoUrl isRecurring nextServiceDate')
+      .populate('assignedAgentId', 'name email role phone specialization location status rating completedJobs');
 
     // Notify Admins about new request
     const admins = await User.find({ role: 'ADMIN' });
