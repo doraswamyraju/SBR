@@ -10,7 +10,7 @@ struct AuthView: View {
     @State private var selectedRole: UserRole = .customer
     @State private var showingForgotAlert = false
     
-    private let primaryBlue = Color(red: 13/255, green: 62/255, blue: 124/255)
+    private let primaryBlue = SBRColors.primaryBlue
     
     var body: some View {
         ZStack {
@@ -100,16 +100,38 @@ struct AuthView: View {
                                 .keyboardType(.phonePad)
                             
                             // Role Picker
-                            VStack(alignment: .leading, spacing: 6) {
+                            VStack(alignment: .leading, spacing: 8) {
                                 Text("Register As")
                                     .font(.caption)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(.gray)
-                                Picker("Role", selection: $selectedRole) {
-                                    Text("Customer / Client").tag(UserRole.customer)
-                                    Text("Service Agent").tag(UserRole.agent)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(SBRColors.textPrimary)
+                                
+                                HStack(spacing: 0) {
+                                    Button(action: { selectedRole = .customer }) {
+                                        Text("Customer / Client")
+                                            .font(.footnote)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(selectedRole == .customer ? .white : SBRColors.textPrimary)
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 10)
+                                            .background(selectedRole == .customer ? primaryBlue : Color.gray.opacity(0.1))
+                                    }
+                                    
+                                    Button(action: { selectedRole = .agent }) {
+                                        Text("Service Agent")
+                                            .font(.footnote)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(selectedRole == .agent ? .white : SBRColors.textPrimary)
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 10)
+                                            .background(selectedRole == .agent ? primaryBlue : Color.gray.opacity(0.1))
+                                    }
                                 }
-                                .pickerStyle(SegmentedPickerStyle())
+                                .cornerRadius(8)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                                )
                             }
                             .padding(.top, 4)
                         }
@@ -192,8 +214,14 @@ struct CustomTextField: View {
                 .foregroundColor(.gray)
                 .frame(width: 20)
             
-            TextField(placeholder, text: $text)
-                .foregroundColor(.black)
+            ZStack(alignment: .leading) {
+                if text.isEmpty {
+                    Text(placeholder)
+                        .foregroundColor(Color.gray.opacity(0.7)) // High contrast placeholder
+                }
+                TextField("", text: $text)
+                    .foregroundColor(.black)
+            }
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
@@ -216,8 +244,14 @@ struct CustomSecureField: View {
                 .foregroundColor(.gray)
                 .frame(width: 20)
             
-            SecureField(placeholder, text: $text)
-                .foregroundColor(.black)
+            ZStack(alignment: .leading) {
+                if text.isEmpty {
+                    Text(placeholder)
+                        .foregroundColor(Color.gray.opacity(0.7)) // High contrast placeholder
+                }
+                SecureField("", text: $text)
+                    .foregroundColor(.black)
+            }
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 16)

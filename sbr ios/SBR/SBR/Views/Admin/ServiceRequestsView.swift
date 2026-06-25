@@ -24,9 +24,15 @@ struct ServiceRequestsView: View {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.gray)
                 
-                TextField("Search by service, agent, or status", text: $searchQuery)
-                    .foregroundColor(SBRColors.textPrimary)
-                    .autocapitalization(.none)
+                ZStack(alignment: .leading) {
+                    if searchQuery.isEmpty {
+                        Text("Search by service, agent, or status")
+                            .foregroundColor(Color.gray.opacity(0.7)) // High contrast placeholder
+                    }
+                    TextField("", text: $searchQuery)
+                        .foregroundColor(SBRColors.textPrimary)
+                        .autocapitalization(.none)
+                }
             }
             .padding(.vertical, 12)
             .padding(.horizontal, 16)
@@ -92,18 +98,18 @@ struct RequestRowItem: View {
                 
                 Text("Agent: \(request.assignedAgentId?.name ?? "Unassigned")")
                     .font(.footnote)
-                    .foregroundColor(SBRColors.textSecondary)
+                    .foregroundColor(Color(red: 0.3, green: 0.35, blue: 0.45)) // High contrast text
                 
                 HStack(spacing: 4) {
                     Text(formatDate(request.createdAt))
                         .font(.footnote)
-                        .foregroundColor(SBRColors.textSecondary)
+                        .foregroundColor(Color(red: 0.35, green: 0.4, blue: 0.5)) // High contrast text
                     
                     if request.createdBy == "ADMIN" {
                         Text(" (By Admin)")
                             .font(.footnote)
                             .fontWeight(.bold)
-                            .foregroundColor(Color(red: 52/255, green: 211/255, blue: 153/255)) // SBRGreen `#34D399`
+                            .foregroundColor(Color(red: 16/255, green: 185/255, blue: 129/255)) // SBRGreen `#10B981` (stronger green)
                     }
                 }
             }
@@ -113,40 +119,41 @@ struct RequestRowItem: View {
             Text(request.status.rawValue)
                 .font(.caption2)
                 .fontWeight(.bold)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(statusColor(for: request.status).opacity(0.15))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(statusColor(for: request.status).opacity(0.12))
                 .foregroundColor(statusColor(for: request.status))
-                .cornerRadius(6)
+                .cornerRadius(20) // rounded status chip
             
             HStack(spacing: 8) {
                 Button(action: onViewDetails) {
                     Image(systemName: "arrow.right")
-                        .font(.body)
-                        .foregroundColor(SBRColors.primaryBlue)
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
                         .frame(width: 36, height: 36)
-                        .background(Color.white)
+                        .background(SBRColors.primaryBlue)
                         .clipShape(Circle())
-                        .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+                        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
                 }
                 .buttonStyle(PlainButtonStyle())
                 
                 Button(action: onDelete) {
-                    Image(systemName: "trash")
-                        .font(.body)
-                        .foregroundColor(.red)
+                    Image(systemName: "trash.fill")
+                        .font(.subheadline)
+                        .foregroundColor(.white)
                         .frame(width: 36, height: 36)
-                        .background(Color.white)
+                        .background(Color.red.opacity(0.9))
                         .clipShape(Circle())
-                        .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+                        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
                 }
                 .buttonStyle(PlainButtonStyle())
             }
         }
         .padding(16)
-        .background(Color(red: 0.92, green: 0.93, blue: 0.96)) // surfaceVariant light gray style
+        .background(Color.white) // High contrast white card background
         .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.02), radius: 3, x: 0, y: 1)
+        .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 3)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.gray.opacity(0.12), lineWidth: 1)

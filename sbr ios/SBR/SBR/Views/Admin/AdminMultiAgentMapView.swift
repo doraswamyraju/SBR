@@ -182,7 +182,7 @@ struct MKMultiAgentMapViewRepresentable: UIViewRepresentable {
     
     class Coordinator: NSObject, MKMapViewDelegate {
         var parent: MKMultiAgentMapViewRepresentable
-        var lastSetCenter: CLLocationCoordinate2D? = nil
+        var lastSetRegion: MKCoordinateRegion? = nil
         
         init(_ parent: MKMultiAgentMapViewRepresentable) {
             self.parent = parent
@@ -271,16 +271,18 @@ struct MKMultiAgentMapViewRepresentable: UIViewRepresentable {
         
         if isValidCoordinate(center) {
             let shouldUpdateRegion: Bool
-            if let lastCenter = context.coordinator.lastSetCenter {
-                shouldUpdateRegion = abs(lastCenter.latitude - center.latitude) > 0.0001 ||
-                                     abs(lastCenter.longitude - center.longitude) > 0.0001
+            if let lastRegion = context.coordinator.lastSetRegion {
+                shouldUpdateRegion = abs(lastRegion.center.latitude - center.latitude) > 0.0001 ||
+                                     abs(lastRegion.center.longitude - center.longitude) > 0.0001 ||
+                                     abs(lastRegion.span.latitudeDelta - span.latitudeDelta) > 0.0001 ||
+                                     abs(lastRegion.span.longitudeDelta - span.longitudeDelta) > 0.0001
             } else {
                 shouldUpdateRegion = true
             }
             
             if shouldUpdateRegion {
-                context.coordinator.lastSetCenter = center
                 let region = MKCoordinateRegion(center: center, span: span)
+                context.coordinator.lastSetRegion = region
                 uiView.setRegion(region, animated: true)
             }
         }

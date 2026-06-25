@@ -2,11 +2,19 @@ import SwiftUI
 
 struct RequestDetailView: View {
     @Environment(\.dismiss) var dismiss
-    let request: ServiceRequest
+    @EnvironmentObject var authVM: AuthViewModel
+    @StateObject private var requestVM = RequestViewModel()
+    
+    @State private var currentRequest: ServiceRequest
     @State private var showingLiveTracking = false
+    @State private var showingAgentSelection = false
+    
+    init(request: ServiceRequest) {
+        _currentRequest = State(initialValue: request)
+    }
     
     var statusColor: Color {
-        switch request.status {
+        switch currentRequest.status {
         case .pending: return .orange
         case .assigned: return .blue
         case .accepted: return .indigo
@@ -22,12 +30,12 @@ struct RequestDetailView: View {
                 VStack(spacing: 20) {
                     // Header Card
                     VStack(spacing: 8) {
-                        Text(request.serviceType)
+                        Text(currentRequest.serviceType)
                             .font(.title3)
                             .fontWeight(.bold)
                             .foregroundColor(SBRColors.textPrimary)
                         
-                        Text(request.status.rawValue)
+                        Text(currentRequest.status.rawValue)
                             .font(.caption)
                             .fontWeight(.bold)
                             .padding(.horizontal, 12)
@@ -48,7 +56,7 @@ struct RequestDetailView: View {
                     .padding(.horizontal)
                     
                     // Track Agent Live Button (Customer tracking)
-                    if request.assignedAgentId != nil && (request.status == .assigned || request.status == .accepted || request.status == .inProgress) {
+                    if currentRequest.assignedAgentId != nil && (currentRequest.status == .assigned || currentRequest.status == .accepted || currentRequest.status == .inProgress) {
                         Button(action: { showingLiveTracking = true }) {
                             Label("Track Agent Live", systemImage: "location.circle.fill")
                                 .font(.subheadline)
@@ -61,7 +69,7 @@ struct RequestDetailView: View {
                         }
                         .padding(.horizontal)
                         .sheet(isPresented: $showingLiveTracking) {
-                            CustomerLiveTrackingView(request: request)
+                            CustomerLiveTrackingView(request: currentRequest)
                         }
                     }
                     
@@ -72,7 +80,7 @@ struct RequestDetailView: View {
                             .fontWeight(.bold)
                             .foregroundColor(SBRColors.primaryBlue)
                         
-                        if let customer = request.customerId {
+                        if let customer = currentRequest.customerId {
                             Label(customer.name, systemImage: "person.fill")
                             if let phone = customer.phone {
                                 Label(phone, systemImage: "phone.fill")
@@ -81,9 +89,9 @@ struct RequestDetailView: View {
                             Text("Customer info unavailable")
                         }
                         
-                        Label(request.customerAddress, systemImage: "mappin.and.ellipse")
+                        Label(currentRequest.customerAddress, systemImage: "mappin.and.ellipse")
                         
-                        if let desc = request.description, !desc.isEmpty {
+                        if let desc = currentRequest.description, !desc.isEmpty {
                             Divider()
                             Text("Description:")
                                 .font(.footnote)
@@ -108,12 +116,34 @@ struct RequestDetailView: View {
                     
                     // Assigned Technician
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("ASSIGNED TECHNICIAN")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .foregroundColor(SBRColors.primaryBlue)
+                        HStack {
+                            Text("ASSIGNED TECHNICIAN")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(SBRColors.primaryBlue)
+                            
+                            Spacer()
+                            
+                            if authVM.currentUser?.role == .admin {
+                                Button(action: { showingAgentSelection = true }) {
+                                    Text(currentRequest.assignedAgentId != nil ? "Reassign" : "Assign")
+                                        .font(.caption2)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 4)
+                                        .background(SBRColors.primaryBlue)
+                                        .cornerRadius(4)
+                                }
+                                .sheet(isPresented: $showingAgentSelection) {
+                                    DetailAgentSelectionSheet(request: currentRequest, requestVM: requestVM) { updatedReq in
+                                        self.currentRequest = updatedReq
+                                    }
+                                }
+                            }
+                        }
                         
-                        if let agent = request.assignedAgentId {
+                        if let agent = currentRequest.assignedAgentId {
                             Label(agent.name, systemImage: "person.badge.shield.checkmark.fill")
                             if let spec = agent.specialization {
                                 Text("Specialization: \(spec)")
@@ -159,7 +189,7 @@ struct RequestDetailView: View {
                         HStack(spacing: 20) {
                             VStack(spacing: 8) {
                                 Text("Before Photo").font(.caption2).foregroundColor(.gray)
-                                if let beforeUrl = request.beforeImageUrl, let url = URL(string: beforeUrl) {
+                                if let beforeUrl = currentRequest.beforeImageUrl, let url = URL(string: beforeUrl) {
                                     AsyncImage(url: url) { image in
                                         image.resizable().scaledToFill()
                                     } placeholder: {
@@ -177,7 +207,7 @@ struct RequestDetailView: View {
                             
                             VStack(spacing: 8) {
                                 Text("After Photo").font(.caption2).foregroundColor(.gray)
-                                if let afterUrl = request.afterImageUrl, let url = URL(string: afterUrl) {
+                                if let afterUrl = currentRequest.afterImageUrl, let url = URL(string: afterUrl) {
                                     AsyncImage(url: url) { image in
                                         image.resizable().scaledToFill()
                                     } placeholder: {
@@ -214,12 +244,12 @@ struct RequestDetailView: View {
                         HStack {
                             Text("Payment Status:")
                             Spacer()
-                            Text(request.paymentStatus ?? "Pending")
+                            Text(currentRequest.paymentStatus ?? "Pending")
                                 .fontWeight(.bold)
-                                .foregroundColor(request.paymentStatus == "Paid" ? .green : .orange)
+                                .foregroundColor(currentRequest.paymentStatus == "Paid" ? .green : .orange)
                         }
                         
-                        if let amt = request.paymentAmount {
+                        if let amt = currentRequest.paymentAmount {
                             HStack {
                                 Text("Amount Collected:")
                                 Spacer()
@@ -229,7 +259,7 @@ struct RequestDetailView: View {
                             }
                         }
                         
-                        if let method = request.paymentMethod {
+                        if let method = currentRequest.paymentMethod {
                             HStack {
                                 Text("Payment Method:")
                                 Spacer()
@@ -250,6 +280,28 @@ struct RequestDetailView: View {
                     )
                     .padding(.horizontal)
                     
+                    if authVM.currentUser?.role == .admin {
+                        Button(action: {
+                            Task {
+                                let success = await requestVM.deleteRequest(requestId: currentRequest.id)
+                                if success {
+                                    dismiss()
+                                }
+                            }
+                        }) {
+                            Label("Delete Service Request", systemImage: "trash.fill")
+                                .font(.subheadline)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(Color.red)
+                                .cornerRadius(8)
+                        }
+                        .padding(.horizontal)
+                        .padding(.top, 10)
+                    }
+                    
                     Spacer()
                 }
                 .padding(.top)
@@ -257,9 +309,87 @@ struct RequestDetailView: View {
             .background(SBRColors.background)
             .navigationTitle("Job Specifications")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(SBRColors.primaryBlue, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Dismiss") { dismiss() }
+                    Button(action: { dismiss() }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.down")
+                            Text("Close")
+                        }
+                        .font(.footnote)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                    }
+                }
+            }
+        }
+        .onAppear {
+            Task {
+                await requestVM.fetchUsers()
+            }
+        }
+    }
+}
+
+struct DetailAgentSelectionSheet: View {
+    let request: ServiceRequest
+    @ObservedObject var requestVM: RequestViewModel
+    var onAssignSuccess: (ServiceRequest) -> Void
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        NavigationView {
+            List(requestVM.users.filter({ $0.role == .agent })) { agent in
+                Button(action: {
+                    Task {
+                        let success = await requestVM.assignAgent(requestId: request.id, agentId: agent.id)
+                        if success {
+                            struct SingleRequestResponse: Decodable {
+                                let success: Bool
+                                let data: ServiceRequest?
+                            }
+                            if let res = try? await APIClient.shared.get(endpoint: "api/requests/\(request.id)", responseType: SingleRequestResponse.self),
+                               res.success, let updatedReq = res.data {
+                                onAssignSuccess(updatedReq)
+                            }
+                            dismiss()
+                        }
+                    }
+                }) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(agent.name)
+                                .font(.body)
+                                .fontWeight(.bold)
+                                .foregroundColor(.primary)
+                            Text(agent.specialization ?? "Field Agent")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.gray)
+                    }
+                    .padding(.vertical, 4)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            .navigationTitle("Select an Agent")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(SBRColors.primaryBlue, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { dismiss() }) {
+                        Text("Cancel")
+                            .font(.footnote)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                    }
                 }
             }
         }
