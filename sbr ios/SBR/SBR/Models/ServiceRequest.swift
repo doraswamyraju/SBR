@@ -42,6 +42,37 @@ struct ServiceRequest: Codable, Identifiable {
         case customerId, assignedAgentId, serviceType, description, customerAddress, status, createdBy, acceptedAt, completedAt, beforeImageUrl, afterImageUrl, paymentAmount, paymentStatus, paymentMethod, paymentTimestamp, locationPath, createdAt, updatedAt
     }
     
+    private static func decodeDate(from container: KeyedDecodingContainer<CodingKeys>, key: CodingKeys) -> String? {
+        if let stringVal = try? container.decodeIfPresent(String.self, forKey: key) {
+            return stringVal
+        }
+        if let doubleVal = try? container.decodeIfPresent(Double.self, forKey: key) {
+            let date: Date
+            if doubleVal > 100000000000 { // Milliseconds
+                date = Date(timeIntervalSince1970: doubleVal / 1000.0)
+            } else { // Seconds
+                date = Date(timeIntervalSince1970: doubleVal)
+            }
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            return formatter.string(from: date)
+        }
+        return nil
+    }
+
+    private static func decodeDouble(from container: KeyedDecodingContainer<CodingKeys>, key: CodingKeys) -> Double? {
+        if let doubleVal = try? container.decodeIfPresent(Double.self, forKey: key) {
+            return doubleVal
+        }
+        if let intVal = try? container.decodeIfPresent(Int.self, forKey: key) {
+            return Double(intVal)
+        }
+        if let stringVal = try? container.decodeIfPresent(String.self, forKey: key), let parsedDouble = Double(stringVal) {
+            return parsedDouble
+        }
+        return nil
+    }
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         
@@ -54,24 +85,42 @@ struct ServiceRequest: Codable, Identifiable {
             throw DecodingError.keyNotFound(CodingKeys.id, DecodingError.Context(codingPath: container.codingPath, debugDescription: "Key id or _id not found in payload"))
         }
         
-        self.customerId = try container.decodeIfPresent(User.self, forKey: .customerId)
-        self.assignedAgentId = try container.decodeIfPresent(User.self, forKey: .assignedAgentId)
-        self.serviceType = try container.decode(String.self, forKey: .serviceType)
+        // Safe decoding for customerId
+        if let customerObj = try? container.decodeIfPresent(User.self, forKey: .customerId) {
+            self.customerId = customerObj
+        } else if let customerIdStr = try? container.decodeIfPresent(String.self, forKey: .customerId) {
+            self.customerId = User(id: customerIdStr, name: "Customer", email: "")
+        } else {
+            self.customerId = nil
+        }
+        
+        // Safe decoding for assignedAgentId
+        if let agentObj = try? container.decodeIfPresent(User.self, forKey: .assignedAgentId) {
+            self.assignedAgentId = agentObj
+        } else if let agentIdStr = try? container.decodeIfPresent(String.self, forKey: .assignedAgentId) {
+            self.assignedAgentId = User(id: agentIdStr, name: "Agent", email: "")
+        } else {
+            self.assignedAgentId = nil
+        }
+        
+        self.serviceType = try container.decodeIfPresent(String.self, forKey: .serviceType) ?? ""
         self.description = try container.decodeIfPresent(String.self, forKey: .description)
-        self.customerAddress = try container.decode(String.self, forKey: .customerAddress)
-        self.status = try container.decode(RequestStatus.self, forKey: .status)
-        self.createdBy = try container.decode(String.self, forKey: .createdBy)
-        self.acceptedAt = try container.decodeIfPresent(String.self, forKey: .acceptedAt)
-        self.completedAt = try container.decodeIfPresent(String.self, forKey: .completedAt)
+        self.customerAddress = try container.decodeIfPresent(String.self, forKey: .customerAddress) ?? ""
+        self.status = try container.decodeIfPresent(RequestStatus.self, forKey: .status) ?? .pending
+        self.createdBy = try container.decodeIfPresent(String.self, forKey: .createdBy) ?? "CUSTOMER"
+        
+        self.acceptedAt = Self.decodeDate(from: container, key: .acceptedAt)
+        self.completedAt = Self.decodeDate(from: container, key: .completedAt)
         self.beforeImageUrl = try container.decodeIfPresent(String.self, forKey: .beforeImageUrl)
         self.afterImageUrl = try container.decodeIfPresent(String.self, forKey: .afterImageUrl)
-        self.paymentAmount = try container.decodeIfPresent(Double.self, forKey: .paymentAmount)
+        self.paymentAmount = Self.decodeDouble(from: container, key: .paymentAmount)
         self.paymentStatus = try container.decodeIfPresent(String.self, forKey: .paymentStatus)
         self.paymentMethod = try container.decodeIfPresent(String.self, forKey: .paymentMethod)
-        self.paymentTimestamp = try container.decodeIfPresent(String.self, forKey: .paymentTimestamp)
+        self.paymentTimestamp = Self.decodeDate(from: container, key: .paymentTimestamp)
         self.locationPath = try container.decodeIfPresent([LocationPoint].self, forKey: .locationPath)
-        self.createdAt = try container.decode(String.self, forKey: .createdAt)
-        self.updatedAt = try container.decode(String.self, forKey: .updatedAt)
+        
+        self.createdAt = Self.decodeDate(from: container, key: .createdAt) ?? ""
+        self.updatedAt = Self.decodeDate(from: container, key: .updatedAt) ?? ""
     }
     
     func encode(to encoder: Encoder) throws {

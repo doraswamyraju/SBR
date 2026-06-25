@@ -31,6 +31,44 @@ struct User: Codable, Identifiable {
         case name, email, role, phone, address, photoUrl, isRecurring, nextServiceDate, specialization, location, status, rating, completedJobs, currentLat, currentLng, isAvailable
     }
     
+    init(
+        id: String,
+        name: String,
+        email: String,
+        role: UserRole = .customer,
+        phone: String? = nil,
+        address: String? = nil,
+        photoUrl: String? = nil,
+        isRecurring: Bool? = nil,
+        nextServiceDate: String? = nil,
+        specialization: String? = nil,
+        location: String? = nil,
+        status: String? = nil,
+        rating: Double? = nil,
+        completedJobs: Int? = nil,
+        currentLat: Double? = nil,
+        currentLng: Double? = nil,
+        isAvailable: Bool? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.email = email
+        self.role = role
+        self.phone = phone
+        self.address = address
+        self.photoUrl = photoUrl
+        self.isRecurring = isRecurring
+        self.nextServiceDate = nextServiceDate
+        self.specialization = specialization
+        self.location = location
+        self.status = status
+        self.rating = rating
+        self.completedJobs = completedJobs
+        self.currentLat = currentLat
+        self.currentLng = currentLng
+        self.isAvailable = isAvailable
+    }
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         
@@ -44,8 +82,8 @@ struct User: Codable, Identifiable {
         }
         
         // Required fields
-        self.name = try container.decode(String.self, forKey: .name)
-        self.email = try container.decode(String.self, forKey: .email)
+        self.name = try container.decodeIfPresent(String.self, forKey: .name) ?? ""
+        self.email = try container.decodeIfPresent(String.self, forKey: .email) ?? ""
         self.role = try container.decodeIfPresent(UserRole.self, forKey: .role) ?? .customer
         
         // Optional fields
