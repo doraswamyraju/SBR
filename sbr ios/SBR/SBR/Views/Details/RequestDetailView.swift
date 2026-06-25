@@ -56,7 +56,7 @@ struct RequestDetailView: View {
                     .padding(.horizontal)
                     
                     // Track Agent Live Button (Customer tracking)
-                    if currentRequest.assignedAgentId != nil && (currentRequest.status == .assigned || currentRequest.status == .accepted || currentRequest.status == .inProgress) {
+                    if isTrackingActive {
                         Button(action: { showingLiveTracking = true }) {
                             Label("Track Agent Live", systemImage: "location.circle.fill")
                                 .font(.subheadline)
@@ -68,9 +68,6 @@ struct RequestDetailView: View {
                                 .cornerRadius(8)
                         }
                         .padding(.horizontal)
-                        .sheet(isPresented: $showingLiveTracking) {
-                            CustomerLiveTrackingView(request: currentRequest)
-                        }
                     }
                     
                     // Client Details
@@ -124,7 +121,7 @@ struct RequestDetailView: View {
                             
                             Spacer()
                             
-                            if authVM.currentUser?.role == .admin {
+                            if isAdmin {
                                 Button(action: { showingAgentSelection = true }) {
                                     Text(currentRequest.assignedAgentId != nil ? "Reassign" : "Assign")
                                         .font(.caption2)
@@ -134,11 +131,6 @@ struct RequestDetailView: View {
                                         .padding(.vertical, 4)
                                         .background(SBRColors.primaryBlue)
                                         .cornerRadius(4)
-                                }
-                                .sheet(isPresented: $showingAgentSelection) {
-                                    DetailAgentSelectionSheet(request: currentRequest, requestVM: requestVM) { updatedReq in
-                                        self.currentRequest = updatedReq
-                                    }
                                 }
                             }
                         }
@@ -280,7 +272,7 @@ struct RequestDetailView: View {
                     )
                     .padding(.horizontal)
                     
-                    if authVM.currentUser?.role == .admin {
+                    if isAdmin {
                         Button(action: {
                             Task {
                                 let success = await requestVM.deleteRequest(requestId: currentRequest.id)
@@ -331,6 +323,25 @@ struct RequestDetailView: View {
                 await requestVM.fetchUsers()
             }
         }
+        .sheet(isPresented: $showingLiveTracking) {
+            CustomerLiveTrackingView(request: currentRequest)
+        }
+        .sheet(isPresented: $showingAgentSelection) {
+            DetailAgentSelectionSheet(request: currentRequest, requestVM: requestVM) { updatedReq in
+                self.currentRequest = updatedReq
+            }
+        }
+    }
+    
+    private var isAdmin: Bool {
+        authVM.user?.role == .admin
+    }
+    
+    private var isTrackingActive: Bool {
+        guard currentRequest.assignedAgentId != nil else { return false }
+        return currentRequest.status == .assigned ||
+               currentRequest.status == .accepted ||
+               currentRequest.status == .inProgress
     }
 }
 
@@ -347,11 +358,7 @@ struct DetailAgentSelectionSheet: View {
                     Task {
                         let success = await requestVM.assignAgent(requestId: request.id, agentId: agent.id)
                         if success {
-                            struct SingleRequestResponse: Decodable {
-                                let success: Bool
-                                let data: ServiceRequest?
-                            }
-                            if let res = try? await APIClient.shared.get(endpoint: "api/requests/\(request.id)", responseType: SingleRequestResponse.self),
+                            if let res = try? await APIClient.shared.get(endpoint: "api/requests/\(request.id)", responseType: RequestViewModel.StandardResponse<ServiceRequest>.self),
                                res.success, let updatedReq = res.data {
                                 onAssignSuccess(updatedReq)
                             }
