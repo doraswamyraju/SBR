@@ -16,6 +16,10 @@ struct AgentDashboardView: View {
     @State private var isDrawerOpen = false
     @State private var selectedRequestDetail: ServiceRequest?
     
+    private var activeJob: ServiceRequest? {
+        requestVM.requests.first(where: { $0.status == .accepted || $0.status == .inProgress })
+    }
+    
     var body: some View {
         SidebarNavigationLayout(
             title: sectionTitle(selectedSection),
@@ -57,6 +61,26 @@ struct AgentDashboardView: View {
         .onAppear {
             Task {
                 await requestVM.fetchRequests()
+                if let job = activeJob {
+                    requestVM.locationManager.requestPermission()
+                    requestVM.startLocationTracking(activeRequestId: job.id)
+                }
+            }
+        }
+        .onChange(of: activeJob?.id) { newId in
+            if let id = newId {
+                requestVM.locationManager.requestPermission()
+                requestVM.startLocationTracking(activeRequestId: id)
+            } else {
+                requestVM.stopLocationTracking()
+            }
+        }
+        .onChange(of: activeJob?.status) { newStatus in
+            if let job = activeJob, (newStatus == .accepted || newStatus == .inProgress) {
+                requestVM.locationManager.requestPermission()
+                requestVM.startLocationTracking(activeRequestId: job.id)
+            } else {
+                requestVM.stopLocationTracking()
             }
         }
     }
