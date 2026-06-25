@@ -6,6 +6,8 @@
 	<string>Sri Balaji Renewables Service Management Application</string>
 	<key>CFBundleName</key>
 	<string>Sri Balaji Renewables Service Management Application</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Your location is used to track your progress and share real-time updates with the customer while working on a request.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
