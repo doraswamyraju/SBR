@@ -61,8 +61,8 @@ exports.getRequests = async (req, res) => {
     }
 
     const requests = await ServiceRequest.find(query)
-      .populate('customerId', 'name email phone')
-      .populate('assignedAgentId', 'name email phone currentLat currentLng')
+      .populate('customerId', 'name email phone role')
+      .populate('assignedAgentId', 'name email phone role currentLat currentLng')
       .sort({ createdAt: -1 });
 
     res.status(200).json({ success: true, count: requests.length, data: requests });
@@ -77,8 +77,8 @@ exports.getRequests = async (req, res) => {
 exports.getRequestById = async (req, res) => {
   try {
     const request = await ServiceRequest.findById(req.params.id)
-      .populate('customerId', 'name email phone')
-      .populate('assignedAgentId', 'name email phone currentLat currentLng');
+      .populate('customerId', 'name email phone role')
+      .populate('assignedAgentId', 'name email phone role currentLat currentLng');
 
     if (!request) {
       return res.status(404).json({ success: false, error: 'Service request not found' });

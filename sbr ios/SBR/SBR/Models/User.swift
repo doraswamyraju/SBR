@@ -46,7 +46,7 @@ struct User: Codable, Identifiable {
         // Required fields
         self.name = try container.decode(String.self, forKey: .name)
         self.email = try container.decode(String.self, forKey: .email)
-        self.role = try container.decode(UserRole.self, forKey: .role)
+        self.role = try container.decodeIfPresent(UserRole.self, forKey: .role) ?? .customer
         
         // Optional fields
         self.phone = try container.decodeIfPresent(String.self, forKey: .phone)

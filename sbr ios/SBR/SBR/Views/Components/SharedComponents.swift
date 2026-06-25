@@ -212,31 +212,39 @@ struct SummaryCard: View {
     var action: (() -> Void)? = nil
     
     var body: some View {
-        Button(action: {
-            action?()
-        }) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(title)
-                    .font(.body)
-                    .fontWeight(.bold)
-                    .foregroundColor(isPrimary ? .white : SBRColors.textPrimary)
-                
-                Spacer().frame(height: 12)
-                
-                Text(value)
-                    .font(.title)
-                    .fontWeight(.black)
-                    .foregroundColor(isPrimary ? .white : SBRColors.textPrimary)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
-            .background(isPrimary ? SBRColors.primaryBlue : Color(red: 0.9, green: 0.92, blue: 0.96))
-            .cornerRadius(16)
-            .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+        let cardContent = VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(.bold)
+                .foregroundColor(isPrimary ? .white : SBRColors.textPrimary)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+            
+            Spacer(minLength: 4)
+            
+            Text(value)
+                .font(.title)
+                .fontWeight(.black)
+                .foregroundColor(isPrimary ? .white : SBRColors.textPrimary)
+                .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .buttonStyle(PlainButtonStyle())
-        .disabled(action == nil)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .frame(height: 110)
+        .background(isPrimary ? SBRColors.primaryBlue : Color(red: 0.9, green: 0.92, blue: 0.96))
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+        
+        return Group {
+            if let action = action {
+                Button(action: action) {
+                    cardContent
+                }
+                .buttonStyle(PlainButtonStyle())
+            } else {
+                cardContent
+            }
+        }
     }
 }
 
