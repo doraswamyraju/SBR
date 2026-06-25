@@ -191,7 +191,13 @@ struct RequestDetailView: View {
                             }) {
                                 VStack(spacing: 8) {
                                     Text("Before Photo").font(.caption2).foregroundColor(.gray)
-                                    if let url = currentRequest.resolvedBeforeImageUrl {
+                                    if requestVM.isLoading && pickerImageType == "before" {
+                                        ProgressView("Uploading...")
+                                            .frame(height: 120)
+                                            .frame(maxWidth: .infinity)
+                                            .background(Color(red: 0.95, green: 0.96, blue: 0.98))
+                                            .cornerRadius(8)
+                                    } else if let url = currentRequest.resolvedBeforeImageUrl {
                                         AsyncImage(url: url) { image in
                                             image.resizable().scaledToFill()
                                         } placeholder: {
@@ -215,7 +221,7 @@ struct RequestDetailView: View {
                                 }
                             }
                             .buttonStyle(PlainButtonStyle())
-                            .disabled(authVM.user?.role != .agent || currentRequest.status == .completed)
+                            .disabled(authVM.user?.role != .agent || currentRequest.status == .completed || requestVM.isLoading)
                             
                             Button(action: {
                                 if authVM.user?.role == .agent {
@@ -225,7 +231,13 @@ struct RequestDetailView: View {
                             }) {
                                 VStack(spacing: 8) {
                                     Text("After Photo").font(.caption2).foregroundColor(.gray)
-                                    if let url = currentRequest.resolvedAfterImageUrl {
+                                    if requestVM.isLoading && pickerImageType == "after" {
+                                        ProgressView("Uploading...")
+                                            .frame(height: 120)
+                                            .frame(maxWidth: .infinity)
+                                            .background(Color(red: 0.95, green: 0.96, blue: 0.98))
+                                            .cornerRadius(8)
+                                    } else if let url = currentRequest.resolvedAfterImageUrl {
                                         AsyncImage(url: url) { image in
                                             image.resizable().scaledToFill()
                                         } placeholder: {
@@ -249,7 +261,7 @@ struct RequestDetailView: View {
                                 }
                             }
                             .buttonStyle(PlainButtonStyle())
-                            .disabled(authVM.user?.role != .agent || currentRequest.status == .completed)
+                            .disabled(authVM.user?.role != .agent || currentRequest.status == .completed || requestVM.isLoading)
                         }
                     }
                     .padding()

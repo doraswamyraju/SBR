@@ -562,6 +562,7 @@ struct AgentActiveServiceView: View {
                                         .background(Color.blue)
                                         .cornerRadius(8)
                                 }
+                                .disabled(requestVM.isLoading)
                             case .inProgress:
                                 if job.beforeImageUrl == nil {
                                     Button(action: {
@@ -578,6 +579,7 @@ struct AgentActiveServiceView: View {
                                             .background(Color.orange)
                                             .cornerRadius(8)
                                     }
+                                    .disabled(requestVM.isLoading)
                                 } else if job.afterImageUrl == nil {
                                     Button(action: {
                                         self.activeJobForUpload = job
@@ -593,6 +595,7 @@ struct AgentActiveServiceView: View {
                                             .background(Color.green)
                                             .cornerRadius(8)
                                     }
+                                    .disabled(requestVM.isLoading)
                                 } else if job.paymentStatus != "Paid" {
                                     Button(action: {
                                         showingPaymentDialog = true
@@ -603,9 +606,10 @@ struct AgentActiveServiceView: View {
                                             .foregroundColor(.white)
                                             .frame(maxWidth: .infinity)
                                             .padding(.vertical, 12)
-                                            .background(Color.orange)
+                                            .background(Color.indigo)
                                             .cornerRadius(8)
                                     }
+                                    .disabled(requestVM.isLoading)
                                 } else {
                                     VStack(spacing: 12) {
                                         Text("Payment Collected: ₹\(Int(job.paymentAmount ?? 0))")
@@ -627,6 +631,7 @@ struct AgentActiveServiceView: View {
                                                 .background(SBRColors.primaryBlue)
                                                 .cornerRadius(8)
                                         }
+                                        .disabled(requestVM.isLoading)
                                         
                                         Button(action: {
                                             closeService(job, requestReview: false)
@@ -640,6 +645,7 @@ struct AgentActiveServiceView: View {
                                                 .background(Color.gray)
                                                 .cornerRadius(8)
                                         }
+                                        .disabled(requestVM.isLoading)
                                     }
                                 }
                             default:

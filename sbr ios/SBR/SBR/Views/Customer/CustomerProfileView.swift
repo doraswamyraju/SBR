@@ -36,7 +36,7 @@ struct CustomerProfileView: View {
                             .scaledToFill()
                             .frame(width: 120, height: 120)
                             .clipShape(Circle())
-                    } else if let photoUrl = photoUrl, let url = URL(string: photoUrl) {
+                    } else if let photoUrl = photoUrl, let url = URL(string: photoUrl.lowercased().hasPrefix("http://") ? "https://" + photoUrl.dropFirst(7) : photoUrl) {
                         AsyncImage(url: url) { image in
                             image.resizable().scaledToFill()
                         } placeholder: {

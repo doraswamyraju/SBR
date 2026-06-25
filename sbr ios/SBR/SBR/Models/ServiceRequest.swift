@@ -56,6 +56,9 @@ struct ServiceRequest: Codable, Identifiable {
                 correctedStr = regex.stringByReplacingMatches(in: correctedStr, options: [], range: range, withTemplate: "https://sbr.sriddha.com")
             }
         }
+        if correctedStr.lowercased().hasPrefix("http://") {
+            correctedStr = "https://" + correctedStr.dropFirst(7)
+        }
         if !correctedStr.lowercased().hasPrefix("http://") && !correctedStr.lowercased().hasPrefix("https://") {
             let base = "https://sbr.sriddha.com"
             if correctedStr.hasPrefix("/") {
