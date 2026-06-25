@@ -451,38 +451,86 @@ struct DetailAgentSelectionSheet: View {
     
     var body: some View {
         NavigationView {
-            List(requestVM.users.filter({ $0.role == .agent })) { agent in
-                Button(action: {
-                    Task {
-                        let success = await requestVM.assignAgent(requestId: request.id, agentId: agent.id)
-                        if success {
-                            if let res = try? await APIClient.shared.get(endpoint: "api/requests/\(request.id)", responseType: RequestViewModel.StandardResponse<ServiceRequest>.self),
-                               res.success, let updatedReq = res.data {
-                                onAssignSuccess(updatedReq)
-                            }
-                            dismiss()
-                        }
-                    }
-                }) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(agent.name)
-                                .font(.body)
-                                .fontWeight(.bold)
-                                .foregroundColor(.primary)
-                            Text(agent.specialization ?? "Field Agent")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.right")
+            ScrollView {
+                VStack(spacing: 12) {
+                    let agents = requestVM.users.filter({ $0.role == .agent })
+                    if agents.isEmpty {
+                        Spacer().frame(height: 60)
+                        Image(systemName: "person.crop.circle.badge.exclamationmark")
+                            .font(.system(size: 60))
+                            .foregroundColor(.gray.opacity(0.5))
+                            .padding(.bottom, 8)
+                        Text("No available technicians found")
                             .foregroundColor(.gray)
+                            .font(.subheadline)
+                    } else {
+                        ForEach(agents) { agent in
+                            Button(action: {
+                                Task {
+                                    let success = await requestVM.assignAgent(requestId: request.id, agentId: agent.id)
+                                    if success {
+                                        if let res = try? await APIClient.shared.get(endpoint: "api/requests/\(request.id)", responseType: RequestViewModel.StandardResponse<ServiceRequest>.self),
+                                           res.success, let updatedReq = res.data {
+                                            onAssignSuccess(updatedReq)
+                                        }
+                                        dismiss()
+                                    }
+                                }
+                            }) {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        Text(agent.name)
+                                            .font(.body)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(SBRColors.textPrimary)
+                                        
+                                        HStack(spacing: 6) {
+                                            Image(systemName: "wrench.and.screwdriver.fill")
+                                                .font(.caption2)
+                                                .foregroundColor(SBRColors.primaryBlue)
+                                            Text(agent.specialization ?? "Field Technician")
+                                                .font(.caption)
+                                                .foregroundColor(.gray)
+                                        }
+                                        
+                                        if let phone = agent.phone {
+                                            HStack(spacing: 6) {
+                                                Image(systemName: "phone.fill")
+                                                    .font(.caption2)
+                                                    .foregroundColor(.green)
+                                                Text(phone)
+                                                    .font(.caption)
+                                                    .foregroundColor(.gray)
+                                            }
+                                        }
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Image(systemName: "chevron.right")
+                                        .font(.subheadline)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(SBRColors.primaryBlue)
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(Color.white)
+                                .cornerRadius(12)
+                                .shadow(color: Color.black.opacity(0.02), radius: 3, x: 0, y: 1)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.gray.opacity(0.12), lineWidth: 1)
+                                )
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
                     }
-                    .padding(.vertical, 4)
                 }
-                .buttonStyle(PlainButtonStyle())
+                .padding()
             }
-            .navigationTitle("Select an Agent")
+            .background(SBRColors.background.ignoresSafeArea())
+            .navigationTitle("Select Technician")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(SBRColors.primaryBlue, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
