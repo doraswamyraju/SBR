@@ -394,6 +394,21 @@ struct AgentActiveServiceView: View {
     
     var body: some View {
         VStack {
+            if let error = requestVM.errorMessage {
+                Text(error)
+                    .font(.footnote)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 16)
+                    .frame(maxWidth: .infinity)
+                    .background(Color.red)
+                    .cornerRadius(8)
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top))
+            }
+            
             if let job = activeJob {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {

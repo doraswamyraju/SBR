@@ -87,15 +87,24 @@ class RequestViewModel: ObservableObject {
     
     // Update Request Status (Agent)
     func updateStatus(requestId: String, status: RequestStatus, requestReview: Bool = false) async -> Bool {
+        isLoading = true
+        errorMessage = nil
         let body: [String: AnyEncodable] = [
             "status": AnyEncodable(status.rawValue),
             "requestReview": AnyEncodable(requestReview)
         ]
         do {
             let res = try await APIClient.shared.put(endpoint: "api/requests/\(requestId)/status", body: body, responseType: StandardResponse<ServiceRequest>.self)
-            return res.success
+            isLoading = false
+            if res.success {
+                return true
+            } else {
+                self.errorMessage = res.error ?? "Failed to update status"
+                return false
+            }
         } catch {
             self.errorMessage = error.localizedDescription
+            isLoading = false
             return false
         }
     }
@@ -123,10 +132,17 @@ class RequestViewModel: ObservableObject {
             if paymentRes.success {
                 let statusRes = try await APIClient.shared.put(endpoint: "api/requests/\(requestId)/status", body: statusBody, responseType: StandardResponse<ServiceRequest>.self)
                 isLoading = false
-                return statusRes.success
+                if statusRes.success {
+                    return true
+                } else {
+                    self.errorMessage = statusRes.error ?? "Failed to mark request completed"
+                    return false
+                }
+            } else {
+                self.errorMessage = paymentRes.error ?? "Failed to record payment"
+                isLoading = false
+                return false
             }
-            isLoading = false
-            return false
         } catch {
             self.errorMessage = error.localizedDescription
             isLoading = false
@@ -147,7 +163,12 @@ class RequestViewModel: ObservableObject {
         do {
             let res = try await APIClient.shared.put(endpoint: "api/requests/\(requestId)/payment", body: body, responseType: StandardResponse<ServiceRequest>.self)
             isLoading = false
-            return res.success
+            if res.success {
+                return true
+            } else {
+                self.errorMessage = res.error ?? "Failed to record payment"
+                return false
+            }
         } catch {
             self.errorMessage = error.localizedDescription
             isLoading = false
@@ -167,7 +188,12 @@ class RequestViewModel: ObservableObject {
             let body = ["imageUrl": url, "imageType": type]
             let res = try await APIClient.shared.put(endpoint: "api/requests/\(requestId)/image", body: body, responseType: StandardResponse<ServiceRequest>.self)
             isLoading = false
-            return res.success
+            if res.success {
+                return true
+            } else {
+                self.errorMessage = res.error ?? "Failed to associate image"
+                return false
+            }
         } catch {
             self.errorMessage = error.localizedDescription
             isLoading = false
