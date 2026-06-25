@@ -64,7 +64,7 @@ struct CustomerDashboardView: View {
                 case .requests:
                     CustomerRequestsListView(requestVM: requestVM, onSelectRequest: { selectedRequestDetail = $0 })
                 case .payments:
-                    CustomerPaymentsView(requestVM: requestVM)
+                    CustomerPaymentsView(requestVM: requestVM, onSelectRequest: { selectedRequestDetail = $0 })
                 case .support:
                     CustomerSupportView()
                 case .profile:

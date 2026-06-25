@@ -99,38 +99,45 @@ fun RequestDetailsContent(
     onViewAfterImage: () -> Unit
 ) {
     // ... This composable is unchanged ...
-    LazyColumn(
+LazyColumn(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
             Text(request.serviceType, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Text(request.description, style = MaterialTheme.typography.bodyLarge)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(request.description ?: "", style = MaterialTheme.typography.bodyLarge)
         }
         item {
             JobTimer(request = request)
         }
         item {
-            DetailsCard(request = request, customerName = customer?.name, agentName = agent?.name)
+            DetailsCard(request = request, customer = customer, agent = agent)
+        }
+        item {
+            DocumentationPhotosCard(
+                request = request,
+                onViewBeforeImage = onViewBeforeImage,
+                onViewAfterImage = onViewAfterImage
+            )
         }
         item {
             ActionsCard(
                 request = request,
-                viewerRole = viewerRole,
-                onTrackAgent = onTrackAgent,
-                onViewBeforeImage = onViewBeforeImage,
-                onViewAfterImage = onViewAfterImage
+                onTrackAgent = onTrackAgent
             )
         }
     }
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DetailsCard(request: ServiceRequest, customerName: String?, agentName: String?) {
-    // ... This composable is unchanged ...
-    val dateFormatter = remember { SimpleDateFormat("dd MMM dd, HH:mm a", Locale.getDefault()) }
+private fun DetailsCard(request: ServiceRequest, customer: User?, agent: Agent?) {
+    val dateFormatter = remember { SimpleDateFormat("dd MMM yyyy, HH:mm a", Locale.getDefault()) }
+    val customerPhone = (customer as? Customer)?.phone
+    val customerAddress = (customer as? Customer)?.address ?: request.customerAddress
+    val agentPhone = agent?.phone
+    val agentSpecialization = agent?.specialization
 
     OutlinedCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(vertical = 8.dp)) {
@@ -141,27 +148,52 @@ private fun DetailsCard(request: ServiceRequest, customerName: String?, agentNam
             )
             Divider(modifier = Modifier.padding(horizontal = 16.dp))
             ListItem(
-                headlineContent = { Text(customerName ?: request.customerId) },
+                headlineContent = {
+                    Column {
+                        Text(customer?.name ?: request.customerId)
+                        if (!customerPhone.isNullOrBlank()) {
+                            Text(customerPhone, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                },
                 leadingContent = { Icon(Icons.Default.Person, contentDescription = null) },
                 supportingContent = { Text("Customer") }
             )
             Divider(modifier = Modifier.padding(horizontal = 16.dp))
             ListItem(
-                headlineContent = { Text(agentName ?: "Unassigned") },
-                leadingContent = { Icon(Icons.Default.Engineering, contentDescription = null) },
-                supportingContent = { Text("Agent") }
+                headlineContent = { Text(customerAddress) },
+                leadingContent = { Icon(Icons.Default.Home, contentDescription = null) },
+                supportingContent = { Text("Service Address") }
             )
             Divider(modifier = Modifier.padding(horizontal = 16.dp))
             ListItem(
-                headlineContent = { Text(request.paymentStatus) },
-                leadingContent = { Icon(Icons.Default.Payment, contentDescription = null) },
-                supportingContent = { Text("Payment Status") }
+                headlineContent = {
+                    Column {
+                        Text(agent?.name ?: "Unassigned")
+                        if (!agentSpecialization.isNullOrBlank()) {
+                            Text(agentSpecialization, style = MaterialTheme.typography.bodySmall)
+                        }
+                        if (!agentPhone.isNullOrBlank()) {
+                            Text(agentPhone, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                },
+                leadingContent = { Icon(Icons.Default.Engineering, contentDescription = null) },
+                supportingContent = { Text("Assigned Agent") }
             )
-            if (request.paymentStatus == "Paid") {
-                ListItem(
-                    headlineContent = { Text("₹${request.paymentAmount} via ${request.paymentMethod}") }
-                )
-            }
+            Divider(modifier = Modifier.padding(horizontal = 16.dp))
+            ListItem(
+                headlineContent = {
+                    val text = if (request.paymentStatus == "Paid") {
+                        "₹${request.paymentAmount} via ${request.paymentMethod}"
+                    } else {
+                        "Pending"
+                    }
+                    Text(text)
+                },
+                leadingContent = { Icon(Icons.Default.Payment, contentDescription = null) },
+                supportingContent = { Text("Payment Details") }
+            )
             Divider(modifier = Modifier.padding(horizontal = 16.dp))
             ListItem(
                 headlineContent = { Text(request.createdAt?.let { dateFormatter.format(it) } ?: "N/A") },
@@ -173,35 +205,90 @@ private fun DetailsCard(request: ServiceRequest, customerName: String?, agentNam
 }
 
 @Composable
-private fun ActionsCard(
+private fun DocumentationPhotosCard(
     request: ServiceRequest,
-    viewerRole: UserRole?,
-    onTrackAgent: () -> Unit,
     onViewBeforeImage: () -> Unit,
     onViewAfterImage: () -> Unit
 ) {
-    // ... This composable is unchanged ...
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(
+                text = "Service Documentation Photos",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                PhotoBox(
+                    label = "Before Photo",
+                    imageUrl = request.beforeImageUrl,
+                    onClick = onViewBeforeImage,
+                    modifier = Modifier.weight(1f)
+                )
+                PhotoBox(
+                    label = "After Photo",
+                    imageUrl = request.afterImageUrl,
+                    onClick = onViewAfterImage,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PhotoBox(
+    label: String,
+    imageUrl: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(modifier = Modifier.height(4.dp))
+        Card(
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(120.dp)
+                .clickable(enabled = imageUrl != null, onClick = onClick),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            if (imageUrl != null) {
+                SubcomposeAsyncImage(
+                    model = imageUrl,
+                    contentDescription = label,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    loading = {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(strokeWidth = 2.dp)
+                        }
+                    }
+                )
+            } else {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Photo,
+                        contentDescription = "No Image",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActionsCard(
+    request: ServiceRequest,
+    onTrackAgent: () -> Unit
+) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Actions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            if (viewerRole == UserRole.ADMIN) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = onViewBeforeImage,
-                        enabled = request.beforeImageUrl != null,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Before Pic")
-                    }
-                    Button(
-                        onClick = onViewAfterImage,
-                        enabled = request.afterImageUrl != null,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("After Pic")
-                    }
-                }
-            }
             Button(
                 onClick = onTrackAgent,
                 enabled = request.assignedAgentId != null && request.status == "In Progress",
@@ -220,8 +307,6 @@ private fun ImagePreviewDialog(
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Card(shape = RoundedCornerShape(16.dp)) {
-            // CHANGED: Use SubcomposeAsyncImage to provide a custom loading composable.
-            // This resolves both errors.
             SubcomposeAsyncImage(
                 model = imageUrl,
                 contentDescription = "Service Image",

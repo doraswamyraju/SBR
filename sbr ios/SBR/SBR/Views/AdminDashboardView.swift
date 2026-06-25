@@ -248,6 +248,7 @@ struct AdminDashboardContent: View {
                                         .background(SBRColors.primaryBlue)
                                         .cornerRadius(8)
                                 }
+                                .buttonStyle(PlainButtonStyle())
                             }
                             .padding()
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -304,6 +305,7 @@ struct AgentSelectionSheet: View {
                     }
                     .padding(.vertical, 4)
                 }
+                .buttonStyle(PlainButtonStyle())
             }
             .navigationTitle("Select an Agent")
             .navigationBarTitleDisplayMode(.inline)
