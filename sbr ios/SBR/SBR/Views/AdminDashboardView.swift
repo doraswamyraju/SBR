@@ -281,6 +281,7 @@ struct AdminDashboardContent: View {
             await requestVM.fetchRequests()
             await requestVM.fetchUsers()
         }
+        .scrollBounceBehavior(.always, axes: .vertical)
     }
 }
 

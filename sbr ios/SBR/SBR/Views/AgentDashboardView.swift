@@ -332,6 +332,7 @@ struct AgentDashboardContent: View {
         .refreshable {
             await requestVM.fetchRequests()
         }
+        .scrollBounceBehavior(.always, axes: .vertical)
     }
 }
 

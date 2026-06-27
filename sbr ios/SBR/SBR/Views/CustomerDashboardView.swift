@@ -255,6 +255,7 @@ struct CustomerDashboardContent: View {
         .refreshable {
             await requestVM.fetchRequests()
         }
+        .scrollBounceBehavior(.always, axes: .vertical)
         .onAppear {
             fetchReviewUrl()
         }

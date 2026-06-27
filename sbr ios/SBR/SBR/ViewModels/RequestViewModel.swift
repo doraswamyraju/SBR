@@ -1,6 +1,7 @@
 import Foundation
 import CoreLocation
 import Combine
+import UIKit
 
 @MainActor
 class RequestViewModel: ObservableObject {
@@ -15,7 +16,18 @@ class RequestViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     
     init() {
+        // Refresh when a push notification is received
         NotificationCenter.default.publisher(for: NSNotification.Name("FCMNotificationReceived"))
+            .sink { _ in
+                Task {
+                    await self.fetchRequests()
+                    await self.fetchUsers()
+                }
+            }
+            .store(in: &cancellables)
+            
+        // Refresh when the app returns from background to foreground
+        NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)
             .sink { _ in
                 Task {
                     await self.fetchRequests()
