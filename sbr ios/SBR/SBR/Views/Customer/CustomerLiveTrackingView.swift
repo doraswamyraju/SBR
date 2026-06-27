@@ -204,9 +204,13 @@ struct CustomerLiveTrackingView: View {
             )
             if res.success, let updatedReq = res.data {
                 await MainActor.run {
-                    self.currentRequest = updatedReq
+                    withAnimation(.easeInOut(duration: 2.0)) {
+                        self.currentRequest = updatedReq
+                    }
                     if let agent = updatedReq.assignedAgentId {
-                        centerMapOnAgent(agent: agent)
+                        withAnimation(.easeInOut(duration: 2.0)) {
+                            centerMapOnAgent(agent: agent)
+                        }
                     }
                 }
             }

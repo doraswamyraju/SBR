@@ -52,6 +52,13 @@ const sendNotificationToUser = async (userId, payload) => {
         title,
         body
       },
+      apns: {
+        payload: {
+          aps: {
+            sound: 'default' // Enables sound on iOS
+          }
+        }
+      },
       data: data || {},
       tokens: user.fcmTokens
     };
