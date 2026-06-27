@@ -35,3 +35,6 @@ brain/
 .idea/
 .vscode/
 .env
+
+# Firebase service account credentials
+**/firebase-service-account.json

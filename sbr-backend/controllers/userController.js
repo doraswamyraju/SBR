@@ -130,3 +130,30 @@ exports.deleteUser = async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 };
+
+// @desc    Update FCM Token
+// @route   POST /api/users/fcm-token
+// @access  Private
+exports.updateFcmToken = async (req, res) => {
+  try {
+    const { fcmToken } = req.body;
+    if (!fcmToken) {
+      return res.status(400).json({ success: false, error: 'Please provide FCM token' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    if (!user.fcmTokens.includes(fcmToken)) {
+      user.fcmTokens.push(fcmToken);
+      await user.save();
+    }
+
+    res.status(200).json({ success: true, data: user.fcmTokens });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+

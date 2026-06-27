@@ -45,6 +45,28 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         guard let token = fcmToken else { return }
         print("Refreshed FCM Token: \(token)")
         UserDefaults.standard.set(token, forKey: "fcm_token")
+        
+        // If user is already authenticated, upload the new token to backend
+        if APIClient.shared.getToken() != nil {
+            Task {
+                do {
+                    struct FCMTokenPayload: Encodable {
+                        let fcmToken: String
+                    }
+                    struct FCMTokenResponse: Decodable {
+                        let success: Bool
+                    }
+                    _ = try await APIClient.shared.post(
+                        endpoint: "api/users/fcm-token",
+                        body: FCMTokenPayload(fcmToken: token),
+                        responseType: FCMTokenResponse.self
+                    )
+                    print("Successfully updated FCM token on server from AppDelegate.")
+                } catch {
+                    print("Failed to update FCM token on server from AppDelegate: \(error.localizedDescription)")
+                }
+            }
+        }
     }
     
     // Handle foreground notifications

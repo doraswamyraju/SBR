@@ -25,6 +25,9 @@ class AuthViewModel: ObservableObject {
             if let decodedUser = try? JSONDecoder().decode(User.self, from: storedUser) {
                 self.user = decodedUser
                 self.isAuthenticated = true
+                Task {
+                    await uploadFCMToken()
+                }
             }
         }
     }
@@ -51,6 +54,7 @@ class AuthViewModel: ObservableObject {
                 
                 self.user = authUser
                 self.isAuthenticated = true
+                await uploadFCMToken()
             } else {
                 self.errorMessage = res.error ?? "Login failed"
             }
@@ -84,6 +88,7 @@ class AuthViewModel: ObservableObject {
                 
                 self.user = authUser
                 self.isAuthenticated = true
+                await uploadFCMToken()
             } else {
                 self.errorMessage = res.error ?? "Registration failed"
             }
@@ -106,5 +111,30 @@ class AuthViewModel: ObservableObject {
         APIClient.shared.clearToken()
         self.user = nil
         self.isAuthenticated = false
+    }
+    
+    // Upload current FCM Token to the server if authenticated
+    func uploadFCMToken() async {
+        guard let token = UserDefaults.standard.string(forKey: "fcm_token"),
+              APIClient.shared.getToken() != nil else { return }
+        
+        struct FCMTokenPayload: Encodable {
+            let fcmToken: String
+        }
+        
+        struct FCMTokenResponse: Decodable {
+            let success: Bool
+        }
+        
+        do {
+            _ = try await APIClient.shared.post(
+                endpoint: "api/users/fcm-token",
+                body: FCMTokenPayload(fcmToken: token),
+                responseType: FCMTokenResponse.self
+            )
+            print("Successfully uploaded FCM Token to server.")
+        } catch {
+            print("Failed to upload FCM Token to server: \(error.localizedDescription)")
+        }
     }
 }
