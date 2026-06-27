@@ -42,6 +42,9 @@ struct CustomerLiveTrackingView: View {
                     .onAppear {
                         geocodeAddress()
                         centerMapOnAgent(agent: agent)
+                        Task {
+                            await refreshRequest()
+                        }
                     }
                     .onReceive(timer) { _ in
                         Task {
