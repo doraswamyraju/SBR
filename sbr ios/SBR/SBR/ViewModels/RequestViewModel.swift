@@ -12,6 +12,19 @@ class RequestViewModel: ObservableObject {
     // Real Location Manager
     @Published var locationManager = LocationManager()
     
+    private var cancellables = Set<AnyCancellable>()
+    
+    init() {
+        NotificationCenter.default.publisher(for: NSNotification.Name("FCMNotificationReceived"))
+            .sink { _ in
+                Task {
+                    await self.fetchRequests()
+                    await self.fetchUsers()
+                }
+            }
+            .store(in: &cancellables)
+    }
+    
     struct StandardResponse<T: Decodable>: Decodable {
         let success: Bool
         let data: T?

@@ -252,6 +252,9 @@ struct CustomerDashboardContent: View {
             }
             .padding(.top)
         }
+        .refreshable {
+            await requestVM.fetchRequests()
+        }
         .onAppear {
             fetchReviewUrl()
         }

@@ -277,6 +277,10 @@ struct AdminDashboardContent: View {
             }
             .padding(.top)
         }
+        .refreshable {
+            await requestVM.fetchRequests()
+            await requestVM.fetchUsers()
+        }
     }
 }
 

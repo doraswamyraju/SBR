@@ -329,6 +329,9 @@ struct AgentDashboardContent: View {
             }
             .padding(.top)
         }
+        .refreshable {
+            await requestVM.fetchRequests()
+        }
     }
 }
 
