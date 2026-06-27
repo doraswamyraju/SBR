@@ -69,11 +69,15 @@ struct AdminDashboardView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingAddCustomerSheet) {
-            AddEditCustomerView(customer: nil)
+        .sheet(isPresented: $showingAddCustomerSheet, onDismiss: {
+            Task { await requestVM.fetchUsers() }
+        }) {
+            AddEditCustomerView(requestVM: requestVM, customer: nil)
         }
-        .sheet(isPresented: $showingCreateJobSheet) {
-            AdminCreateRequestView(customers: requestVM.users.filter({ $0.role == .customer }))
+        .sheet(isPresented: $showingCreateJobSheet, onDismiss: {
+            Task { await requestVM.fetchRequests() }
+        }) {
+            AdminCreateRequestView(requestVM: requestVM, customers: requestVM.users.filter({ $0.role == .customer }))
         }
         .sheet(item: $selectedRequestDetail) { req in
             RequestDetailView(request: req, requestVM: requestVM)

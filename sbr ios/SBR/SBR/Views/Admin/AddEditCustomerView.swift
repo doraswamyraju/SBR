@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AddEditCustomerView: View {
     @Environment(\.dismiss) var dismiss
+    @ObservedObject var requestVM: RequestViewModel
     let customer: User? // Nil for adding new customer
     
     @State private var name = ""
@@ -94,6 +95,7 @@ struct AddEditCustomerView: View {
                     struct UserResponse: Decodable { let success: Bool }
                     let res = try await APIClient.shared.put(endpoint: "api/users/\(c.id)", body: body, responseType: UserResponse.self)
                     if res.success {
+                        await requestVM.fetchUsers()
                         dismiss()
                     } else {
                         errorMessage = "Failed to update profile"
@@ -112,6 +114,7 @@ struct AddEditCustomerView: View {
                     struct RegisterResponse: Decodable { let success: Bool }
                     let res = try await APIClient.shared.post(endpoint: "api/auth/register", body: body, responseType: RegisterResponse.self)
                     if res.success {
+                        await requestVM.fetchUsers()
                         dismiss()
                     } else {
                         errorMessage = "Failed to create customer"

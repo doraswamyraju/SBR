@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AdminCreateRequestView: View {
     @Environment(\.dismiss) var dismiss
+    @ObservedObject var requestVM: RequestViewModel
     let customers: [User]
     
     @State private var selectedCustomerId = ""
@@ -116,6 +117,7 @@ struct AdminCreateRequestView: View {
                 struct RequestResponse: Decodable { let success: Bool }
                 let res = try await APIClient.shared.post(endpoint: "api/requests", body: body, responseType: RequestResponse.self)
                 if res.success {
+                    await requestVM.fetchRequests()
                     dismiss()
                 } else {
                     errorMessage = "Failed to book request"

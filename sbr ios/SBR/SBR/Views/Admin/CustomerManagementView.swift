@@ -92,7 +92,7 @@ struct CustomerManagementView: View {
         .sheet(isPresented: $showingAddEditSheet, onDismiss: {
             Task { await requestVM.fetchUsers() }
         }) {
-            AddEditCustomerView(customer: selectedCustomer)
+            AddEditCustomerView(requestVM: requestVM, customer: selectedCustomer)
         }
         .alert(item: $customerToDelete) { client in
             Alert(
