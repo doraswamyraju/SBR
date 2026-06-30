@@ -147,6 +147,19 @@ exports.assignRequest = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Invalid agent ID specified' });
     }
 
+    const existingRequest = await ServiceRequest.findById(req.params.id);
+    if (!existingRequest) {
+      return res.status(404).json({ success: false, error: 'Service request not found' });
+    }
+
+    const previousAgentId = existingRequest.assignedAgentId;
+    if (previousAgentId && previousAgentId.toString() !== agentId) {
+      sendNotificationToUser(previousAgentId, {
+        title: 'Service Request Unassigned',
+        body: `You have been unassigned from service request #${existingRequest._id}`
+      });
+    }
+
     const request = await ServiceRequest.findByIdAndUpdate(
       req.params.id,
       { assignedAgentId: agentId, status: 'Assigned' },
@@ -154,10 +167,6 @@ exports.assignRequest = async (req, res) => {
     )
       .populate('customerId', 'name email role phone address photoUrl isRecurring nextServiceDate')
       .populate('assignedAgentId', 'name email role phone specialization location status rating completedJobs');
-
-    if (!request) {
-      return res.status(404).json({ success: false, error: 'Service request not found' });
-    }
 
     // Notify Agent
     sendNotificationToUser(agentId, {
@@ -216,6 +225,17 @@ exports.updateRequestStatus = async (req, res) => {
       title: 'Service Request Status Updated',
       body: `Your service request is now: ${status}`
     });
+
+    // Notify Admins when request is Completed
+    if (status === 'Completed') {
+      const admins = await User.find({ role: 'ADMIN' });
+      admins.forEach(admin => {
+        sendNotificationToUser(admin._id, {
+          title: 'Service Request Completed',
+          body: `Service request #${request._id} has been completed by ${request.assignedAgentId?.name || 'Agent'} and is awaiting review.`
+        });
+      });
+    }
 
     // If completed and requestReview is chosen, send review mail + push notification
     if (status === 'Completed' && (requestReview === true || requestReview === 'true')) {
@@ -323,6 +343,15 @@ exports.updatePaymentDetails = async (req, res) => {
     )
       .populate('customerId', 'name email role phone address photoUrl isRecurring nextServiceDate')
       .populate('assignedAgentId', 'name email role phone specialization location status rating completedJobs');
+
+    // Notify Admins about payment collection
+    const admins = await User.find({ role: 'ADMIN' });
+    admins.forEach(admin => {
+      sendNotificationToUser(admin._id, {
+        title: 'Payment Collected',
+        body: `Agent ${request.assignedAgentId?.name || 'Agent'} collected ₹${amount} via ${method} for request #${request._id}`
+      });
+    });
 
     res.status(200).json({ success: true, data: request });
   } catch (error) {
