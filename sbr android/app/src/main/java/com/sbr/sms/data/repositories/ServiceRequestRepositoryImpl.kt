@@ -8,6 +8,9 @@ import com.sbr.sms.data.api.ServiceRequestDto
 import com.sbr.sms.data.api.AgentLocationDto
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.MutableSharedFlow
 import java.text.SimpleDateFormat
 import java.util.*
 import javax.inject.Inject
@@ -19,6 +22,21 @@ class ServiceRequestRepositoryImpl @Inject constructor(
 ) : ServiceRequestRepository {
 
     private val tag = "ServiceRequestRepo"
+
+    private val refreshTrigger = MutableSharedFlow<Unit>(replay = 1).apply { tryEmit(Unit) }
+
+    fun triggerRefresh() {
+        refreshTrigger.tryEmit(Unit)
+    }
+
+    private val tickerFlow = flow {
+        while (true) {
+            kotlinx.coroutines.delay(10000)
+            emit(Unit)
+        }
+    }
+
+    private val requestsUpdatesFlow = merge(refreshTrigger, tickerFlow)
 
     private val isoDateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
         timeZone = TimeZone.getTimeZone("UTC")
@@ -100,7 +118,9 @@ class ServiceRequestRepositoryImpl @Inject constructor(
             )
             val response = apiService.createRequest(payload)
             if (response.isSuccessful) {
-                return response.body()?.data?.id ?: ""
+                val newId = response.body()?.data?.id ?: ""
+                triggerRefresh()
+                return newId
             } else {
                 throw Exception("Failed to add request: ${response.errorBody()?.string()}")
             }
@@ -127,6 +147,7 @@ class ServiceRequestRepositoryImpl @Inject constructor(
             if (!response.isSuccessful) {
                 throw Exception("Failed to update request: ${response.errorBody()?.string()}")
             }
+            triggerRefresh()
         } catch (e: Exception) {
             Log.e(tag, "Error updating request ${request.id}", e)
             throw e
@@ -139,6 +160,7 @@ class ServiceRequestRepositoryImpl @Inject constructor(
             if (!response.isSuccessful) {
                 throw Exception("Failed to delete request: ${response.errorBody()?.string()}")
             }
+            triggerRefresh()
         } catch (e: Exception) {
             Log.e(tag, "Error deleting request $requestId", e)
             throw e
@@ -175,40 +197,36 @@ class ServiceRequestRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getAllRequestsStream(): Flow<List<ServiceRequest>> = flow {
-        emit(getAllRequests())
+    override fun getAllRequestsStream(): Flow<List<ServiceRequest>> = requestsUpdatesFlow.map {
+        getAllRequests()
     }
 
-    override fun getRequestsStreamForAgent(agentId: String): Flow<List<ServiceRequest>> = flow {
-        val list = getAllRequests().filter { it.assignedAgentId == agentId }
-        emit(list)
+    override fun getRequestsStreamForAgent(agentId: String): Flow<List<ServiceRequest>> = requestsUpdatesFlow.map {
+        getAllRequests().filter { it.assignedAgentId == agentId }
     }
 
-    override fun getRequestsStreamForCustomer(customerId: String): Flow<List<ServiceRequest>> = flow {
-        val list = getAllRequests().filter { it.customerId == customerId }
-        emit(list)
+    override fun getRequestsStreamForCustomer(customerId: String): Flow<List<ServiceRequest>> = requestsUpdatesFlow.map {
+        getAllRequests().filter { it.customerId == customerId }
     }
 
-    override fun getTodaysCollectionsStream(agentId: String): Flow<List<ServiceRequest>> = flow {
+    override fun getTodaysCollectionsStream(agentId: String): Flow<List<ServiceRequest>> = requestsUpdatesFlow.map {
         val calendar = Calendar.getInstance()
         calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(Calendar.MINUTE, 0); calendar.set(Calendar.SECOND, 0)
         val startOfToday = calendar.time
         
-        val list = getAllRequests().filter {
+        getAllRequests().filter {
             it.assignedAgentId == agentId &&
             it.paymentStatus == "Paid" &&
             it.paymentTimestamp != null &&
             it.paymentTimestamp.after(startOfToday)
         }
-        emit(list)
     }
 
-    override fun getPaymentHistoryStream(agentId: String): Flow<List<ServiceRequest>> = flow {
-        val list = getAllRequests().filter {
+    override fun getPaymentHistoryStream(agentId: String): Flow<List<ServiceRequest>> = requestsUpdatesFlow.map {
+        getAllRequests().filter {
             it.assignedAgentId == agentId &&
             it.paymentStatus == "Paid"
         }
-        emit(list)
     }
 
     override suspend fun assignRequest(requestId: String, agentId: String) {
@@ -217,6 +235,7 @@ class ServiceRequestRepositoryImpl @Inject constructor(
             if (!response.isSuccessful) {
                 throw Exception("Failed to assign request: ${response.errorBody()?.string()}")
             }
+            triggerRefresh()
         } catch (e: Exception) {
             Log.e(tag, "Error assigning request $requestId", e)
             throw e
@@ -232,6 +251,7 @@ class ServiceRequestRepositoryImpl @Inject constructor(
             if (!response.isSuccessful) {
                 throw Exception("Failed to update status: ${response.errorBody()?.string()}")
             }
+            triggerRefresh()
         } catch (e: Exception) {
             Log.e(tag, "Error updating request status $requestId", e)
             throw e
@@ -247,6 +267,7 @@ class ServiceRequestRepositoryImpl @Inject constructor(
             if (!response.isSuccessful) {
                 throw Exception("Failed to update request image: ${response.errorBody()?.string()}")
             }
+            triggerRefresh()
         } catch (e: Exception) {
             Log.e(tag, "Error updating request image $requestId", e)
             throw e
@@ -262,6 +283,7 @@ class ServiceRequestRepositoryImpl @Inject constructor(
             if (!response.isSuccessful) {
                 throw Exception("Failed to update payment details: ${response.errorBody()?.string()}")
             }
+            triggerRefresh()
         } catch (e: Exception) {
             Log.e(tag, "Error updating payment details $requestId", e)
             throw e
@@ -283,14 +305,12 @@ class ServiceRequestRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getActiveRequestsStream(): Flow<List<ServiceRequest>> = flow {
-        val list = getAllRequests().filter { it.status in listOf("Accepted", "In Progress") }
-        emit(list)
+    override fun getActiveRequestsStream(): Flow<List<ServiceRequest>> = requestsUpdatesFlow.map {
+        getAllRequests().filter { it.status in listOf("Accepted", "In Progress") }
     }
 
-    override fun getPaidRequestsStream(): Flow<List<ServiceRequest>> = flow {
-        val list = getAllRequests().filter { it.paymentStatus == "Paid" }
-        emit(list)
+    override fun getPaidRequestsStream(): Flow<List<ServiceRequest>> = requestsUpdatesFlow.map {
+        getAllRequests().filter { it.paymentStatus == "Paid" }
     }
 
     override suspend fun getPaidRequestsInDateRange(startDate: Date, endDate: Date): List<ServiceRequest> {
@@ -302,11 +322,10 @@ class ServiceRequestRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getCustomerPaymentHistoryStream(customerId: String): Flow<List<ServiceRequest>> = flow {
-        val list = getAllRequests().filter {
+    override fun getCustomerPaymentHistoryStream(customerId: String): Flow<List<ServiceRequest>> = requestsUpdatesFlow.map {
+        getAllRequests().filter {
             it.customerId == customerId &&
             it.paymentStatus == "Paid"
         }
-        emit(list)
     }
 }

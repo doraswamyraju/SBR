@@ -464,6 +464,8 @@ struct AgentActiveServiceView: View {
             if let job = activeJob {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
+                        JobTimerView(request: job)
+                        
                         VStack(alignment: .leading, spacing: 12) {
                             Text(job.serviceType)
                                 .font(.title3)

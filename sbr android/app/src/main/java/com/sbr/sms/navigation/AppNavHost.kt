@@ -62,15 +62,27 @@ sealed class AppRoutes(val route: String) {
 }
 
 @Composable
-fun AppNavHost() {
+fun AppNavHost(viewModel: AuthViewModel = hiltViewModel()) {
     val navController = rememberNavController()
+    val authState by viewModel.authState.collectAsState()
+
+    LaunchedEffect(authState) {
+        if (authState is AuthState.Unauthenticated) {
+            val currentRoute = navController.currentBackStackEntry?.destination?.route
+            if (currentRoute != AppRoutes.AuthFlow.route && currentRoute != null) {
+                navController.navigate(AppRoutes.AuthFlow.route) {
+                    popUpTo(0) { inclusive = true }
+                }
+            }
+        }
+    }
 
     NavHost(
         navController = navController,
         startDestination = AppRoutes.AuthFlow.route
     ) {
         composable(AppRoutes.AuthFlow.route) {
-            AuthGate(navController = navController)
+            AuthGate(navController = navController, viewModel = viewModel)
         }
         composable("auth_ui_screen") { AuthScreen() }
         composable(AppRoutes.AdminPanel.route) { AdminPanelScreen(navController) }

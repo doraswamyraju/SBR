@@ -59,6 +59,9 @@ struct RequestDetailView: View {
                     )
                     .padding(.horizontal)
                     
+                    JobTimerView(request: currentRequest)
+                        .padding(.horizontal)
+                    
                     // Track Agent Live Button (Customer tracking)
                     if isTrackingActive {
                         Button(action: { showingLiveTracking = true }) {

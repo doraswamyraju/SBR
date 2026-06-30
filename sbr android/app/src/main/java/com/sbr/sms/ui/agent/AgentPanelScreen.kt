@@ -19,6 +19,12 @@ import com.sbr.sms.ui.agent.viewmodels.AgentRequestsViewModel
 import com.sbr.sms.ui.common.RequestLocationPermission
 import kotlinx.coroutines.launch
 
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.sbr.sms.R
+
 enum class AgentSection(val title: String, val icon: ImageVector) {
     Dashboard("Dashboard", Icons.Default.Dashboard),
     NewRequests("New Requests", Icons.AutoMirrored.Filled.List),
@@ -44,7 +50,7 @@ fun AgentPanelScreen(
                 ModalDrawerSheet {
                     Column(Modifier.fillMaxHeight().padding(top = 24.dp)) {
                         Text("Agent Panel", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(16.dp))
-                        Divider()
+                        HorizontalDivider()
                         AgentSection.values().forEach { section ->
                             NavigationDrawerItem(
                                 label = { Text(section.title) },
@@ -64,9 +70,6 @@ fun AgentPanelScreen(
                             selected = false,
                             onClick = {
                                 viewModel.logout()
-                                navController.navigate(AppRoutes.AuthFlow.route) {
-                                    popUpTo(AppRoutes.AgentPanel.route) { inclusive = true }
-                                }
                             },
                             modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                         )
@@ -88,14 +91,19 @@ fun AgentPanelScreen(
                                 IconButton(onClick = { scope.launch { drawerState.open() } }) {
                                     Icon(Icons.Default.Menu, contentDescription = "Menu")
                                 }
+                                androidx.compose.foundation.Image(
+                                    painter = painterResource(id = R.drawable.sbr_logo),
+                                    contentDescription = "SBR Logo",
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(RoundedCornerShape(6.dp))
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
                             }
                         },
                         actions = {
                             IconButton(onClick = {
                                 viewModel.logout()
-                                navController.navigate(AppRoutes.AuthFlow.route) {
-                                    popUpTo(AppRoutes.AgentPanel.route) { inclusive = true }
-                                }
                             }) {
                                 Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Logout", tint = MaterialTheme.colorScheme.onPrimary)
                             }

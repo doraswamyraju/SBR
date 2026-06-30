@@ -1,10 +1,6 @@
 package com.sbr.sms.ui.admin
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
@@ -17,6 +13,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.sbr.sms.R
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.sbr.sms.navigation.AppRoutes
 import com.sbr.sms.ui.admin.viewmodels.AdminDashboardViewModel
 import com.sbr.sms.ui.auth.AuthViewModel
@@ -57,7 +57,7 @@ fun AdminPanelScreen(
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.padding(16.dp)
                     )
-                    Divider()
+                    HorizontalDivider()
                     AdminSection.values().sortedBy { it.ordinal }.forEach { section ->
                         NavigationDrawerItem(
                             label = { Text(section.title) },
@@ -77,9 +77,6 @@ fun AdminPanelScreen(
                         selected = false,
                         onClick = {
                             authViewModel.logout()
-                            navController.navigate(AppRoutes.AuthFlow.route) {
-                                popUpTo(AppRoutes.AdminPanel.route) { inclusive = true }
-                            }
                         },
                         modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                     )
@@ -101,6 +98,25 @@ fun AdminPanelScreen(
                             IconButton(onClick = { scope.launch { drawerState.open() } }) {
                                 Icon(Icons.Default.Menu, contentDescription = "Menu")
                             }
+                            androidx.compose.foundation.Image(
+                                painter = painterResource(id = R.drawable.sbr_logo),
+                                contentDescription = "SBR Logo",
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(RoundedCornerShape(6.dp))
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = {
+                            authViewModel.logout()
+                        }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                                contentDescription = "Logout",
+                                tint = MaterialTheme.colorScheme.onPrimary
+                            )
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(

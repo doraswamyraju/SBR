@@ -17,6 +17,12 @@ import com.sbr.sms.navigation.AppRoutes
 import com.sbr.sms.ui.auth.AuthViewModel
 import kotlinx.coroutines.launch
 
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.sbr.sms.R
+
 enum class CustomerSection(val title: String) {
     Dashboard("Dashboard"),
     Requests("My Requests"),
@@ -42,7 +48,7 @@ fun CustomerPanelScreen(
             ModalDrawerSheet {
                 Column(Modifier.fillMaxHeight().padding(top = 24.dp)) {
                     Text("Customer Panel", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(16.dp))
-                    Divider()
+                    HorizontalDivider()
                     CustomerSection.values().forEach { section ->
                         NavigationDrawerItem(
                             label = { Text(section.title) },
@@ -61,9 +67,6 @@ fun CustomerPanelScreen(
                         selected = false,
                         onClick = {
                             authViewModel.logout()
-                            navController.navigate(AppRoutes.AuthFlow.route) {
-                                popUpTo(AppRoutes.CustomerPanel.route) { inclusive = true }
-                            }
                         },
                         modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                     )
@@ -85,9 +88,27 @@ fun CustomerPanelScreen(
                             IconButton(onClick = { scope.launch { drawerState.open() } }) {
                                 Icon(Icons.Default.Menu, contentDescription = "Menu")
                             }
+                            androidx.compose.foundation.Image(
+                                painter = painterResource(id = R.drawable.sbr_logo),
+                                contentDescription = "SBR Logo",
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(RoundedCornerShape(6.dp))
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
                         }
                     },
-                    actions = {},
+                    actions = {
+                        IconButton(onClick = {
+                            authViewModel.logout()
+                        }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                                contentDescription = "Logout",
+                                tint = MaterialTheme.colorScheme.onPrimary
+                            )
+                        }
+                    },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         titleContentColor = MaterialTheme.colorScheme.onPrimary,

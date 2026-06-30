@@ -206,13 +206,26 @@ class UserRepositoryImpl @Inject constructor(
     }
 
     override fun getAllUsersFlow(): Flow<List<User>> = flow {
-        emit(getAllUsers())
+        while (true) {
+            try {
+                emit(getAllUsers())
+            } catch (e: Exception) {
+                Log.e(tag, "Error fetching all users flow", e)
+            }
+            kotlinx.coroutines.delay(5000)
+        }
     }
 
     override fun getUsersByIds(userIds: List<String>): Flow<List<User>> = flow {
-        // Fetch all users and filter locally to match the list of IDs
-        val all = getAllUsers()
-        emit(all.filter { it.id in userIds })
+        while (true) {
+            try {
+                val all = getAllUsers()
+                emit(all.filter { it.id in userIds })
+            } catch (e: Exception) {
+                Log.e(tag, "Error fetching users by ids flow", e)
+            }
+            kotlinx.coroutines.delay(5000)
+        }
     }
 
     override suspend fun deleteUser(userId: String) {

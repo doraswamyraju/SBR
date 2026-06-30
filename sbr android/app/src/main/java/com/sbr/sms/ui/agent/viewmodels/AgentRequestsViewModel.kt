@@ -192,7 +192,10 @@ class AgentRequestsViewModel @Inject constructor(
     }
 
     fun logout() {
-        auth.signOut()
+        viewModelScope.launch {
+            userRepository.logout()
+            auth.signOut()
+        }
     }
 
     fun startLocationUpdates() {

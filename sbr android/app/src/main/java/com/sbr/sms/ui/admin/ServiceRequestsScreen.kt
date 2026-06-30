@@ -32,6 +32,30 @@ fun ServiceRequestsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
+    var requestToDelete by remember { mutableStateOf<UiRequest?>(null) }
+
+    if (requestToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { requestToDelete = null },
+            title = { Text("Delete Service Request") },
+            text = { Text("Are you sure you want to delete the request for ${requestToDelete?.request?.serviceType}? This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        requestToDelete?.let { viewModel.deleteRequest(it.request.id) }
+                        requestToDelete = null
+                    }
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { requestToDelete = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -90,9 +114,8 @@ fun ServiceRequestsScreen(
                                         navController.navigate("requestDetail/$requestId")
                                     },
                                     onDelete = { requestId ->
-                                        viewModel.deleteRequest(requestId)
+                                        requestToDelete = uiRequest
                                     }
-
                                 )
                             }
                         }
