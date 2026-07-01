@@ -20,7 +20,8 @@ import {
   ChevronRight,
   TrendingUp,
   Sliders,
-  DollarSign
+  DollarSign,
+  FileText
 } from 'lucide-react';
 import './Dashboard.css';
 
@@ -29,6 +30,7 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
   const [activeTab, setActiveTab] = useState(initialTab || 'overview');
   const [requests, setRequests] = useState([]);
   const [users, setUsers] = useState([]);
+  const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -68,9 +70,11 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
     try {
       const requestsRes = await api.get('api/requests');
       const usersRes = await api.get('api/users');
+      const blogsRes = await api.get('api/blogs');
       
       if (requestsRes.success) setRequests(requestsRes.data);
       if (usersRes.success) setUsers(usersRes.data);
+      if (blogsRes.success) setBlogs(blogsRes.data);
     } catch (err) {
       setError(err.message || 'Failed to fetch dashboard data');
     } finally {
@@ -198,6 +202,12 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
             onClick={() => switchTab('customers')}
           >
             <Users size={18} /> Customers ({customers.length})
+          </button>
+          <button 
+            className={`menu-item ${activeTab === 'blogs' ? 'active' : ''}`}
+            onClick={() => switchTab('blogs')}
+          >
+            <FileText size={18} /> Blogs ({blogs.length})
           </button>
         </div>
         <button className="menu-item logout-btn" onClick={handleLogout}>
@@ -570,6 +580,10 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
             </div>
           </div>
         )}
+
+        {activeTab === 'blogs' && (
+          <AdminBlogsSection blogs={blogs} onRefresh={fetchData} />
+        )}
       </main>
 
       {/* Map Live Location Modal */}
@@ -707,6 +721,336 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
               >
                 {agentFormLoading ? 'Creating Agent...' : 'Create Account'}
               </button>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const AdminBlogsSection = ({ blogs, onRefresh }) => {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingBlog, setEditingBlog] = useState(null);
+  const [formData, setFormData] = useState({
+    title: '',
+    slug: '',
+    category: 'Solar Power',
+    author: 'Admin',
+    image: 'https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=800&q=80',
+    summary: '',
+    content: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [isSlugEdited, setIsSlugEdited] = useState(false);
+
+  // Sync edit mode
+  useEffect(() => {
+    if (editingBlog) {
+      setFormData({
+        title: editingBlog.title,
+        slug: editingBlog.slug,
+        category: editingBlog.category || 'General',
+        author: editingBlog.author || 'Admin',
+        image: editingBlog.image || '',
+        summary: editingBlog.summary || '',
+        content: editingBlog.content || ''
+      });
+      setIsSlugEdited(true); // Don't auto-generate when editing
+      setModalOpen(true);
+    } else {
+      setFormData({
+        title: '',
+        slug: '',
+        category: 'Solar Power',
+        author: 'Admin',
+        image: 'https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=800&q=80',
+        summary: '',
+        content: ''
+      });
+      setIsSlugEdited(false);
+    }
+  }, [editingBlog]);
+
+  const handleTitleChange = (e) => {
+    const titleVal = e.target.value;
+    setFormData(prev => {
+      const updated = { ...prev, title: titleVal };
+      if (!isSlugEdited) {
+        // Auto-generate slug
+        updated.slug = titleVal
+          .toLowerCase()
+          .replace(/[^a-z0-9\s-]/g, '') // remove special characters
+          .replace(/\s+/g, '-')         // replace spaces with hyphens
+          .replace(/-+/g, '-');        // reduce multiple hyphens
+      }
+      return updated;
+    });
+  };
+
+  const handleSlugChange = (e) => {
+    setIsSlugEdited(true);
+    setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      let res;
+      if (editingBlog) {
+        // Update blog post
+        res = await api.put(`api/blogs/${editingBlog._id}`, {
+          ...formData,
+          _id: editingBlog._id
+        });
+      } else {
+        // Create new blog post
+        res = await api.post('api/blogs', formData);
+      }
+
+      if (res.success) {
+        setSuccess(editingBlog ? 'Blog updated successfully!' : 'Blog post created successfully!');
+        setModalOpen(false);
+        setEditingBlog(null);
+        onRefresh();
+      } else {
+        setError(res.error || 'Failed to save blog post');
+      }
+    } catch (err) {
+      setError(err.message || 'Error occurred while saving blog post');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (blogId) => {
+    if (!window.confirm('Are you sure you want to delete this blog post?')) return;
+    try {
+      const res = await api.delete(`api/blogs/${blogId}`);
+      if (res.success) {
+        onRefresh();
+      } else {
+        alert(res.error || 'Failed to delete blog post');
+      }
+    } catch (err) {
+      alert(err.message || 'Error deleting blog post');
+    }
+  };
+
+  return (
+    <div className="dashboard-card" style={{ marginTop: '20px' }}>
+      <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div>
+          <h2>Manage Blog Posts</h2>
+          <p className="card-subtitle">Create, update, and manage dynamically published articles on the SBR website.</p>
+        </div>
+        <button 
+          className="btn-primary" 
+          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          onClick={() => {
+            setEditingBlog(null);
+            setModalOpen(true);
+          }}
+        >
+          <Plus size={16} /> Create Blog Post
+        </button>
+      </div>
+
+      <div className="table-wrapper">
+        <table className="requests-table">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>URL Slug</th>
+              <th>Category</th>
+              <th>Author</th>
+              <th>Published Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {blogs.length === 0 ? (
+              <tr>
+                <td colSpan="6" style={{ textAlign: 'center', color: '#9ca3af', padding: '30px' }}>
+                  No blog posts found. Create your first post!
+                </td>
+              </tr>
+            ) : (
+              blogs.map((b) => (
+                <tr key={b._id}>
+                  <td style={{ fontWeight: 'bold', color: '#3b82f6' }}>{b.title}</td>
+                  <td style={{ color: '#60a5fa', fontFamily: 'monospace' }}>/{b.slug}</td>
+                  <td><span className="badge badge-assigned" style={{ background: '#1e3a8a', color: '#93c5fd' }}>{b.category}</span></td>
+                  <td>{b.author}</td>
+                  <td>{new Date(b.publishedAt).toLocaleDateString()}</td>
+                  <td>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button 
+                        className="btn-secondary" 
+                        style={{ padding: '4px 10px', fontSize: '12px' }}
+                        onClick={() => setEditingBlog(b)}
+                      >
+                        Edit
+                      </button>
+                      <button 
+                        className="btn-secondary" 
+                        style={{ padding: '4px 10px', fontSize: '12px', borderColor: '#ef4444', color: '#ef4444' }}
+                        onClick={() => handleDelete(b._id)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Create/Edit Blog Modal Overlay */}
+      {modalOpen && (
+        <div className="modal-overlay" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, padding: '20px' }}>
+          <div className="modal-content" style={{ background: '#1e293b', color: 'white', padding: '30px', borderRadius: '12px', width: '100%', maxWidth: '750px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '15px' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: 'bold' }}>
+                {editingBlog ? 'Edit Blog Post' : 'Create New Blog Post'}
+              </h3>
+              <button 
+                onClick={() => {
+                  setModalOpen(false);
+                  setEditingBlog(null);
+                }} 
+                style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {error && (
+              <div style={{ background: '#fecaca', color: '#991b1b', padding: '10px', borderRadius: '6px', marginBottom: '15px', fontSize: '14px' }}>
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                <div className="input-group">
+                  <label style={{ color: '#cbd5e1', fontSize: '14px', marginBottom: '5px', display: 'block' }}>Article Title</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.title}
+                    onChange={handleTitleChange}
+                    placeholder="e.g. 5 Signs to Switch to Solar Water Heater"
+                    style={{ width: '100%', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
+                  />
+                </div>
+
+                <div className="input-group">
+                  <label style={{ color: '#cbd5e1', fontSize: '14px', marginBottom: '5px', display: 'block' }}>URL Slug (Customizable)</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.slug}
+                    onChange={handleSlugChange}
+                    placeholder="e.g. 5-signs-switch-to-solar-water-heater"
+                    style={{ width: '100%', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px', fontFamily: 'monospace' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                <div className="input-group">
+                  <label style={{ color: '#cbd5e1', fontSize: '14px', marginBottom: '5px', display: 'block' }}>Category</label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    style={{ width: '100%', background: '#1e293b', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
+                  >
+                    <option value="Solar Power">Solar Power</option>
+                    <option value="Water Purification">Water Purification</option>
+                    <option value="Energy Savings">Energy Savings</option>
+                    <option value="General">General</option>
+                  </select>
+                </div>
+
+                <div className="input-group">
+                  <label style={{ color: '#cbd5e1', fontSize: '14px', marginBottom: '5px', display: 'block' }}>Author Name</label>
+                  <input
+                    type="text"
+                    value={formData.author}
+                    onChange={(e) => setFormData({ ...formData, author: e.target.value })}
+                    placeholder="e.g. SBR Team"
+                    style={{ width: '100%', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
+                  />
+                </div>
+              </div>
+
+              <div className="input-group">
+                <label style={{ color: '#cbd5e1', fontSize: '14px', marginBottom: '5px', display: 'block' }}>Featured Image URL</label>
+                <input
+                  type="text"
+                  value={formData.image}
+                  onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                  placeholder="https://images.unsplash.com/..."
+                  style={{ width: '100%', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
+                />
+              </div>
+
+              <div className="input-group">
+                <label style={{ color: '#cbd5e1', fontSize: '14px', marginBottom: '5px', display: 'block' }}>Card Summary (Short Description)</label>
+                <textarea
+                  required
+                  rows="2"
+                  value={formData.summary}
+                  onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
+                  placeholder="A short snippet that will show up on the homepage blog card."
+                  style={{ width: '100%', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
+                />
+              </div>
+
+              <div className="input-group">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                  <label style={{ color: '#cbd5e1', fontSize: '14px', display: 'block' }}>Article Body (Supports HTML markup)</label>
+                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>Use &lt;p&gt;, &lt;h3&gt;, &lt;ul&gt;, &lt;li&gt; tags</span>
+                </div>
+                <textarea
+                  required
+                  rows="8"
+                  value={formData.content}
+                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                  placeholder="<p>Write your detailed article body here...</p>"
+                  style={{ width: '100%', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px', fontFamily: 'monospace', fontSize: '13px' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '20px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  style={{ background: 'transparent', color: '#94a3b8', border: '1px solid #475569' }}
+                  onClick={() => {
+                    setModalOpen(false);
+                    setEditingBlog(null);
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={loading}
+                >
+                  {loading ? 'Saving...' : 'Save Post'}
+                </button>
+              </div>
             </form>
           </div>
         </div>

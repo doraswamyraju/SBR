@@ -540,10 +540,13 @@ const ContactSection = () => {
             </div>
         </section>
     );
-};
-
-const BlogSection = ({ blogPostsData }) => {
+const BlogSection = ({ blogPostsData, handleNavigation }) => {
     const [ref, isInView] = useInView({ threshold: 0.2, triggerOnce: true });
+
+    if (!blogPostsData || blogPostsData.length === 0) return null;
+
+    const mainPost = blogPostsData[0];
+    const otherPosts = blogPostsData.slice(1, 3); // limit to 2 other posts to keep layout neat
 
     return (
         <section ref={ref} id="blog" className="py-20 bg-brand-light-blue decorated-background overflow-hidden">
@@ -551,35 +554,34 @@ const BlogSection = ({ blogPostsData }) => {
                 <SectionTitle title="From Our Blog" subtitle="Stay updated with the latest news, tips, and insights on renewable solutions." isInView={isInView} />
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
                     <div className={`lg:row-span-2 transition-all duration-700 ease-out ${isInView ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10'}`}>
-                           <a href={`/blog/${blogPostsData[0].id}`} className="block bg-white/60 backdrop-blur-lg rounded-lg shadow-lg overflow-hidden group h-full border border-white/50 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+                           <a href="#" onClick={(e) => { e.preventDefault(); handleNavigation('blog-' + mainPost.slug); }} className="block bg-white/60 backdrop-blur-lg rounded-lg shadow-lg overflow-hidden group h-full border border-white/50 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
                             <div className="relative overflow-hidden">
-                                <img src={blogPostsData[0].image} alt={blogPostsData[0].title} className="w-full h-80 object-cover group-hover:scale-110 transition-transform duration-300" />
-                                <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/60 to-transparent"><p className="text-sm font-semibold text-brand-yellow">{blogPostsData[0].category}</p></div>
+                                <img src={mainPost.image} alt={mainPost.title} className="w-full h-80 object-cover group-hover:scale-110 transition-transform duration-300" />
+                                <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/60 to-transparent"><p className="text-sm font-semibold text-brand-yellow">{mainPost.category}</p></div>
                             </div>
                             <div className="p-6 flex flex-col flex-grow">
-                                <h3 className="text-2xl font-bold text-brand-dark-blue group-hover:text-brand-blue transition-colors duration-300 mb-4">{blogPostsData[0].title}</h3>
-                                <p className="text-gray-500 text-sm mb-4">{`By ${blogPostsData[0].author} on ${blogPostsData[0].date}`}</p>
+                                <h3 className="text-2xl font-bold text-brand-dark-blue group-hover:text-brand-blue transition-colors duration-300 mb-4">{mainPost.title}</h3>
+                                <p className="text-gray-600 text-sm mb-4">{mainPost.summary || `By ${mainPost.author}`}</p>
                                 <span className="mt-auto inline-block font-semibold text-brand-blue group-hover:text-brand-dark-blue group-hover:text-shadow-yellow transition-all">Read More &rarr;</span>
                             </div>
                         </a>
                     </div>
-                    {blogPostsData.slice(1).map((post, index) => (
-                        <div key={post.id} className={`transition-all duration-700 ease-out ${isInView ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-10'}`} style={{ transitionDelay: `${(index + 1) * 150}ms` }}>
-                            <a href={`/blog/${post.id}`} className="block bg-white/60 backdrop-blur-lg rounded-lg shadow-lg overflow-hidden group h-full border border-white/50 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+                    {otherPosts.map((post, index) => (
+                        <div key={post._id || post.id} className={`transition-all duration-700 ease-out ${isInView ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-10'}`} style={{ transitionDelay: `${(index + 1) * 150}ms` }}>
+                            <a href="#" onClick={(e) => { e.preventDefault(); handleNavigation('blog-' + post.slug); }} className="block bg-white/60 backdrop-blur-lg rounded-lg shadow-lg overflow-hidden group h-full border border-white/50 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
                                 <div className="relative overflow-hidden">
                                     <img src={post.image} alt={post.title} className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300" />
                                       <div className="absolute bottom-0 left-0 w-full p-2 bg-gradient-to-t from-black/60 to-transparent"><p className="text-xs font-semibold text-brand-yellow">{post.category}</p></div>
                                 </div>
                                 <div className="p-4">
                                     <h3 className="text-lg font-bold text-brand-dark-blue group-hover:text-brand-blue transition-colors duration-300 mb-2">{post.title}</h3>
-                                    <p className="text-gray-500 text-xs mb-2">{`By ${post.author} on ${post.date}`}</p>
+                                    <p className="text-gray-500 text-xs mb-2">{post.summary || `By ${post.author}`}</p>
                                     <span className="mt-2 inline-block font-semibold text-sm text-brand-blue group-hover:text-brand-dark-blue group-hover:text-shadow-yellow transition-all">Read More &rarr;</span>
                                 </div>
                             </a>
                         </div>
                     ))}
                 </div>
-                <div className={`text-center transition-all duration-700 delay-500 ${isInView ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}><a href="/blog" className="bg-brand-yellow text-brand-dark-blue font-bold py-3 px-8 rounded-full text-lg hover:bg-yellow-500 transition duration-300 transform hover:scale-105 shadow-lg">View All Posts</a></div>
             </div>
         </section>
     );
@@ -587,14 +589,15 @@ const BlogSection = ({ blogPostsData }) => {
 
 
 // --- HOMEPAGE COMPONENT ---
-const HomePage = ({ handleNavigation }) => {
+const HomePage = ({ blogs, handleNavigation }) => {
     // --- Data for HomePage ---
     const productLinksData = ["Water Scalenors", "Water Softeners", "Solar Water Heaters", "RO Water Plant", "Domestic RO Purifier", "Solar Power Systems", "Fenice Solar Energy", "Heat Pumps"];
     const heroSlidesData = [
-        { id: 1, title: "Maintenance-Free Water Scalenors", subtitle: "Our advanced HM Hard Water Scalenors prevent limescale buildup, protecting your pipes and appliances without chemicals or maintenance.", bgImage: "https://i.postimg.cc/sQDwJZY8/scalenor.png" },
-        { id: 2, title: "High-Efficiency Heat Pumps", subtitle: "Experience energy-efficient water heating with our state-of-the-art Heat Pumps, providing reliable hot water while reducing your electricity bills.", bgImage: "https://i.postimg.cc/XZzp2ptq/heat-pump.png" },
-        { id: 3, title: "Automatic Water Softeners", subtitle: "Enjoy the benefits of soft water. Our automatic systems remove hardness, leading to better skin, shinier hair, and longer-lasting appliances.", bgImage: "https://i.postimg.cc/BPjpr9wB/softener.png" },
-        { id: 4, title: "Commercial & Domestic RO Plants", subtitle: "Get pure, safe drinking water with our custom-designed RO Water Plants, built for both residential and large-scale commercial needs.", bgImage: "https://i.postimg.cc/G4ZpYZDT/ro-plant.png" },
+        { id: 1, title: "Maintenance-Free Water Scalenors", subtitle: "Our advanced HM Hard Water Scalenors prevent limescale buildup, protecting your pipes and appliances without chemicals or maintenance.", bgImage: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1920&q=80" },
+        { id: 2, title: "High-Efficiency Heat Pumps", subtitle: "Experience energy-efficient water heating with our state-of-the-art Heat Pumps, providing reliable hot water while reducing your electricity bills.", bgImage: "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1920&q=80" },
+        { id: 3, title: "Automatic Water Softeners", subtitle: "Enjoy the benefits of soft water. Our automatic systems remove hardness, leading to better skin, shinier hair, and longer-lasting appliances.", bgImage: "https://images.unsplash.com/photo-1527061011665-3652c757a4d4?auto=format&fit=crop&w=1920&q=80" },
+        { id: 4, title: "Commercial & Domestic RO Plants", subtitle: "Get pure, safe drinking water with our custom-designed RO Water Plants, built for both residential and large-scale commercial needs.", bgImage: "https://images.unsplash.com/photo-1548839140-29a749e1cf4d?auto=format&fit=crop&w=1920&q=80" },
+        { id: 5, title: "SPC Solar Water Heaters", subtitle: "Enjoy 24/7 hot water with our high-efficiency solar water heating systems, backed by a 5-year replacement guarantee.", bgImage: "https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=1920&q=80" }
     ];
     const productsPageData = [ // Used for homepage product display
         { id: 'p1', name: "Solar Water Heaters", description: "Harness the power of the sun for efficient, eco-friendly hot water.", image: "https://i.postimg.cc/CZp2b16T/solar-water-heater.png" },
@@ -640,6 +643,8 @@ const HomePage = ({ handleNavigation }) => {
         { id: 'b3', category: "Energy Savings", title: "The Benefits of a Maintenance-Free Scalenor", image: "https://i.postimg.cc/sQDwJZY8/scalenor.png", author: "Peter Jones", date: "July 15, 2025" },
     ];
 
+    const activeBlogs = blogs && blogs.length > 0 ? blogs : blogPostsData;
+
     return (
         <>
             <HeroSlider heroSlides={heroSlidesData} productLinks={productLinksData} handleNavigation={handleNavigation} />
@@ -650,7 +655,7 @@ const HomePage = ({ handleNavigation }) => {
             <GallerySection galleryLogos={galleryLogosData} />
             <FaqSection faqData={faqPageData} />
             <ContactSection />
-            <BlogSection blogPostsData={blogPostsData} />
+            <BlogSection blogPostsData={activeBlogs} handleNavigation={handleNavigation} />
         </>
     );
 };

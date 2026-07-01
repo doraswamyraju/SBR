@@ -57,13 +57,46 @@ const Header = ({ navLinks, productLinks, projectImages, openContactModal, handl
 
                     {/* Desktop navigation links */}
                     <ul className="hidden md:flex flex-grow justify-center items-center space-x-1">
-                        {navLinks.map(item => (
-                            <li key={item}>
-                                <a href="#" onClick={() => handleNavigation(item.toLowerCase())} className={`font-semibold transition-all duration-300 transform active:scale-95 px-4 py-2 rounded-md ${isScrolled ? 'text-white hover:bg-brand-yellow hover:text-brand-dark-blue' : 'text-brand-dark-blue hover:bg-brand-yellow/20'}`}>
-                                    {item}
-                                </a>
-                            </li>
-                        ))}
+                        {navLinks.map(item => {
+                            if (item === 'Products') {
+                                return (
+                                    <li key="Products" onMouseEnter={() => setDropdownOpen(true)} onMouseLeave={() => setDropdownOpen(false)} className="relative">
+                                        <button onClick={() => handleNavigation('products')} className={`font-semibold transition-all duration-300 transform active:scale-95 px-4 py-2 rounded-md flex items-center ${isScrolled ? 'text-white hover:bg-brand-yellow hover:text-brand-dark-blue' : 'text-brand-dark-blue hover:bg-brand-yellow/20'}`}>
+                                            Products
+                                            <svg className={`w-4 h-4 ml-1 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                        </button>
+                                        <div className={`absolute top-full left-1/2 -translate-x-1/2 mt-2 w-[40rem] transition-all duration-300 ${dropdownOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-4'}`}>
+                                            <div className="bg-white/90 backdrop-blur-lg shadow-2xl rounded-lg border border-gray-200 grid grid-cols-2">
+                                                <div className="p-6 border-r border-gray-200">
+                                                    <h4 className="font-bold text-brand-dark-blue mb-4">Our Products</h4>
+                                                    <ul className="space-y-2">
+                                                        {productLinks.map(link => (
+                                                            <li key={link.name}>
+                                                                <a href="#" onClick={() => handleNavigation(link.route)} className="block text-brand-dark-blue font-medium hover:text-brand-blue hover:translate-x-1 transition-all">
+                                                                    {link.name}
+                                                                </a>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                                <div className="p-6 space-y-4">
+                                                    <h4 className="font-bold text-brand-dark-blue mb-4">Featured Products</h4>
+                                                    {projectImages.map(img => <a href="#" key={img.alt} onClick={() => handleNavigation('products')} className="block group overflow-hidden rounded-md relative"><img src={img.src} alt={img.alt} className="w-full h-24 object-cover group-hover:scale-110 transition-transform duration-300" /><div className="absolute inset-0 bg-black/40 flex items-end p-2"><p className="text-white font-semibold text-sm">{img.title}</p></div></a>)}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                );
+                            }
+
+                            return (
+                                <li key={item}>
+                                    <a href="#" onClick={() => handleNavigation(item.toLowerCase())} className={`font-semibold transition-all duration-300 transform active:scale-95 px-4 py-2 rounded-md ${isScrolled ? 'text-white hover:bg-brand-yellow hover:text-brand-dark-blue' : 'text-brand-dark-blue hover:bg-brand-yellow/20'}`}>
+                                        {item}
+                                    </a>
+                                </li>
+                            );
+                        })}
                         {user && (
                             <li>
                                 <a href="#" onClick={() => handleNavigation(`${user.role.toLowerCase()}-dashboard`)} className={`font-semibold transition-all duration-300 transform active:scale-95 px-4 py-2 rounded-md ${isScrolled ? 'text-white hover:bg-brand-yellow hover:text-brand-dark-blue' : 'text-brand-dark-blue hover:bg-brand-yellow/20'}`}>
@@ -71,36 +104,6 @@ const Header = ({ navLinks, productLinks, projectImages, openContactModal, handl
                                 </a>
                             </li>
                         )}
-
-                        {/* Products dropdown */}
-                        <li onMouseEnter={() => setDropdownOpen(true)} onMouseLeave={() => setDropdownOpen(false)} className="relative">
-                            {/* Main Products button - now navigates to 'products' page on click */}
-                            <button onClick={() => handleNavigation('products')} className={`font-semibold transition-all duration-300 transform active:scale-95 px-4 py-2 rounded-md flex items-center ${isScrolled ? 'text-white hover:bg-brand-yellow hover:text-brand-dark-blue' : 'text-brand-dark-blue hover:bg-brand-yellow/20'}`}>
-                                Products
-                                <svg className={`w-4 h-4 ml-1 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                            </button>
-                            <div className={`absolute top-full left-1/2 -translate-x-1/2 mt-2 w-[40rem] transition-all duration-300 ${dropdownOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-4'}`}>
-                                <div className="bg-white/90 backdrop-blur-lg shadow-2xl rounded-lg border border-gray-200 grid grid-cols-2">
-                                    <div className="p-6 border-r border-gray-200">
-                                        <h4 className="font-bold text-brand-dark-blue mb-4">Our Products</h4>
-                                        <ul className="space-y-2">
-                                            {/* Iterate over productLinks and use link.name for display, link.route for navigation */}
-                                            {productLinks.map(link => (
-                                                <li key={link.name}>
-                                                    <a href="#" onClick={() => handleNavigation(link.route)} className="block text-brand-dark-blue font-medium hover:text-brand-blue hover:translate-x-1 transition-all">
-                                                        {link.name}
-                                                    </a>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                    <div className="p-6 space-y-4">
-                                        <h4 className="font-bold text-brand-dark-blue mb-4">Featured Products</h4>
-                                        {projectImages.map(img => <a href="#" key={img.alt} onClick={() => handleNavigation('products')} className="block group overflow-hidden rounded-md relative"><img src={img.src} alt={img.alt} className="w-full h-24 object-cover group-hover:scale-110 transition-transform duration-300" /><div className="absolute inset-0 bg-black/40 flex items-end p-2"><p className="text-white font-semibold text-sm">{img.title}</p></div></a>)}
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
                     </ul>
 
                     {/* Desktop Contact Us button */}
@@ -132,12 +135,6 @@ const Header = ({ navLinks, productLinks, projectImages, openContactModal, handl
                             </a>
                         </li>
                     ))}
-                    {/* Mobile Products link - also navigates to 'products' page */}
-                    <li key="products-mobile">
-                        <a href="#" onClick={() => { closeNav(); handleNavigation('products'); }} className="block py-3 px-4 text-white font-medium hover:bg-brand-blue rounded-md active:bg-brand-blue">
-                            Products
-                        </a>
-                    </li>
                     {user && (
                         <li key="portal-mobile">
                             <a href="#" onClick={() => { closeNav(); handleNavigation(`${user.role.toLowerCase()}-dashboard`); }} className="block py-3 px-4 text-white font-medium hover:bg-brand-blue rounded-md active:bg-brand-blue">
