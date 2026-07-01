@@ -31,14 +31,7 @@ const FloatingActionButtons = ({ openContactModal, openChatbotModal }) => {
                 <IconArrowUp className="h-6 w-6" />
             </button>
 
-            {/* Chatbot button */}
-            <button
-                onClick={openChatbotModal}
-                className="bg-brand-blue text-white p-4 rounded-full shadow-lg hover:bg-brand-dark-blue transition-all duration-300 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-brand-yellow"
-                aria-label="Open Chatbot"
-            >
-                <IconRobot className="h-6 w-6" />
-            </button>
+
             {/* WhatsApp chat link */}
             <a
                 href={`https://wa.me/${whatsappNumber}`}
