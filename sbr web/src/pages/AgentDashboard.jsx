@@ -13,7 +13,8 @@ import {
   Compass,
   Check,
   DollarSign,
-  AlertCircle
+  AlertCircle,
+  User
 } from 'lucide-react';
 import './Dashboard.css';
 
@@ -279,6 +280,12 @@ const AgentDashboard = ({ handleNavigation }) => {
           >
             <CheckCircle size={18} /> Completed ({completedJobs.length})
           </button>
+          <button 
+            className={`menu-item ${activeTab === 'profile' ? 'active' : ''}`}
+            onClick={() => setActiveTab('profile')}
+          >
+            <User size={18} /> My Profile
+          </button>
         </div>
         <div style={{ padding: '10px 15px', fontSize: '11px', color: '#9ca3af', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '20px' }}>
           Completed Jobs: <strong>{user?.completedJobs || 0}</strong>
@@ -478,35 +485,27 @@ const AgentDashboard = ({ handleNavigation }) => {
                     <th>Job ID</th>
                     <th>Customer</th>
                     <th>Service Provided</th>
-                    <th>Completed Date</th>
-                    <th>Payment Taken</th>
+                    <th>Date Resolved</th>
+                    <th>Revenue Collected</th>
                     <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {completedJobs.length === 0 ? (
                     <tr>
-                      <td colSpan="6" style={{ textAlign: 'center', color: '#9ca3af', padding: '30px' }}>No completed service records found.</td>
+                      <td colSpan="6" style={{ textAlign: 'center', color: '#9ca3af', padding: '30px' }}>No completed history found.</td>
                     </tr>
                   ) : (
                     completedJobs.map(job => (
                       <tr key={job._id}>
                         <td style={{ fontSize: '11px', color: '#9ca3af' }}>#{job._id.substring(job._id.length - 8)}</td>
                         <td>
-                          <div>{job.customerId?.name || 'Client'}</div>
+                          <div style={{ fontWeight: '600' }}>{job.customerId?.name || 'Customer'}</div>
                           <div style={{ fontSize: '11px', color: '#9ca3af' }}>{job.customerId?.phone}</div>
                         </td>
-                        <td style={{ fontWeight: '600' }}>{job.serviceType}</td>
+                        <td style={{ fontWeight: '600', color: '#a78bfa' }}>{job.serviceType}</td>
                         <td>{job.completedAt ? new Date(job.completedAt).toLocaleDateString() : new Date(job.updatedAt).toLocaleDateString()}</td>
-                        <td>
-                          {job.paymentStatus === 'Paid' ? (
-                            <span style={{ color: '#10b981', fontWeight: 'bold' }}>
-                              ₹{job.paymentAmount} ({job.paymentMethod})
-                            </span>
-                          ) : (
-                            <span style={{ color: '#9ca3af' }}>None</span>
-                          )}
-                        </td>
+                        <td style={{ fontWeight: 'bold', color: '#10b981' }}>₹{job.paymentAmount || 0}</td>
                         <td>
                           <span className="badge badge-completed">Completed</span>
                         </td>
@@ -515,6 +514,86 @@ const AgentDashboard = ({ handleNavigation }) => {
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'profile' && (
+          <div className="section-card">
+            <h2 className="section-title">My Profile & Availability</h2>
+            
+            <div className="profile-details-card" style={{ background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
+                <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(99,102,241,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a78bfa', fontSize: '24px', fontWeight: 'bold' }}>
+                  {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'white' }}>{user?.name}</h3>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#9ca3af' }}>{user?.email}</p>
+                </div>
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', fontSize: '14px' }}>
+                <div>
+                  <span style={{ color: '#9ca3af', display: 'block', fontSize: '12px', marginBottom: '4px' }}>Phone Number</span>
+                  <strong>{user?.phone || 'Not Provided'}</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#9ca3af', display: 'block', fontSize: '12px', marginBottom: '4px' }}>Specialization</span>
+                  <strong>{user?.specialization || 'General Technician'}</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#9ca3af', display: 'block', fontSize: '12px', marginBottom: '4px' }}>Location Scope</span>
+                  <strong>{user?.location || 'Tirupati Region'}</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#9ca3af', display: 'block', fontSize: '12px', marginBottom: '4px' }}>Total Completed Jobs</span>
+                  <strong>{user?.completedJobs || 0} jobs</strong>
+                </div>
+              </div>
+            </div>
+
+            <div className="availability-card" style={{ background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', fontWeight: '600', color: 'white' }}>Work Availability Status</h3>
+              <p style={{ margin: '0 0 15px 0', fontSize: '13px', color: '#9ca3af' }}>
+                Toggle your availability status. When Offline, the administrator will not assign you new service requests.
+              </p>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const nextStatus = user?.status === 'Online' ? 'Offline' : 'Online';
+                    try {
+                      const res = await api.put('api/users/profile', { status: nextStatus });
+                      if (res.success) {
+                        const updatedUser = { ...user, status: nextStatus };
+                        setUser(updatedUser);
+                        localStorage.setItem('auth_user', JSON.stringify(updatedUser));
+                        alert(`You are now ${nextStatus}!`);
+                      }
+                    } catch (e) {
+                      alert('Failed to update availability status.');
+                    }
+                  }}
+                  style={{
+                    padding: '8px 20px',
+                    fontSize: '13px',
+                    borderRadius: '8px',
+                    background: user?.status === 'Online' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                    color: user?.status === 'Online' ? '#10b981' : '#f87171',
+                    border: user?.status === 'Online' ? '1px solid #10b981' : '1px solid #ef4444',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  Status: {user?.status || 'Offline'}
+                </button>
+                <span style={{ fontSize: '13px', color: '#9ca3af' }}>
+                  {user?.status === 'Online' ? '🟢 You are ready to accept new service requests.' : '🔴 You will not receive any new requests.'}
+                </span>
+              </div>
             </div>
           </div>
         )}

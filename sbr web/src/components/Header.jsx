@@ -64,11 +64,13 @@ const Header = ({ navLinks, productLinks, projectImages, openContactModal, handl
                                 </a>
                             </li>
                         ))}
-                        <li>
-                            <a href="#" onClick={() => handleNavigation(user ? `${user.role.toLowerCase()}-dashboard` : 'auth')} className={`font-semibold transition-all duration-300 transform active:scale-95 px-4 py-2 rounded-md ${isScrolled ? 'text-white hover:bg-brand-yellow hover:text-brand-dark-blue' : 'text-brand-dark-blue hover:bg-brand-yellow/20'}`}>
-                                {user ? 'Dashboard' : 'Portal'}
-                            </a>
-                        </li>
+                        {user && (
+                            <li>
+                                <a href="#" onClick={() => handleNavigation(`${user.role.toLowerCase()}-dashboard`)} className={`font-semibold transition-all duration-300 transform active:scale-95 px-4 py-2 rounded-md ${isScrolled ? 'text-white hover:bg-brand-yellow hover:text-brand-dark-blue' : 'text-brand-dark-blue hover:bg-brand-yellow/20'}`}>
+                                    Dashboard
+                                </a>
+                            </li>
+                        )}
 
                         {/* Products dropdown */}
                         <li onMouseEnter={() => setDropdownOpen(true)} onMouseLeave={() => setDropdownOpen(false)} className="relative">
@@ -136,11 +138,13 @@ const Header = ({ navLinks, productLinks, projectImages, openContactModal, handl
                             Products
                         </a>
                     </li>
-                    <li key="portal-mobile">
-                        <a href="#" onClick={() => { closeNav(); handleNavigation(user ? `${user.role.toLowerCase()}-dashboard` : 'auth'); }} className="block py-3 px-4 text-white font-medium hover:bg-brand-blue rounded-md active:bg-brand-blue">
-                            {user ? 'Dashboard' : 'Client Portal'}
-                        </a>
-                    </li>
+                    {user && (
+                        <li key="portal-mobile">
+                            <a href="#" onClick={() => { closeNav(); handleNavigation(`${user.role.toLowerCase()}-dashboard`); }} className="block py-3 px-4 text-white font-medium hover:bg-brand-blue rounded-md active:bg-brand-blue">
+                                Dashboard
+                            </a>
+                        </li>
+                    )}
 
                 </ul>
             </div>

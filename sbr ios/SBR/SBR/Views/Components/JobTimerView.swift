@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct JobTimerView: View {
     let request: ServiceRequest
@@ -21,6 +22,7 @@ struct JobTimerView: View {
                         .font(.title2)
                         .fontWeight(.bold)
                         .fontDesign(.monospaced)
+                        .foregroundColor(SBRColors.textPrimary)
                     
                     Text(timerLabel)
                         .font(.caption)

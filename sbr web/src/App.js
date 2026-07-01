@@ -34,14 +34,36 @@ export default function App() {
     );
 }
 
+const getInitialPageFromPath = () => {
+    const path = window.location.pathname;
+    if (path === '/login') return 'auth';
+    if (path === '/admin') return 'admin-dashboard';
+    if (path === '/customer') return 'customer-dashboard';
+    if (path === '/agent') return 'agent-dashboard';
+    if (path === '/about') return 'about';
+    if (path === '/products') return 'products';
+    if (path === '/scalenors') return 'scalenors page';
+    return 'home';
+};
+
 function AppContent() {
-    const [currentPage, setCurrentPage] = useState('home');
+    const [currentPage, setCurrentPage] = useState(getInitialPageFromPath);
     const [isContactModalOpen, setIsContactModalOpen] = useState(false);
     const [isChatbotModalOpen, setIsChatbotModalOpen] = useState(false);
     const [isTimedWelcomeModalOpen, setIsTimedWelcomeModalOpen] = useState(false);
 
     // Context state
     const { user, loading: authLoading } = useAuth();
+
+    // Listen to popstate event for back/forward navigation
+    useEffect(() => {
+        const handlePopState = () => {
+            setCurrentPage(getInitialPageFromPath());
+        };
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, []);
+
 
     // Firebase state (will remain null if Firebase is not initialized)
     const [db, setDb] = useState(null);
@@ -131,6 +153,21 @@ function AppContent() {
     // Handle navigation for single page application
     const handleNavigation = (pageId) => {
         setCurrentPage(pageId);
+        
+        let path = '/';
+        if (pageId === 'auth') path = '/login';
+        else if (pageId === 'admin-dashboard') path = '/admin';
+        else if (pageId === 'customer-dashboard') path = '/customer';
+        else if (pageId === 'agent-dashboard') path = '/agent';
+        else if (pageId === 'about') path = '/about';
+        else if (pageId === 'products') path = '/products';
+        else if (pageId === 'scalenors page') path = '/scalenors';
+        else if (pageId === 'home') path = '/';
+        
+        if (window.location.pathname !== path) {
+            window.history.pushState({ pageId }, '', path);
+        }
+        
         window.scrollTo(0, 0); // Scroll to top on page change
     };
 
@@ -168,27 +205,28 @@ function AppContent() {
         // Authentication guard and redirect logic
         if (['admin-dashboard', 'customer-dashboard', 'agent-dashboard'].includes(currentPage)) {
             if (!user) {
-                setTimeout(() => setCurrentPage('auth'), 0);
+                setTimeout(() => handleNavigation('auth'), 0);
                 return null;
             }
             if (currentPage === 'admin-dashboard' && user.role !== 'ADMIN') {
-                setTimeout(() => setCurrentPage(`${user.role.toLowerCase()}-dashboard`), 0);
+                setTimeout(() => handleNavigation(`${user.role.toLowerCase()}-dashboard`), 0);
                 return null;
             }
             if (currentPage === 'customer-dashboard' && user.role !== 'CUSTOMER') {
-                setTimeout(() => setCurrentPage(`${user.role.toLowerCase()}-dashboard`), 0);
+                setTimeout(() => handleNavigation(`${user.role.toLowerCase()}-dashboard`), 0);
                 return null;
             }
             if (currentPage === 'agent-dashboard' && user.role !== 'AGENT') {
-                setTimeout(() => setCurrentPage(`${user.role.toLowerCase()}-dashboard`), 0);
+                setTimeout(() => handleNavigation(`${user.role.toLowerCase()}-dashboard`), 0);
                 return null;
             }
         }
 
         if (currentPage === 'auth' && user) {
-            setTimeout(() => setCurrentPage(`${user.role.toLowerCase()}-dashboard`), 0);
+            setTimeout(() => handleNavigation(`${user.role.toLowerCase()}-dashboard`), 0);
             return null;
         }
+
 
         switch (currentPage) {
             case 'home':

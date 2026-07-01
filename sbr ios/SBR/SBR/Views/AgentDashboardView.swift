@@ -163,7 +163,7 @@ struct AgentDashboardContent: View {
     }
     
     private var completedTodayCount: Int {
-        requestVM.requests.filter({ $0.status == .completed }).count
+        requestVM.requests.filter({ $0.status == .completed || $0.status == .paid }).count
     }
     
     private var todaysEarningsSum: Double {
@@ -965,7 +965,7 @@ struct AgentCompletedRequestsSheet: View {
     @Environment(\.dismiss) var dismiss
     
     private var completedRequests: [ServiceRequest] {
-        requestVM.requests.filter({ $0.status == .completed })
+        requestVM.requests.filter({ $0.status == .completed || $0.status == .paid })
     }
     
     var body: some View {

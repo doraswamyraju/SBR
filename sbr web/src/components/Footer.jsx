@@ -51,15 +51,41 @@ const Footer = ({ navLinks, handleNavigation }) => {
                             {formStatus && <p className="text-sm text-green-300">{formStatus}</p>}
                         </form>
                     </div>
-                    {/* Follow Us Social Links */}
+                    {/* Follow Us Social Links & App Download */}
                     <div>
                         <h3 className="font-bold text-lg mb-4">Follow Us</h3>
-                        <div className="flex space-x-4">
+                        <div className="flex space-x-4 mb-6">
                             <a href="#" aria-label="Facebook" className="text-blue-200 hover:text-brand-yellow transition-transform hover:scale-125"><IconFacebook className="h-6 w-6" /></a>
                             <a href="#" aria-label="Instagram" className="text-blue-200 hover:text-brand-yellow transition-transform hover:scale-125"><IconInstagram className="h-6 w-6" /></a>
                             <a href="#" aria-label="WhatsApp" className="text-blue-200 hover:text-brand-yellow transition-transform hover:scale-125"><IconWhatsapp className="h-6 w-6" /></a>
                         </div>
+                        
+                        <h3 className="font-bold text-md mb-4 text-white">Download Our Apps</h3>
+                        <div className="flex flex-col gap-3">
+                            {/* Google Play Store Badge */}
+                            <a href="#" className="flex items-center bg-black/40 hover:bg-black/60 border border-blue-700/50 rounded-lg px-3 py-1.5 transition-colors w-44">
+                                <svg className="w-5 h-5 mr-2 text-white fill-current" viewBox="0 0 24 24">
+                                    <path d="M3.609 1.814L13.792 12 3.61 22.186A2.257 2.257 0 013 20.598V3.402c0-.66.223-1.246.609-1.588zm11.29 9.077l3.14-1.812a2.249 2.249 0 010 3.842l-3.14-1.812-.001.001-.001-.001-1.129-.652 1.13-.652.001-.009zm-1.821 1.761L3.924 22.002a2.185 2.185 0 001.328.498 2.25 2.25 0 001.558-.592l8.868-5.12-2.602-2.602-.001-.034zm0-1.304l2.602-2.602L6.81 3.126a2.25 2.25 0 00-1.558-.592 2.185 2.185 0 00-1.328.498l9.155 9.156v-.036z"/>
+                                </svg>
+                                <div className="text-left">
+                                    <p className="text-[9px] text-blue-200 uppercase font-semibold leading-none">Get it on</p>
+                                    <p className="text-xs text-white font-bold leading-tight mt-0.5">Google Play</p>
+                                </div>
+                            </a>
+                            
+                            {/* Apple App Store Badge */}
+                            <a href="#" className="flex items-center bg-black/40 hover:bg-black/60 border border-blue-700/50 rounded-lg px-3 py-1.5 transition-colors w-44">
+                                <svg className="w-5 h-5 mr-2 text-white fill-current" viewBox="0 0 24 24">
+                                    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.22.67-2.94 1.5-.62.71-1.16 1.85-1.01 2.96 1.12.09 2.27-.58 2.96-1.4"/>
+                                </svg>
+                                <div className="text-left">
+                                    <p className="text-[9px] text-blue-200 uppercase font-semibold leading-none">Download on the</p>
+                                    <p className="text-xs text-white font-bold leading-tight mt-0.5">App Store</p>
+                                </div>
+                            </a>
+                        </div>
                     </div>
+
                 </div>
             </div>
             {/* Copyright information */}

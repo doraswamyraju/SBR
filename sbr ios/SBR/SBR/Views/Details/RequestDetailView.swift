@@ -25,6 +25,7 @@ struct RequestDetailView: View {
         case .inProgress: return .purple
         case .completed: return .green
         case .cancelled: return .red
+        case .paid: return .green
         }
     }
     
@@ -224,7 +225,7 @@ struct RequestDetailView: View {
                                 }
                             }
                             .buttonStyle(PlainButtonStyle())
-                            .disabled(authVM.user?.role != .agent || currentRequest.status == .completed || requestVM.isLoading)
+                            .disabled(authVM.user?.role != .agent || currentRequest.status == .completed || currentRequest.status == .paid || requestVM.isLoading)
                             
                             Button(action: {
                                 if authVM.user?.role == .agent {
@@ -264,7 +265,7 @@ struct RequestDetailView: View {
                                 }
                             }
                             .buttonStyle(PlainButtonStyle())
-                            .disabled(authVM.user?.role != .agent || currentRequest.status == .completed || requestVM.isLoading)
+                            .disabled(authVM.user?.role != .agent || currentRequest.status == .completed || currentRequest.status == .paid || requestVM.isLoading)
                         }
                     }
                     .padding()
@@ -345,7 +346,7 @@ struct RequestDetailView: View {
                         .padding(.top, 10)
                     }
                     
-                    if authVM.user?.role == .customer && currentRequest.status == .completed && currentRequest.requestReview == true {
+                    if authVM.user?.role == .customer && (currentRequest.status == .completed || currentRequest.status == .paid) && currentRequest.requestReview == true {
                         GeminiGlowOutlineButton(
                             title: "Leave Sri Balaji Renewables Review",
                             icon: "star.bubble.fill"
@@ -384,7 +385,7 @@ struct RequestDetailView: View {
             Task {
                 await requestVM.fetchUsers()
             }
-            if currentRequest.status == .completed && currentRequest.requestReview == true {
+            if (currentRequest.status == .completed || currentRequest.status == .paid) && currentRequest.requestReview == true {
                 fetchReviewUrl()
             }
         }

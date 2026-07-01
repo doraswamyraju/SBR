@@ -168,6 +168,7 @@ struct RequestRowItem: View {
         case .inProgress: return .purple
         case .completed: return .green
         case .cancelled: return .red
+        case .paid: return .green
         }
     }
     

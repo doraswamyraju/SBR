@@ -20,6 +20,7 @@ const CustomerDashboard = ({ handleNavigation }) => {
   const { user, logout, setUser } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [requests, setRequests] = useState([]);
+  const [requestsFilter, setRequestsFilter] = useState('All');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -313,6 +314,32 @@ const CustomerDashboard = ({ handleNavigation }) => {
         {activeTab === 'requests' && (
           <div className="section-card">
             <h2 className="section-title">All Service Requests</h2>
+            
+            {/* Status Filter Tabs */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
+              {['All', 'Pending', 'Assigned', 'In Progress', 'Completed', 'Paid', 'Cancelled'].map(status => (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() => setRequestsFilter(status)}
+                  className={`menu-item-filter ${requestsFilter === status ? 'active' : ''}`}
+                  style={{
+                    padding: '6px 14px',
+                    fontSize: '12px',
+                    borderRadius: '20px',
+                    background: requestsFilter === status ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                    color: requestsFilter === status ? '#a78bfa' : '#9ca3af',
+                    border: requestsFilter === status ? '1px solid #6366f1' : '1px solid rgba(255,255,255,0.05)',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
+
             <div className="table-wrapper">
               <table className="custom-table">
                 <thead>
@@ -327,44 +354,52 @@ const CustomerDashboard = ({ handleNavigation }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {requests.length === 0 ? (
-                    <tr>
-                      <td colSpan="7" style={{ textAlign: 'center', color: '#9ca3af', padding: '30px' }}>No service history found.</td>
-                    </tr>
-                  ) : (
-                    requests.map(req => (
-                      <tr key={req._id}>
-                        <td style={{ fontSize: '11px', color: '#9ca3af' }}>#{req._id.substring(req._id.length - 8)}</td>
-                        <td style={{ fontWeight: '600', color: '#a78bfa' }}>{req.serviceType}</td>
-                        <td>{req.description}</td>
-                        <td>{new Date(req.createdAt).toLocaleDateString()}</td>
-                        <td>
-                          {req.assignedAgentId ? (
-                            <div>
-                              <div>{req.assignedAgentId.name}</div>
-                              <div style={{ fontSize: '11px', color: '#9ca3af' }}>{req.assignedAgentId.phone}</div>
-                            </div>
-                          ) : (
-                            <span style={{ color: '#9ca3af', fontSize: '12px' }}>Awaiting allocation</span>
-                          )}
-                        </td>
-                        <td>
-                          <span className={`badge badge-${req.status.toLowerCase().replace(' ', '-')}`}>
-                            {req.status}
-                          </span>
-                        </td>
-                        <td>
-                          {req.status === 'Completed' ? (
-                            <span style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px' }}>
-                              <CheckCircle size={14} /> Resolved {req.completedAt ? new Date(req.completedAt).toLocaleDateString() : ''}
-                            </span>
-                          ) : (
-                            <span style={{ color: '#9ca3af', fontSize: '12px' }}>In progress</span>
-                          )}
-                        </td>
+                  {(() => {
+                    const filteredRequests = requests.filter(req => {
+                      if (requestsFilter === 'All') return true;
+                      if (requestsFilter === 'Paid') return req.paymentStatus === 'Paid';
+                      return req.status.toLowerCase() === requestsFilter.toLowerCase();
+                    });
+                    
+                    return filteredRequests.length === 0 ? (
+                      <tr>
+                        <td colSpan="7" style={{ textAlign: 'center', color: '#9ca3af', padding: '30px' }}>No requests matching this status found.</td>
                       </tr>
-                    ))
-                  )}
+                    ) : (
+                      filteredRequests.map(req => (
+                        <tr key={req._id}>
+                          <td style={{ fontSize: '11px', color: '#9ca3af' }}>#{req._id.substring(req._id.length - 8)}</td>
+                          <td style={{ fontWeight: '600', color: '#a78bfa' }}>{req.serviceType}</td>
+                          <td>{req.description}</td>
+                          <td>{new Date(req.createdAt).toLocaleDateString()}</td>
+                          <td>
+                            {req.assignedAgentId ? (
+                              <div>
+                                <div>{req.assignedAgentId.name}</div>
+                                <div style={{ fontSize: '11px', color: '#9ca3af' }}>{req.assignedAgentId.phone}</div>
+                              </div>
+                            ) : (
+                              <span style={{ color: '#9ca3af', fontSize: '12px' }}>Awaiting allocation</span>
+                            )}
+                          </td>
+                          <td>
+                            <span className={`badge badge-${req.status.toLowerCase().replace(' ', '-')}`}>
+                              {req.status}
+                            </span>
+                          </td>
+                          <td>
+                            {req.status === 'Completed' || req.paymentStatus === 'Paid' ? (
+                              <span style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px' }}>
+                                <CheckCircle size={14} /> Resolved {req.completedAt ? new Date(req.completedAt).toLocaleDateString() : ''}
+                              </span>
+                            ) : (
+                              <span style={{ color: '#9ca3af', fontSize: '12px' }}>In progress</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    );
+                  })()}
                 </tbody>
               </table>
             </div>

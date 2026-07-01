@@ -13,6 +13,7 @@ enum RequestStatus: String, Codable {
     case inProgress = "In Progress"
     case completed = "Completed"
     case cancelled = "Cancelled"
+    case paid = "Paid"
 }
 
 struct ServiceRequest: Codable, Identifiable {

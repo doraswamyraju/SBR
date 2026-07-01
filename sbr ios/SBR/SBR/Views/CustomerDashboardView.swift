@@ -131,7 +131,7 @@ struct CustomerDashboardContent: View {
     
     private var pendingPaymentsSum: Double {
         // Calculate unpaid completed requests sum
-        requestVM.requests.filter({ $0.status == .completed && ($0.paymentStatus == nil || $0.paymentStatus != "Paid") }).reduce(0.0) { $0 + ($1.paymentAmount ?? 0.0) }
+        requestVM.requests.filter({ ($0.status == .completed || $0.status == .paid) && ($0.paymentStatus == nil || $0.paymentStatus != "Paid") }).reduce(0.0) { $0 + ($1.paymentAmount ?? 0.0) }
     }
     
     private func fetchReviewUrl() {
@@ -233,7 +233,7 @@ struct CustomerDashboardContent: View {
                                 }
                                 .buttonStyle(PlainButtonStyle())
                                 
-                                if req.status == .completed && req.requestReview == true {
+                                if (req.status == .completed || req.status == .paid) && req.requestReview == true {
                                     GeminiGlowOutlineButton(
                                         title: "Leave Sri Balaji Renewables Review",
                                         icon: "star.bubble.fill"
