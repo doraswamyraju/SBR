@@ -24,6 +24,7 @@ import Auth from './pages/Auth';
 import AdminDashboard from './pages/AdminDashboard';
 import CustomerDashboard from './pages/CustomerDashboard';
 import AgentDashboard from './pages/AgentDashboard';
+import ProductDetail from './pages/ProductDetail';
 
 // --- MAIN APP COMPONENT ---
 export default function App() {
@@ -34,20 +35,35 @@ export default function App() {
     );
 }
 
-const getInitialPageFromPath = () => {
+const parsePath = () => {
     const path = window.location.pathname;
-    if (path === '/login') return 'auth';
-    if (path === '/admin') return 'admin-dashboard';
-    if (path === '/customer') return 'customer-dashboard';
-    if (path === '/agent') return 'agent-dashboard';
-    if (path === '/about') return 'about';
-    if (path === '/products') return 'products';
-    if (path === '/scalenors') return 'scalenors page';
-    return 'home';
+    if (path === '/login') return { pageId: 'auth' };
+    if (path === '/admin') return { pageId: 'admin-dashboard', tab: 'overview' };
+    if (path === '/admin/requests') return { pageId: 'admin-dashboard', tab: 'requests' };
+    if (path === '/admin/agents') return { pageId: 'admin-dashboard', tab: 'agents' };
+    if (path === '/admin/customers') return { pageId: 'admin-dashboard', tab: 'customers' };
+    if (path === '/customer') return { pageId: 'customer-dashboard', tab: 'overview' };
+    if (path === '/customer/book') return { pageId: 'customer-dashboard', tab: 'book' };
+    if (path === '/customer/requests') return { pageId: 'customer-dashboard', tab: 'requests' };
+    if (path === '/customer/payments') return { pageId: 'customer-dashboard', tab: 'payments' };
+    if (path === '/customer/profile') return { pageId: 'customer-dashboard', tab: 'profile' };
+    if (path === '/agent') return { pageId: 'agent-dashboard', tab: 'jobs' };
+    if (path === '/agent/completed') return { pageId: 'agent-dashboard', tab: 'completed' };
+    if (path === '/agent/profile') return { pageId: 'agent-dashboard', tab: 'profile' };
+    if (path === '/about') return { pageId: 'about' };
+    if (path === '/products') return { pageId: 'products' };
+    if (path.startsWith('/product/')) {
+        const productId = path.substring(9);
+        return { pageId: 'product-detail', productId };
+    }
+    return { pageId: 'home' };
 };
 
 function AppContent() {
-    const [currentPage, setCurrentPage] = useState(getInitialPageFromPath);
+    const initialRoute = parsePath();
+    const [currentPage, setCurrentPage] = useState(initialRoute.pageId);
+    const [currentTab, setCurrentTab] = useState(initialRoute.tab || '');
+    const [currentProductId, setCurrentProductId] = useState(initialRoute.productId || '');
     const [isContactModalOpen, setIsContactModalOpen] = useState(false);
     const [isChatbotModalOpen, setIsChatbotModalOpen] = useState(false);
     const [isTimedWelcomeModalOpen, setIsTimedWelcomeModalOpen] = useState(false);
@@ -58,11 +74,15 @@ function AppContent() {
     // Listen to popstate event for back/forward navigation
     useEffect(() => {
         const handlePopState = () => {
-            setCurrentPage(getInitialPageFromPath());
+            const route = parsePath();
+            setCurrentPage(route.pageId);
+            setCurrentTab(route.tab || '');
+            setCurrentProductId(route.productId || '');
         };
         window.addEventListener('popstate', handlePopState);
         return () => window.removeEventListener('popstate', handlePopState);
     }, []);
+
 
 
     // Firebase state (will remain null if Firebase is not initialized)
@@ -151,39 +171,62 @@ function AppContent() {
     }, []);
 
     // Handle navigation for single page application
-    const handleNavigation = (pageId) => {
+    const handleNavigation = (pageInput) => {
+        let pageId, tab, productId;
+        
+        if (typeof pageInput === 'string') {
+            pageId = pageInput;
+            
+            // Map legacy page IDs or shortcut strings
+            if (pageId === 'admin-dashboard') tab = 'overview';
+            else if (pageId === 'customer-dashboard') tab = 'overview';
+            else if (pageId === 'agent-dashboard') tab = 'jobs';
+            else if (pageId.startsWith('product-')) {
+                productId = pageId.substring(8);
+                pageId = 'product-detail';
+            }
+        } else {
+            pageId = pageInput.pageId;
+            tab = pageInput.tab;
+            productId = pageInput.productId;
+        }
+
         setCurrentPage(pageId);
+        setCurrentTab(tab || '');
+        setCurrentProductId(productId || '');
         
         let path = '/';
         if (pageId === 'auth') path = '/login';
-        else if (pageId === 'admin-dashboard') path = '/admin';
-        else if (pageId === 'customer-dashboard') path = '/customer';
-        else if (pageId === 'agent-dashboard') path = '/agent';
-        else if (pageId === 'about') path = '/about';
+        else if (pageId === 'admin-dashboard') {
+            path = tab && tab !== 'overview' ? `/admin/${tab}` : '/admin';
+        } else if (pageId === 'customer-dashboard') {
+            path = tab && tab !== 'overview' ? `/customer/${tab}` : '/customer';
+        } else if (pageId === 'agent-dashboard') {
+            path = tab && tab !== 'jobs' ? `/agent/${tab}` : '/agent';
+        } else if (pageId === 'about') path = '/about';
         else if (pageId === 'products') path = '/products';
-        else if (pageId === 'scalenors page') path = '/scalenors';
+        else if (pageId === 'product-detail') path = `/product/${productId}`;
         else if (pageId === 'home') path = '/';
         
         if (window.location.pathname !== path) {
-            window.history.pushState({ pageId }, '', path);
+            window.history.pushState({ pageId, tab, productId }, '', path);
         }
         
         window.scrollTo(0, 0); // Scroll to top on page change
     };
 
+
     // --- Global Data (Centralized for the whole website) ---
     const navLinksData = ["Home", "About", "Calculator", "Projects", "Blog"];
     const productLinksData = [
-        // HM Hard Water Scalenors moved to first position and given its specific route
-        { name: "HM Hard Water Scalenors", route: "scalenors page" },
-        { name: "Water Scalenors", route: "products" }, // This might be a duplicate or general category
-        { name: "Water Softeners", route: "products" },
-        { name: "Solar Water Heaters", route: "products" },
-        { name: "RO Water Plant", route: "products" },
-        { name: "Domestic RO Purifier", route: "products" },
-        { name: "Solar Power Systems", route: "products" },
-        { name: "Fenice Solar Energy", route: "products" },
-        { name: "Heat Pumps", route: "products" },
+        { name: "HM Hard Water Scalenors", route: "product-hmws" },
+        { name: "Water Softeners", route: "product-aws" },
+        { name: "Solar Water Heaters", route: "product-swh" },
+        { name: "RO Water Plant", route: "product-rowp" },
+        { name: "Domestic RO Purifier", route: "product-drop" },
+        { name: "Solar Power Systems", route: "product-sps" },
+        { name: "Fenice Solar Energy", route: "product-fse" },
+        { name: "Heat Pumps", route: "product-hp" },
     ];
     const projectImagesData = [
         { src: "https://i.postimg.cc/CZp2b16T/solar-water-heater.png", alt: "Solar Water Heater", title: "Solar Water Heaters" },
@@ -237,14 +280,16 @@ function AppContent() {
                 return <ProductsPage handleNavigation={handleNavigation} />;
             case 'scalenors page':
                 return <ProductScalenorPage openContactModal={openContactModal} />;
+            case 'product-detail':
+                return <ProductDetail productId={currentProductId} handleNavigation={handleNavigation} openContactModal={openContactModal} />;
             case 'auth':
                 return <Auth handleNavigation={handleNavigation} />;
             case 'admin-dashboard':
-                return <AdminDashboard handleNavigation={handleNavigation} />;
+                return <AdminDashboard initialTab={currentTab} handleNavigation={handleNavigation} />;
             case 'customer-dashboard':
-                return <CustomerDashboard handleNavigation={handleNavigation} />;
+                return <CustomerDashboard initialTab={currentTab} handleNavigation={handleNavigation} />;
             case 'agent-dashboard':
-                return <AgentDashboard handleNavigation={handleNavigation} />;
+                return <AgentDashboard initialTab={currentTab} handleNavigation={handleNavigation} />;
             default:
                 return <HomePage handleNavigation={handleNavigation} />; // Fallback to home page
         }

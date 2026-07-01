@@ -115,7 +115,7 @@ const ProductsPage = ({ handleNavigation }) => {
                                 <div className="p-6 flex-grow flex flex-col">
                                     <h3 className="text-xl font-bold text-brand-dark-blue mb-2">{product.name}</h3>
                                     <p className="text-gray-600 text-sm flex-grow mb-4">{product.description || "Details coming soon..."}</p>
-                                    <button onClick={() => handleNavigation('product-scalenor')} className="mt-auto inline-block bg-brand-blue text-white font-semibold py-2 px-6 rounded-full hover:bg-brand-dark-blue transition-all duration-300">
+                                    <button onClick={() => handleNavigation('product-' + product.id)} className="mt-auto inline-block bg-brand-blue text-white font-semibold py-2 px-6 rounded-full hover:bg-brand-dark-blue transition-all duration-300">
                                         Learn More
                                     </button>
                                 </div>

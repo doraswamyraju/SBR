@@ -16,13 +16,23 @@ import {
 } from 'lucide-react';
 import './Dashboard.css';
 
-const CustomerDashboard = ({ handleNavigation }) => {
+const CustomerDashboard = ({ initialTab, handleNavigation }) => {
   const { user, logout, setUser } = useAuth();
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(initialTab || 'overview');
   const [requests, setRequests] = useState([]);
   const [requestsFilter, setRequestsFilter] = useState('All');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
+  const switchTab = (tabName) => {
+    handleNavigation({ pageId: 'customer-dashboard', tab: tabName });
+  };
 
   // New Request Form State
   const [serviceType, setServiceType] = useState('Solar Water Heaters');
@@ -139,31 +149,31 @@ const CustomerDashboard = ({ handleNavigation }) => {
         <div className="sidebar-menu">
           <button 
             className={`menu-item ${activeTab === 'overview' ? 'active' : ''}`}
-            onClick={() => setActiveTab('overview')}
+            onClick={() => switchTab('overview')}
           >
             <LayoutDashboard size={18} /> Overview
           </button>
           <button 
             className={`menu-item ${activeTab === 'book' ? 'active' : ''}`}
-            onClick={() => setActiveTab('book')}
+            onClick={() => switchTab('book')}
           >
             <PlusCircle size={18} /> Book Service
           </button>
           <button 
             className={`menu-item ${activeTab === 'requests' ? 'active' : ''}`}
-            onClick={() => setActiveTab('requests')}
+            onClick={() => switchTab('requests')}
           >
             <Wrench size={18} /> Service History
           </button>
           <button 
             className={`menu-item ${activeTab === 'payments' ? 'active' : ''}`}
-            onClick={() => setActiveTab('payments')}
+            onClick={() => switchTab('payments')}
           >
             <CreditCard size={18} /> Payments
           </button>
           <button 
             className={`menu-item ${activeTab === 'profile' ? 'active' : ''}`}
-            onClick={() => setActiveTab('profile')}
+            onClick={() => switchTab('profile')}
           >
             <User size={18} /> My Profile
           </button>

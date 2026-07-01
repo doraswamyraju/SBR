@@ -18,12 +18,22 @@ import {
 } from 'lucide-react';
 import './Dashboard.css';
 
-const AgentDashboard = ({ handleNavigation }) => {
+const AgentDashboard = ({ initialTab, handleNavigation }) => {
   const { user, logout, setUser } = useAuth();
-  const [activeTab, setActiveTab] = useState('jobs');
+  const [activeTab, setActiveTab] = useState(initialTab || 'jobs');
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
+  const switchTab = (tabName) => {
+    handleNavigation({ pageId: 'agent-dashboard', tab: tabName });
+  };
   
   // Tracking Simulation State
   const [isTrackingActive, setIsTrackingActive] = useState(false);
@@ -270,19 +280,19 @@ const AgentDashboard = ({ handleNavigation }) => {
         <div className="sidebar-menu">
           <button 
             className={`menu-item ${activeTab === 'jobs' ? 'active' : ''}`}
-            onClick={() => setActiveTab('jobs')}
+            onClick={() => switchTab('jobs')}
           >
             <Wrench size={18} /> Active Jobs ({activeJobs.length + assignedJobs.length})
           </button>
           <button 
             className={`menu-item ${activeTab === 'completed' ? 'active' : ''}`}
-            onClick={() => setActiveTab('completed')}
+            onClick={() => switchTab('completed')}
           >
             <CheckCircle size={18} /> Completed ({completedJobs.length})
           </button>
           <button 
             className={`menu-item ${activeTab === 'profile' ? 'active' : ''}`}
-            onClick={() => setActiveTab('profile')}
+            onClick={() => switchTab('profile')}
           >
             <User size={18} /> My Profile
           </button>

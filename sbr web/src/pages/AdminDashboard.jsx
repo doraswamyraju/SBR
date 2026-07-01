@@ -24,13 +24,23 @@ import {
 } from 'lucide-react';
 import './Dashboard.css';
 
-const AdminDashboard = ({ handleNavigation }) => {
+const AdminDashboard = ({ initialTab, handleNavigation }) => {
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(initialTab || 'overview');
   const [requests, setRequests] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
+  const switchTab = (tabName) => {
+    handleNavigation({ pageId: 'admin-dashboard', tab: tabName });
+  };
   
   // Modals state
   const [trackingRequest, setTrackingRequest] = useState(null);
@@ -167,25 +177,25 @@ const AdminDashboard = ({ handleNavigation }) => {
         <div className="sidebar-menu">
           <button 
             className={`menu-item ${activeTab === 'overview' ? 'active' : ''}`}
-            onClick={() => setActiveTab('overview')}
+            onClick={() => switchTab('overview')}
           >
             <LayoutDashboard size={18} /> Overview
           </button>
           <button 
             className={`menu-item ${activeTab === 'requests' ? 'active' : ''}`}
-            onClick={() => setActiveTab('requests')}
+            onClick={() => switchTab('requests')}
           >
             <Wrench size={18} /> Requests ({requests.length})
           </button>
           <button 
             className={`menu-item ${activeTab === 'agents' ? 'active' : ''}`}
-            onClick={() => setActiveTab('agents')}
+            onClick={() => switchTab('agents')}
           >
             <Users size={18} /> Service Agents ({agents.length})
           </button>
           <button 
             className={`menu-item ${activeTab === 'customers' ? 'active' : ''}`}
-            onClick={() => setActiveTab('customers')}
+            onClick={() => switchTab('customers')}
           >
             <Users size={18} /> Customers ({customers.length})
           </button>
