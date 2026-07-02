@@ -26,6 +26,7 @@ import CustomerDashboard from './pages/CustomerDashboard';
 import AgentDashboard from './pages/AgentDashboard';
 import ProductDetail from './pages/ProductDetail';
 import BlogDetail from './pages/BlogDetail';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 
 // --- MAIN APP COMPONENT ---
 export default function App() {
@@ -54,6 +55,7 @@ const parsePath = () => {
     }
     if (path === '/about') return { pageId: 'about' };
     if (path === '/products') return { pageId: 'products' };
+    if (path === '/privacy') return { pageId: 'privacy' };
     if (path.startsWith('/product/')) {
         const productId = path.substring(9);
         return { pageId: 'product-detail', productId };
@@ -236,6 +238,7 @@ function AppContent() {
             path = tab && tab !== 'jobs' ? `/agent/${tab}` : '/agent';
         } else if (pageId === 'about') path = '/about';
         else if (pageId === 'products') path = '/products';
+        else if (pageId === 'privacy') path = '/privacy';
         else if (pageId === 'product-detail') path = `/product/${productId}`;
         else if (pageId === 'blog-detail') path = `/${blogSlug}`;
         else if (pageId === 'home') path = '/';
@@ -324,6 +327,8 @@ function AppContent() {
                 return <CustomerDashboard initialTab={currentTab} handleNavigation={handleNavigation} />;
             case 'agent-dashboard':
                 return <AgentDashboard initialTab={currentTab} handleNavigation={handleNavigation} />;
+            case 'privacy':
+                return <PrivacyPolicy />;
             default:
                 return <HomePage blogs={blogs} handleNavigation={handleNavigation} />; // Fallback to home page
         }

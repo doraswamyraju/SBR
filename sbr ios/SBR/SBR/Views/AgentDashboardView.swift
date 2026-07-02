@@ -747,6 +747,7 @@ struct AgentProfileScreenView: View {
     
     @State private var isAvailable: Bool = true
     @State private var isUpdatingAvailability = false
+    @State private var showingDeleteAlert = false
     
     var body: some View {
         ScrollView {
@@ -825,6 +826,58 @@ struct AgentProfileScreenView: View {
                     }
                     .padding(.horizontal)
                     .padding(.top, 10)
+                    
+                    // Privacy Policy Link
+                    Link(destination: URL(string: "https://sribalajirenewables.com/privacy")!) {
+                        HStack {
+                            Image(systemName: "hand.raised.fill")
+                            Text("Privacy Policy")
+                                .fontWeight(.medium)
+                        }
+                        .font(.footnote)
+                        .foregroundColor(SBRColors.primaryBlue)
+                        .padding(.top, 8)
+                    }
+                    
+                    Divider()
+                        .padding(.horizontal)
+                        .padding(.top, 16)
+                    
+                    // Delete Account Section
+                    VStack(spacing: 8) {
+                        Text("Danger Zone")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .foregroundColor(.red)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        
+                        Text("Permanently delete your profile and personal data. This cannot be undone.")
+                            .font(.caption2)
+                            .foregroundColor(.gray)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        
+                        Button(action: { showingDeleteAlert = true }) {
+                            HStack {
+                                Spacer()
+                                Text("Delete Account")
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.white)
+                                Spacer()
+                            }
+                            .padding()
+                            .background(Color.red.opacity(0.85))
+                            .cornerRadius(12)
+                        }
+                    }
+                    .padding()
+                    .background(Color.red.opacity(0.05))
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.red.opacity(0.15), lineWidth: 1)
+                    )
+                    .padding(.horizontal)
+                    .padding(.top, 8)
                 } else {
                     ProgressView()
                 }
@@ -833,6 +886,16 @@ struct AgentProfileScreenView: View {
             }
         }
         .background(Color(red: 0.97, green: 0.98, blue: 1.0).ignoresSafeArea())
+        .alert(isPresented: $showingDeleteAlert) {
+            Alert(
+                title: Text("Delete Account"),
+                message: Text("Are you absolutely sure you want to permanently delete your account? This action is permanent and cannot be undone."),
+                primaryButton: .destructive(Text("Delete")) {
+                    deleteUserAccount()
+                },
+                secondaryButton: .cancel()
+            )
+        }
         .onAppear {
             if let user = authVM.user {
                 isAvailable = user.isAvailable ?? true
@@ -861,6 +924,12 @@ struct AgentProfileScreenView: View {
                 print("Failed to update availability status: \(error)")
             }
             isUpdatingAvailability = false
+        }
+    }
+    
+    private func deleteUserAccount() {
+        Task {
+            _ = await authVM.deleteAccount()
         }
     }
 }

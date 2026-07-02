@@ -18,6 +18,7 @@ struct CustomerProfileView: View {
     @State private var isLoading = false
     @State private var statusMessage = ""
     @State private var statusColor = Color.green
+    @State private var showingDeleteAlert = false
     
     // Address Sheets control
     @State private var showingPrimaryPinPicker = false
@@ -298,6 +299,58 @@ struct CustomerProfileView: View {
                 .padding(.horizontal)
                 .disabled(name.isEmpty || isLoading)
                 
+                // Privacy Policy Link
+                Link(destination: URL(string: "https://sribalajirenewables.com/privacy")!) {
+                    HStack {
+                        Image(systemName: "hand.raised.fill")
+                        Text("Privacy Policy")
+                            .fontWeight(.medium)
+                    }
+                    .font(.footnote)
+                    .foregroundColor(SBRColors.primaryBlue)
+                    .padding(.top, 8)
+                }
+                
+                Divider()
+                    .padding(.horizontal)
+                    .padding(.top, 16)
+                
+                // Delete Account Section
+                VStack(spacing: 8) {
+                    Text("Danger Zone")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundColor(.red)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    Text("Permanently delete your profile and personal data. This cannot be undone.")
+                        .font(.caption2)
+                        .foregroundColor(.gray)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    Button(action: { showingDeleteAlert = true }) {
+                        HStack {
+                            Spacer()
+                            Text("Delete Account")
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                            Spacer()
+                        }
+                        .padding()
+                        .background(Color.red.opacity(0.85))
+                        .cornerRadius(12)
+                    }
+                }
+                .padding()
+                .background(Color.red.opacity(0.05))
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.red.opacity(0.15), lineWidth: 1)
+                )
+                .padding(.horizontal)
+                .padding(.top, 8)
+                
                 Spacer()
             }
             .padding(.bottom, 24)
@@ -336,6 +389,16 @@ struct CustomerProfileView: View {
                     saveProfile()
                 }
             }
+        }
+        .alert(isPresented: $showingDeleteAlert) {
+            Alert(
+                title: Text("Delete Account"),
+                message: Text("Are you absolutely sure you want to permanently delete your account? This action is permanent and cannot be undone."),
+                primaryButton: .destructive(Text("Delete")) {
+                    deleteUserAccount()
+                },
+                secondaryButton: .cancel()
+            )
         }
     }
     
@@ -408,6 +471,18 @@ struct CustomerProfileView: View {
                 statusMessage = error.localizedDescription
             }
             isLoading = false
+        }
+    }
+    
+    private func deleteUserAccount() {
+        isLoading = true
+        Task {
+            let success = await authVM.deleteAccount()
+            if !success {
+                statusColor = .red
+                statusMessage = authVM.errorMessage ?? "Failed to delete account"
+                isLoading = false
+            }
         }
     }
 }

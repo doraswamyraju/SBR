@@ -605,6 +605,45 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
                 </span>
               </div>
             </div>
+
+            <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+              <h3 style={{ color: '#ef4444', fontSize: '16px', fontWeight: 'bold', marginBottom: '8px' }}>Danger Zone</h3>
+              <p style={{ color: '#9ca3af', fontSize: '13px', marginBottom: '15px' }}>
+                Permanently delete your account and all associated personal data. This action is irreversible.
+              </p>
+              <button
+                type="button"
+                onClick={async () => {
+                  const confirmDelete = window.confirm(
+                    "WARNING: Are you absolutely sure you want to permanently delete your agent account? This will erase all your profile data and cannot be undone."
+                  );
+                  if (confirmDelete) {
+                    try {
+                      const res = await api.delete('api/users/profile');
+                      if (res.success) {
+                        alert("Your account has been successfully deleted.");
+                        handleLogout();
+                      }
+                    } catch (err) {
+                      alert(err.message || "Failed to delete account. Please try again.");
+                    }
+                  }
+                }}
+                style={{
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  color: '#ef4444',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  fontSize: '13px',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Delete Account
+              </button>
+            </div>
           </div>
         )}
       </main>

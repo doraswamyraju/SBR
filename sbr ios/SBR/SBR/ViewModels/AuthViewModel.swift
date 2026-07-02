@@ -113,6 +113,34 @@ class AuthViewModel: ObservableObject {
         self.isAuthenticated = false
     }
     
+    // Delete Account
+    func deleteAccount() async -> Bool {
+        isLoading = true
+        errorMessage = nil
+        
+        struct DeleteResponse: Decodable {
+            let success: Bool
+            let error: String?
+        }
+        
+        do {
+            let res = try await APIClient.shared.delete(endpoint: "api/users/profile", responseType: DeleteResponse.self)
+            if res.success {
+                APIClient.shared.clearToken()
+                self.user = nil
+                self.isAuthenticated = false
+                isLoading = false
+                return true
+            } else {
+                self.errorMessage = res.error ?? "Failed to delete account"
+            }
+        } catch {
+            self.errorMessage = error.localizedDescription
+        }
+        isLoading = false
+        return false
+    }
+    
     // Upload current FCM Token to the server if authenticated
     func uploadFCMToken() async {
         guard let token = UserDefaults.standard.string(forKey: "fcm_token"),

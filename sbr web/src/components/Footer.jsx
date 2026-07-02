@@ -91,7 +91,13 @@ const Footer = ({ navLinks, handleNavigation }) => {
             {/* Copyright information */}
             <div className="bg-black/20 py-4">
                 <div className="container mx-auto px-6 text-center text-blue-300 text-sm">
-                    <p>&copy; {new Date().getFullYear()} Sri Balaji Renewables. All Rights Reserved.</p>
+                    <p>
+                        &copy; {new Date().getFullYear()} Sri Balaji Renewables. All Rights Reserved.
+                        {" | "}
+                        <a href="#" onClick={(e) => { e.preventDefault(); handleNavigation('privacy'); }} className="hover:text-brand-yellow underline transition-colors">
+                            Privacy Policy
+                        </a>
+                    </p>
                 </div>
             </div>
         </footer>

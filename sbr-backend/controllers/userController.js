@@ -157,3 +157,20 @@ exports.updateFcmToken = async (req, res) => {
   }
 };
 
+// @desc    Delete own profile (Account Deletion)
+// @route   DELETE /api/users/profile
+// @access  Private
+exports.deleteProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    await user.deleteOne();
+    res.status(200).json({ success: true, message: 'Account successfully deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
