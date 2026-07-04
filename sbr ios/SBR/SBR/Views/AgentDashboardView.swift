@@ -828,7 +828,7 @@ struct AgentProfileScreenView: View {
                     .padding(.top, 10)
                     
                     // Privacy Policy Link
-                    Link(destination: URL(string: "https://sribalajirenewables.com/privacy")!) {
+                    Link(destination: URL(string: "https://sbr.sriddha.com/privacy")!) {
                         HStack {
                             Image(systemName: "hand.raised.fill")
                             Text("Privacy Policy")
