@@ -223,6 +223,23 @@ function AppContent() {
             blogSlug = pageInput.blogSlug;
         }
 
+        // Special handling for homepage sections (Blog & Calculator)
+        if (pageId === 'blog' || pageId === 'calculator') {
+            const sectionId = pageId === 'blog' ? 'blog' : 'assistant';
+            setCurrentPage('home');
+            setCurrentTab('');
+            setCurrentProductId('');
+            setCurrentBlogSlug('');
+            window.history.pushState({ pageId: 'home' }, '', '/');
+            setTimeout(() => {
+                const element = document.getElementById(sectionId);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth' });
+                }
+            }, 100);
+            return;
+        }
+
         setCurrentPage(pageId);
         setCurrentTab(tab || '');
         setCurrentProductId(productId || '');

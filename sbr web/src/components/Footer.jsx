@@ -97,6 +97,8 @@ const Footer = ({ navLinks, handleNavigation }) => {
                         <a href="#" onClick={(e) => { e.preventDefault(); handleNavigation('privacy'); }} className="hover:text-brand-yellow underline transition-colors">
                             Privacy Policy
                         </a>
+                        {" | "}
+                        Built with ❤️ by <a href="https://www.rajugariventures.com" target="_blank" rel="noopener noreferrer" className="hover:text-brand-yellow underline transition-colors">Rajugari Ventures</a>
                     </p>
                 </div>
             </div>

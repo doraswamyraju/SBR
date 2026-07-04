@@ -28,28 +28,26 @@ git pull origin main
 
 ### 3. Deploy Frontend (Web Module)
 ```bash
-# Navigate to the web folder
+# Navigate to the web folder inside repo
 cd "sbr web"
 
-# Install any new dependencies
+# Install dependencies and build
 npm install
-
-# Build the React production bundle
 npm run build
+
+# Clear active web files and deploy the new build
+rm -rf /var/www/sbr.sriddha.com/web/*
+cp -r "/var/www/sbr.sriddha.com/repo/sbr web/build/"* /var/www/sbr.sriddha.com/web/
 ```
-*Note: The Nginx configuration is mapped to read directly from `/var/www/sbr.sriddha.com/repo/sbr web/build`. Rebuilding is sufficient to push updates live.*
+*Note: The Nginx configuration maps sbr.sriddha.com directly to `/var/www/sbr.sriddha.com/web/`. Therefore, the compiled files must be copied from the repo build directory.*
 
 ### 4. Deploy Backend (API Module)
 If backend controller logic or models are updated:
 ```bash
-# Navigate to the backend folder
-cd /var/www/sbr.sriddha.com/repo/sbr-backend
+# Sync updated backend files (excluding node_modules and configurations) to active backend directory
+rsync -av --exclude 'node_modules' --exclude '.env' /var/www/sbr.sriddha.com/repo/sbr-backend/ /var/www/sbr.sriddha.com/backend/
 
-# Install dependencies if package.json changed
-npm install
-
-# Restart the Node server process (usually run with PM2)
-pm2 restart all
-# Or if it has a specific process name:
-pm2 restart server
+# Restart the PM2 process to apply changes
+pm2 restart sbr-backend
 ```
+*Note: PM2 runs the active server process from `/var/www/sbr.sriddha.com/backend/server.js`.*
