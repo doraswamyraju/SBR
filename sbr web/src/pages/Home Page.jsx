@@ -540,6 +540,8 @@ const ContactSection = () => {
             </div>
         </section>
     );
+};
+
 const BlogSection = ({ blogPostsData, handleNavigation }) => {
     const [ref, isInView] = useInView({ threshold: 0.2, triggerOnce: true });
 
