@@ -39,9 +39,15 @@ class AdminLiveTrackingViewModel @Inject constructor(
             .map { request ->
                 // FIXED: Check for the 'locationPath' list, not 'agentLocation'.
                 if (request != null && request.locationPath.isNotEmpty()) {
-                    // Get the most recent location by sorting the path by timestamp.
-                    val sortedPath = request.locationPath.sortedByDescending { it.timestamp }
-                    LiveTrackingUiState.Success(sortedPath, sortedPath.first())
+                    // Filter out invalid (0.0, 0.0) coordinates and sort chronologically (oldest to newest)
+                    val chronologicalPath = request.locationPath
+                        .filter { it.latitude != 0.0 && it.longitude != 0.0 }
+                        .sortedBy { it.timestamp }
+                    if (chronologicalPath.isNotEmpty()) {
+                        LiveTrackingUiState.Success(chronologicalPath, chronologicalPath.last())
+                    } else {
+                        LiveTrackingUiState.Idle
+                    }
                 } else if (request != null) {
                     LiveTrackingUiState.Idle
                 } else {

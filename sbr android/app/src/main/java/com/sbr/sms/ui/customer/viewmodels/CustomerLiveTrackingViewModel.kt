@@ -32,8 +32,14 @@ class CustomerLiveTrackingViewModel @Inject constructor(
             .map { request ->
                 // FIXED: Check if 'locationPath' is not empty and get the last location.
                 if (request?.locationPath?.isNotEmpty() == true) {
-                    // Pass the most recent location to the Success state.
-                    LiveTrackingUiState.Success(request.locationPath.last())
+                    val validPath = request.locationPath
+                        .filter { it.latitude != 0.0 && it.longitude != 0.0 }
+                        .sortedBy { it.timestamp }
+                    if (validPath.isNotEmpty()) {
+                        LiveTrackingUiState.Success(validPath.last())
+                    } else {
+                        LiveTrackingUiState.Idle
+                    }
                 } else if (request != null) {
                     LiveTrackingUiState.Idle
                 } else {
