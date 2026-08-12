@@ -12,8 +12,10 @@ import {
   RefreshCw,
   CheckCircle,
   MapPin,
-  Calendar
+  Calendar,
+  Users
 } from 'lucide-react';
+import OurCustomersTab from '../components/OurCustomersTab';
 import './Dashboard.css';
 
 const CustomerDashboard = ({ initialTab, handleNavigation }) => {
@@ -170,6 +172,12 @@ const CustomerDashboard = ({ initialTab, handleNavigation }) => {
             onClick={() => switchTab('payments')}
           >
             <CreditCard size={18} /> Payments
+          </button>
+          <button 
+            className={`menu-item ${activeTab === 'our-customers' ? 'active' : ''}`}
+            onClick={() => switchTab('our-customers')}
+          >
+            <Users size={18} /> Our Customers
           </button>
           <button 
             className={`menu-item ${activeTab === 'profile' ? 'active' : ''}`}
@@ -549,6 +557,9 @@ const CustomerDashboard = ({ initialTab, handleNavigation }) => {
               </button>
             </div>
           </div>
+        )}
+        {activeTab === 'our-customers' && (
+          <OurCustomersTab />
         )}
       </main>
     </div>

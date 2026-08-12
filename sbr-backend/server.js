@@ -36,6 +36,7 @@ app.use('/api/requests', require('./routes/requestRoutes'));
 app.use('/api/upload', require('./routes/uploadRoutes'));
 app.use('/api/settings', require('./routes/settingsRoutes'));
 app.use('/api/blogs', require('./routes/blogRoutes'));
+app.use('/api/customer-list', require('./routes/customerListRoutes'));
 
 // Basic health check route
 app.get('/', (req, res) => {

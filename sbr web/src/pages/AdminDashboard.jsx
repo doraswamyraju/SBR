@@ -21,8 +21,12 @@ import {
   TrendingUp,
   Sliders,
   DollarSign,
-  FileText
+  FileText,
+  UserCheck,
+  UploadCloud,
+  FileSpreadsheet
 } from 'lucide-react';
+import OurCustomersTab from '../components/OurCustomersTab';
 import './Dashboard.css';
 
 const AdminDashboard = ({ initialTab, handleNavigation }) => {
@@ -59,6 +63,26 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
   });
   const [agentFormLoading, setAgentFormLoading] = useState(false);
   const [agentFormError, setAgentFormError] = useState('');
+
+  // Customer List Upload & Management States
+  const [isCustomerListUploadModalOpen, setIsCustomerListUploadModalOpen] = useState(false);
+  const [customerListFile, setCustomerListFile] = useState(null);
+  const [uploadMode, setUploadMode] = useState('replace');
+  const [uploadingCustomerList, setUploadingCustomerList] = useState(false);
+  const [uploadCustomerListError, setUploadCustomerListError] = useState('');
+
+  const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
+  const [newCustomerRecord, setNewCustomerRecord] = useState({
+    sNo: '',
+    name: '',
+    address: '',
+    model: '',
+    purchaseDate: ''
+  });
+  const [addingRecordLoading, setAddingRecordLoading] = useState(false);
+  const [addingRecordError, setAddingRecordError] = useState('');
+
+  const [customerListRefreshTrigger, setCustomerListRefreshTrigger] = useState(0);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -142,6 +166,77 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
     }
   };
 
+  const handleCustomerUploadSubmit = async (e) => {
+    e.preventDefault();
+    if (!customerListFile) {
+      setUploadCustomerListError('Please select an Excel (.xlsx, .xls) or CSV (.csv) file to upload.');
+      return;
+    }
+
+    setUploadingCustomerList(true);
+    setUploadCustomerListError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', customerListFile);
+      formData.append('mode', uploadMode);
+
+      const res = await api.post('api/customer-list/upload', formData);
+      if (res.success) {
+        setIsCustomerListUploadModalOpen(false);
+        setCustomerListFile(null);
+        setCustomerListRefreshTrigger(prev => prev + 1);
+        alert(res.message || 'Customer list uploaded successfully!');
+      } else {
+        throw new Error(res.error || 'Failed to upload customer list');
+      }
+    } catch (err) {
+      setUploadCustomerListError(err.message || 'Upload failed');
+    } finally {
+      setUploadingCustomerList(false);
+    }
+  };
+
+  const handleAddCustomerSubmit = async (e) => {
+    e.preventDefault();
+    if (!newCustomerRecord.name || !newCustomerRecord.name.trim()) {
+      setAddingRecordError('Customer name is required.');
+      return;
+    }
+
+    setAddingRecordLoading(true);
+    setAddingRecordError('');
+    try {
+      const res = await api.post('api/customer-list', newCustomerRecord);
+      if (res.success) {
+        setIsAddCustomerModalOpen(false);
+        setNewCustomerRecord({ sNo: '', name: '', address: '', model: '', purchaseDate: '' });
+        setCustomerListRefreshTrigger(prev => prev + 1);
+        alert('Customer record added successfully!');
+      } else {
+        throw new Error(res.error || 'Failed to add record');
+      }
+    } catch (err) {
+      setAddingRecordError(err.message || 'Failed to add record');
+    } finally {
+      setAddingRecordLoading(false);
+    }
+  };
+
+  const handleClearAllCustomers = async () => {
+    if (!window.confirm('Are you sure you want to CLEAR ALL customer list records? This action cannot be undone.')) {
+      return;
+    }
+    try {
+      const res = await api.delete('api/customer-list/clear');
+      if (res.success) {
+        setCustomerListRefreshTrigger(prev => prev + 1);
+        alert('All customer records cleared successfully.');
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to clear customer records');
+    }
+  };
+
   // Calculations for Metrics
   const totalCollections = requests
     .filter(req => req.paymentStatus === 'Paid')
@@ -202,6 +297,12 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
             onClick={() => switchTab('customers')}
           >
             <Users size={18} /> Customers ({customers.length})
+          </button>
+          <button 
+            className={`menu-item ${activeTab === 'our-customers' ? 'active' : ''}`}
+            onClick={() => switchTab('our-customers')}
+          >
+            <UserCheck size={18} /> Our Customers List
           </button>
           <button 
             className={`menu-item ${activeTab === 'blogs' ? 'active' : ''}`}
@@ -583,6 +684,63 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
 
         {activeTab === 'blogs' && (
           <AdminBlogsSection blogs={blogs} onRefresh={fetchData} />
+        )}
+
+        {activeTab === 'our-customers' && (
+          <div>
+            {/* Admin Header Action Controls */}
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              flexWrap: 'wrap', 
+              gap: '12px', 
+              marginBottom: '20px', 
+              backgroundColor: '#1e293b', 
+              padding: '16px 20px', 
+              borderRadius: '12px',
+              border: '1px solid rgba(255,255,255,0.08)'
+            }}>
+              <div>
+                <h3 style={{ margin: 0, color: '#ffffff', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <FileSpreadsheet size={20} color="#38bdf8" /> Admin Customer Dataset Management
+                </h3>
+                <p style={{ margin: '4px 0 0 0', fontSize: '12.5px', color: '#94a3b8' }}>
+                  Upload Excel/CSV customer lists (S.No., Name, Address, Model, Date of Purchase) or manage single records.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => setIsCustomerListUploadModalOpen(true)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', boxShadow: 'none' }}
+                >
+                  <UploadCloud size={16} /> Upload Excel / CSV
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setIsAddCustomerModalOpen(true)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.08)', color: '#ffffff', border: '1px solid rgba(255,255,255,0.2)' }}
+                >
+                  <Plus size={16} /> Add Single Record
+                </button>
+                <button
+                  type="button"
+                  className="btn-danger"
+                  onClick={handleClearAllCustomers}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(220, 38, 38, 0.2)', color: '#fca5a5', border: '1px solid rgba(220, 38, 38, 0.4)', padding: '8px 14px', borderRadius: '8px', fontSize: '13px', cursor: 'pointer' }}
+                >
+                  <Trash2 size={16} /> Clear All
+                </button>
+              </div>
+            </div>
+
+            {/* Embedded Shared Search & Filter Table */}
+            <OurCustomersTab key={customerListRefreshTrigger} isAdmin={true} />
+          </div>
         )}
       </main>
 
@@ -1049,6 +1207,200 @@ const AdminBlogsSection = ({ blogs, onRefresh }) => {
                   disabled={loading}
                 >
                   {loading ? 'Saving...' : 'Save Post'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Excel / CSV Customer List Modal */}
+      {isCustomerListUploadModalOpen && (
+        <div className="modal-backdrop" onClick={() => setIsCustomerListUploadModalOpen(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '540px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <UploadCloud size={20} color="#38bdf8" /> Upload Customer List File
+              </h3>
+              <button 
+                type="button" 
+                style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
+                onClick={() => setIsCustomerListUploadModalOpen(false)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {uploadCustomerListError && <div className="error-banner" style={{ marginBottom: '15px' }}>{uploadCustomerListError}</div>}
+
+            <form onSubmit={handleCustomerUploadSubmit} className="dashboard-form">
+              <div className="input-group">
+                <label style={{ color: '#cbd5e1', fontSize: '14px', marginBottom: '8px', display: 'block' }}>
+                  Select File (.xlsx, .xls, .csv)
+                </label>
+                <input
+                  type="file"
+                  accept=".xlsx, .xls, .csv"
+                  required
+                  onChange={(e) => setCustomerListFile(e.target.files[0])}
+                  style={{
+                    width: '100%',
+                    background: 'rgba(0,0,0,0.3)',
+                    color: 'white',
+                    border: '1px dashed #38bdf8',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    cursor: 'pointer'
+                  }}
+                />
+                <span style={{ fontSize: '12px', color: '#94a3b8', marginTop: '6px', display: 'block' }}>
+                  Supported headers: <strong>S.No</strong>, <strong>Name</strong>, <strong>Address</strong>, <strong>Model</strong> (or <strong>Product</strong>), <strong>Date of Purchase</strong> (optional).
+                </span>
+              </div>
+
+              <div className="input-group" style={{ marginTop: '16px' }}>
+                <label style={{ color: '#cbd5e1', fontSize: '14px', marginBottom: '8px', display: 'block' }}>Upload Mode</label>
+                <div style={{ display: 'flex', gap: '20px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#e2e8f0', cursor: 'pointer', fontSize: '13.5px' }}>
+                    <input
+                      type="radio"
+                      name="uploadMode"
+                      value="replace"
+                      checked={uploadMode === 'replace'}
+                      onChange={() => setUploadMode('replace')}
+                    />
+                    Replace existing customer list
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#e2e8f0', cursor: 'pointer', fontSize: '13.5px' }}>
+                    <input
+                      type="radio"
+                      name="uploadMode"
+                      value="append"
+                      checked={uploadMode === 'append'}
+                      onChange={() => setUploadMode('append')}
+                    />
+                    Append to existing list
+                  </label>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px' }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  style={{ background: 'transparent', color: '#94a3b8', border: '1px solid #475569' }}
+                  onClick={() => setIsCustomerListUploadModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={uploadingCustomerList}
+                  style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', boxShadow: 'none' }}
+                >
+                  {uploadingCustomerList ? 'Processing File...' : 'Upload List'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Single Customer Record Modal */}
+      {isAddCustomerModalOpen && (
+        <div className="modal-backdrop" onClick={() => setIsAddCustomerModalOpen(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Plus size={20} color="#38bdf8" /> Add Customer Record
+              </h3>
+              <button 
+                type="button" 
+                style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
+                onClick={() => setIsAddCustomerModalOpen(false)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {addingRecordError && <div className="error-banner" style={{ marginBottom: '15px' }}>{addingRecordError}</div>}
+
+            <form onSubmit={handleAddCustomerSubmit} className="dashboard-form">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
+                <div className="input-group">
+                  <label style={{ color: '#cbd5e1', fontSize: '13px' }}>S.No.</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 1"
+                    value={newCustomerRecord.sNo}
+                    onChange={(e) => setNewCustomerRecord({ ...newCustomerRecord, sNo: e.target.value })}
+                    style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
+                  />
+                </div>
+                <div className="input-group">
+                  <label style={{ color: '#cbd5e1', fontSize: '13px' }}>Customer Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Ramesh Kumar"
+                    value={newCustomerRecord.name}
+                    onChange={(e) => setNewCustomerRecord({ ...newCustomerRecord, name: e.target.value })}
+                    style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
+                  />
+                </div>
+              </div>
+
+              <div className="input-group" style={{ marginTop: '12px' }}>
+                <label style={{ color: '#cbd5e1', fontSize: '13px' }}>Address</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Indiranagar, Bangalore"
+                  value={newCustomerRecord.address}
+                  onChange={(e) => setNewCustomerRecord({ ...newCustomerRecord, address: e.target.value })}
+                  style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
+                <div className="input-group">
+                  <label style={{ color: '#cbd5e1', fontSize: '13px' }}>Product Model</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Solar Water Heater 200L"
+                    value={newCustomerRecord.model}
+                    onChange={(e) => setNewCustomerRecord({ ...newCustomerRecord, model: e.target.value })}
+                    style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
+                  />
+                </div>
+                <div className="input-group">
+                  <label style={{ color: '#cbd5e1', fontSize: '13px' }}>Date of Purchase (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 2024-05-15 or N/A"
+                    value={newCustomerRecord.purchaseDate}
+                    onChange={(e) => setNewCustomerRecord({ ...newCustomerRecord, purchaseDate: e.target.value })}
+                    style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px' }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  style={{ background: 'transparent', color: '#94a3b8', border: '1px solid #475569' }}
+                  onClick={() => setIsAddCustomerModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={addingRecordLoading}
+                  style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', boxShadow: 'none' }}
+                >
+                  {addingRecordLoading ? 'Saving...' : 'Add Record'}
                 </button>
               </div>
             </form>

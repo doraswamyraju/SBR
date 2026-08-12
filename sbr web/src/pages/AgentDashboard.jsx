@@ -14,8 +14,10 @@ import {
   Check,
   DollarSign,
   AlertCircle,
-  User
+  User,
+  Users
 } from 'lucide-react';
+import OurCustomersTab from '../components/OurCustomersTab';
 import './Dashboard.css';
 
 const AgentDashboard = ({ initialTab, handleNavigation }) => {
@@ -289,6 +291,12 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
             onClick={() => switchTab('completed')}
           >
             <CheckCircle size={18} /> Completed ({completedJobs.length})
+          </button>
+          <button 
+            className={`menu-item ${activeTab === 'our-customers' ? 'active' : ''}`}
+            onClick={() => switchTab('our-customers')}
+          >
+            <Users size={18} /> Our Customers
           </button>
           <button 
             className={`menu-item ${activeTab === 'profile' ? 'active' : ''}`}
@@ -645,6 +653,9 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
               </button>
             </div>
           </div>
+        )}
+        {activeTab === 'our-customers' && (
+          <OurCustomersTab />
         )}
       </main>
 
