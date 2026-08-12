@@ -9,14 +9,34 @@ plugins {
 
 android {
     namespace = "com.sbr.sms"
-    compileSdk = 35
+    compileSdk = 36
+
+    signingConfigs {
+        create("release") {
+            storeFile = file("sbr-release-key.jks")
+            storePassword = "sbrpassword"
+            keyAlias = "sbr-alias"
+            keyPassword = "sbrpassword"
+        }
+    }
 
     defaultConfig {
         applicationId = "com.sbr.sms"
         minSdk = 24
-        targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        targetSdk = 36
+        versionCode = 2
+        versionName = "1.0.1"
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            signingConfig = signingConfigs.getByName("release")
+        }
     }
 
     buildFeatures {

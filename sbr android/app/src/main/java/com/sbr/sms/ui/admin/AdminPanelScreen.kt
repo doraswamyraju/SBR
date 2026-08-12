@@ -22,10 +22,13 @@ import com.sbr.sms.ui.admin.viewmodels.AdminDashboardViewModel
 import com.sbr.sms.ui.auth.AuthViewModel
 import kotlinx.coroutines.launch
 
+import com.sbr.sms.ui.common.OurCustomersScreen
+
 enum class AdminSection(val title: String, val icon: ImageVector) {
     Dashboard("Dashboard", Icons.Default.Dashboard),
     Agents("Agents", Icons.Default.Group),
     Customers("Customers", Icons.Default.People),
+    OurCustomers("Our Customers List", Icons.Default.PeopleOutline),
     Requests("Requests", Icons.Default.List),
     Reports("Reports", Icons.Default.Assessment),
     Payments("Payments", Icons.Default.Payment),
@@ -150,6 +153,7 @@ fun AdminPanelScreen(
                     )
                     AdminSection.Agents -> AgentManagementScreen(navController)
                     AdminSection.Customers -> CustomerManagementScreen(navController)
+                    AdminSection.OurCustomers -> OurCustomersScreen(isAdmin = true)
                     AdminSection.Requests -> ServiceRequestsScreen(navController)
                     AdminSection.LiveTracking -> AdminMultiAgentMapScreen(navController)
                     AdminSection.Payments -> PaymentsScreen(navController)

@@ -74,4 +74,16 @@ interface ApiService {
     @Multipart
     @POST("api/upload")
     suspend fun uploadImage(@Part file: MultipartBody.Part): Response<UploadResponse>
+
+    // Customer List endpoints
+    @GET("api/customer-list")
+    suspend fun getCustomerList(
+        @Query("search") search: String? = null,
+        @Query("product") product: String? = null
+    ): Response<CustomerListResponseDto>
+
+    @DELETE("api/customer-list/{id}")
+    suspend fun deleteCustomerRecord(
+        @Path("id") id: String
+    ): Response<ApiResponse<Map<String, Any>>>
 }

@@ -90,3 +90,23 @@ data class UploadResponse(
     val url: String,
     val filename: String
 )
+
+// Customer List DTOs
+data class CustomerRecordDto(
+    @SerializedName("id", alternate = ["_id"]) val id: String = "",
+    val sNo: String? = "",
+    val name: String = "",
+    val address: String? = "",
+    val product: String? = "",
+    val model: String? = "",
+    val purchaseDate: String? = ""
+)
+
+data class CustomerListResponseDto(
+    val success: Boolean = false,
+    val count: Int? = 0,
+    val products: List<String>? = emptyList(),
+    val data: List<CustomerRecordDto>? = emptyList(),
+    val message: String? = null,
+    val error: String? = null
+)
