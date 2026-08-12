@@ -42,7 +42,7 @@ struct OurCustomersView: View {
                 // Product Filter Horizontal Chips
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        FilterChip(
+                        OurCustomersFilterChip(
                             title: "All Products",
                             isSelected: viewModel.selectedProduct == "All",
                             action: {
@@ -52,7 +52,7 @@ struct OurCustomersView: View {
                         )
                         
                         ForEach(viewModel.availableProducts, id: \.self) { prod in
-                            FilterChip(
+                            OurCustomersFilterChip(
                                 title: prod,
                                 isSelected: viewModel.selectedProduct == prod,
                                 action: {
@@ -134,7 +134,7 @@ struct OurCustomersView: View {
 }
 
 // Subview: Filter Chip
-struct FilterChip: View {
+struct OurCustomersFilterChip: View {
     let title: String
     let isSelected: Bool
     let action: () -> Void
