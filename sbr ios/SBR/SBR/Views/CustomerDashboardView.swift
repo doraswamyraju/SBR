@@ -3,6 +3,7 @@ import SwiftUI
 enum CustomerSection: Hashable {
     case dashboard
     case requests
+    case ourCustomers
     case payments
     case support
     case profile
@@ -38,7 +39,7 @@ struct CustomerDashboardView: View {
         SidebarNavigationLayout(
             title: sectionTitle(selectedSection),
             drawerHeader: "Customer Panel",
-            sections: [.dashboard, .requests, .payments, .support, .profile],
+            sections: [.dashboard, .requests, .ourCustomers, .payments, .support, .profile],
             selectedSection: $selectedSection,
             sectionTitle: { sectionTitle($0) },
             sectionIcon: { sectionIcon($0) },
@@ -63,6 +64,8 @@ struct CustomerDashboardView: View {
                     )
                 case .requests:
                     CustomerRequestsListView(requestVM: requestVM, onSelectRequest: { selectedRequestDetail = $0 })
+                case .ourCustomers:
+                    OurCustomersView(isAdmin: false)
                 case .payments:
                     CustomerPaymentsView(requestVM: requestVM, onSelectRequest: { selectedRequestDetail = $0 })
                 case .support:
@@ -99,6 +102,7 @@ struct CustomerDashboardView: View {
         switch section {
         case .dashboard: return "Dashboard"
         case .requests: return "My Requests"
+        case .ourCustomers: return "Our Customers"
         case .payments: return "Payments"
         case .support: return "Contact Support"
         case .profile: return "My Profile"
@@ -109,6 +113,7 @@ struct CustomerDashboardView: View {
         switch section {
         case .dashboard: return "square.grid.2x2.fill"
         case .requests: return "wrench.and.screwdriver.fill"
+        case .ourCustomers: return "person.2.fill"
         case .payments: return "creditcard.fill"
         case .support: return "questionmark.bubble.fill"
         case .profile: return "person.crop.circle.fill"
