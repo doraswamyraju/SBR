@@ -76,6 +76,7 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
     sNo: '',
     name: '',
     address: '',
+    product: '',
     model: '',
     purchaseDate: ''
   });
@@ -209,7 +210,7 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
       const res = await api.post('api/customer-list', newCustomerRecord);
       if (res.success) {
         setIsAddCustomerModalOpen(false);
-        setNewCustomerRecord({ sNo: '', name: '', address: '', model: '', purchaseDate: '' });
+        setNewCustomerRecord({ sNo: '', name: '', address: '', product: '', model: '', purchaseDate: '' });
         setCustomerListRefreshTrigger(prev => prev + 1);
         alert('Customer record added successfully!');
       } else {
@@ -924,7 +925,7 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
                   }}
                 />
                 <span style={{ fontSize: '12px', color: '#94a3b8', marginTop: '6px', display: 'block' }}>
-                  Supported headers: <strong>S.No</strong>, <strong>Name</strong>, <strong>Address</strong>, <strong>Model</strong> (or <strong>Product</strong>), <strong>Date of Purchase</strong> (optional).
+                  Supported headers: <strong>S.No</strong>, <strong>Name</strong>, <strong>Address</strong>, <strong>Product</strong>, <strong>Model</strong> (optional), <strong>Date of Purchase</strong> (optional).
                 </span>
               </div>
 
@@ -1034,25 +1035,36 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
                 <div className="input-group">
-                  <label style={{ color: '#cbd5e1', fontSize: '13px' }}>Product Model</label>
+                  <label style={{ color: '#cbd5e1', fontSize: '13px' }}>Product Category</label>
                   <input
                     type="text"
-                    placeholder="e.g. Solar Water Heater 200L"
+                    placeholder="e.g. Solar Water Heater"
+                    value={newCustomerRecord.product}
+                    onChange={(e) => setNewCustomerRecord({ ...newCustomerRecord, product: e.target.value })}
+                    style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
+                  />
+                </div>
+                <div className="input-group">
+                  <label style={{ color: '#cbd5e1', fontSize: '13px' }}>Model (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 200L ETC"
                     value={newCustomerRecord.model}
                     onChange={(e) => setNewCustomerRecord({ ...newCustomerRecord, model: e.target.value })}
                     style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
                   />
                 </div>
-                <div className="input-group">
-                  <label style={{ color: '#cbd5e1', fontSize: '13px' }}>Date of Purchase (Optional)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 2024-05-15 or N/A"
-                    value={newCustomerRecord.purchaseDate}
-                    onChange={(e) => setNewCustomerRecord({ ...newCustomerRecord, purchaseDate: e.target.value })}
-                    style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
-                  />
-                </div>
+              </div>
+
+              <div className="input-group" style={{ marginTop: '12px' }}>
+                <label style={{ color: '#cbd5e1', fontSize: '13px' }}>Date of Purchase (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 2024-05-15 or N/A"
+                  value={newCustomerRecord.purchaseDate}
+                  onChange={(e) => setNewCustomerRecord({ ...newCustomerRecord, purchaseDate: e.target.value })}
+                  style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
+                />
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px' }}>

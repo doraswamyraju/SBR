@@ -2,50 +2,6 @@ const CustomerList = require('../models/CustomerList');
 const xlsx = require('xlsx');
 const fs = require('fs');
 
-// @desc    Get customer list with search & model filter
-// @route   GET /api/customer-list
-// @access  Private (Customer, Agent, Admin)
-exports.getCustomerList = async (req, res) => {
-  try {
-    const { search, model } = req.query;
-    let query = {};
-
-    if (model && model !== 'All') {
-      query.model = { $regex: new RegExp(`^${model.trim()}$`, 'i') };
-    }
-
-    if (search && search.trim() !== '') {
-      const searchRegex = new RegExp(search.trim(), 'i');
-      query.$or = [
-        { name: searchRegex },
-        { address: searchRegex },
-        { model: searchRegex },
-        { sNo: searchRegex },
-        { purchaseDate: searchRegex }
-      ];
-    }
-
-    const customers = await CustomerList.find(query).sort({ createdAt: -1 });
-    
-    // Fetch list of all unique models for frontend dropdown filter
-    const allModels = await CustomerList.distinct('model');
-    const validModels = allModels.filter(m => m && m.trim() !== '');
-
-    res.status(200).json({
-      success: true,
-      count: customers.length,
-      models: validModels,
-      data: customers
-    });
-  } catch (error) {
-    console.error('Error fetching customer list:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Server error fetching customer list'
-    });
-  }
-};
-
 // Helper function to extract cell value by candidate keys
 const getVal = (row, candidates) => {
   const rowKeys = Object.keys(row);
@@ -56,6 +12,51 @@ const getVal = (row, candidates) => {
     }
   }
   return '';
+};
+
+// @desc    Get customer list with search & product filter
+// @route   GET /api/customer-list
+// @access  Private (Customer, Agent, Admin)
+exports.getCustomerList = async (req, res) => {
+  try {
+    const { search, product } = req.query;
+    let query = {};
+
+    if (product && product !== 'All') {
+      query.product = { $regex: new RegExp(`^${product.trim()}$`, 'i') };
+    }
+
+    if (search && search.trim() !== '') {
+      const searchRegex = new RegExp(search.trim(), 'i');
+      query.$or = [
+        { name: searchRegex },
+        { address: searchRegex },
+        { product: searchRegex },
+        { model: searchRegex },
+        { sNo: searchRegex },
+        { purchaseDate: searchRegex }
+      ];
+    }
+
+    const customers = await CustomerList.find(query).sort({ createdAt: -1 });
+    
+    // Fetch list of all unique products for frontend dropdown filter
+    const allProducts = await CustomerList.distinct('product');
+    const validProducts = allProducts.filter(p => p && p.trim() !== '');
+
+    res.status(200).json({
+      success: true,
+      count: customers.length,
+      products: validProducts,
+      data: customers
+    });
+  } catch (error) {
+    console.error('Error fetching customer list:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error fetching customer list'
+    });
+  }
 };
 
 // @desc    Upload customer list from Excel/CSV file or JSON
@@ -76,13 +77,21 @@ exports.uploadCustomerList = async (req, res) => {
         const sNo = getVal(row, ['s.no', 's.no.', 'sno', 's no', 'sl.no', 'sl no', 'serial no']) || String(index + 1);
         const name = getVal(row, ['name', 'customer name', 'customer']);
         const address = getVal(row, ['address', 'location', 'customer address']);
-        const model = getVal(row, ['model', 'product', 'product model', 'machine model']);
+        let product = getVal(row, ['product', 'product name', 'category', 'product category']);
+        let model = getVal(row, ['model', 'product model', 'machine model', 'capacity']);
         const purchaseDate = getVal(row, ['date of purchase', 'purchase date', 'date', 'purchasedate']);
+
+        // Fallback if sheet has single 'Model' or 'Product' column
+        if (!product && model) {
+          product = model;
+          model = '';
+        }
 
         return {
           sNo,
           name: name || `Customer ${index + 1}`,
           address,
+          product: product || 'General Product',
           model,
           purchaseDate
         };
@@ -95,7 +104,8 @@ exports.uploadCustomerList = async (req, res) => {
         sNo: row.sNo || String(index + 1),
         name: row.name || `Customer ${index + 1}`,
         address: row.address || '',
-        model: row.model || '',
+        product: row.product || row.model || 'General Product',
+        model: row.model && row.product ? row.model : '',
         purchaseDate: row.purchaseDate || ''
       }));
     } else {
@@ -134,7 +144,7 @@ exports.uploadCustomerList = async (req, res) => {
 // @access  Private (Admin only)
 exports.addCustomerRecord = async (req, res) => {
   try {
-    const { sNo, name, address, model, purchaseDate } = req.body;
+    const { sNo, name, address, product, model, purchaseDate } = req.body;
 
     if (!name || name.trim() === '') {
       return res.status(400).json({
@@ -147,6 +157,7 @@ exports.addCustomerRecord = async (req, res) => {
       sNo: sNo || '',
       name: name.trim(),
       address: address ? address.trim() : '',
+      product: product ? product.trim() : 'General Product',
       model: model ? model.trim() : '',
       purchaseDate: purchaseDate ? purchaseDate.trim() : ''
     });

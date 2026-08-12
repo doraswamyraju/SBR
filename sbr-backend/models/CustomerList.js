@@ -14,6 +14,10 @@ const CustomerListSchema = new mongoose.Schema(
       type: String,
       default: ''
     },
+    product: {
+      type: String,
+      default: ''
+    },
     model: {
       type: String,
       default: ''
@@ -29,6 +33,6 @@ const CustomerListSchema = new mongoose.Schema(
 );
 
 // Add index for fast multi-field searching
-CustomerListSchema.index({ name: 'text', address: 'text', model: 'text', sNo: 'text' });
+CustomerListSchema.index({ name: 'text', address: 'text', product: 'text', model: 'text', sNo: 'text' });
 
 module.exports = mongoose.model('CustomerList', CustomerListSchema);
