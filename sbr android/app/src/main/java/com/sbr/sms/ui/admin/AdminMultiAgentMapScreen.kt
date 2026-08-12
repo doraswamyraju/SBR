@@ -121,9 +121,10 @@ fun AdminMultiAgentMapScreen(
                             val lat = path.lastOrNull()?.latitude ?: agentInfo.agent.currentLat
                             val lng = path.lastOrNull()?.longitude ?: agentInfo.agent.currentLng
                             if (lat != null && lng != null) {
-                                if (path.isNotEmpty()) {
+                                val validPath = path.filter { it.latitude != 0.0 && it.longitude != 0.0 }
+                                if (validPath.size >= 2) {
                                     Polyline(
-                                        points = path.map { LatLng(it.latitude, it.longitude) },
+                                        points = validPath.map { LatLng(it.latitude, it.longitude) },
                                         color = Color.Yellow,
                                         width = 10f
                                     )

@@ -86,12 +86,15 @@ fun LiveTrackingScreen(
                         cameraPositionState = cameraPositionState,
                         properties = MapProperties(mapStyleOptions = MapStyleOptions(mapStyleJson))
                     ) {
-                        // ADDED: Draw the Polyline using the 'path' from the state.
-                        Polyline(
-                            points = state.path.map { LatLng(it.latitude, it.longitude) },
-                            color = Color.Cyan,
-                            width = 15f
-                        )
+                        // Filter out invalid (0.0, 0.0) initial GPS coordinates to prevent straight line across map
+                        val validPath = state.path.filter { it.latitude != 0.0 && it.longitude != 0.0 }
+                        if (validPath.size >= 2) {
+                            Polyline(
+                                points = validPath.map { LatLng(it.latitude, it.longitude) },
+                                color = Color.Cyan,
+                                width = 12f
+                            )
+                        }
                         Marker(
                             state = markerState,
                             title = "Agent Location",
