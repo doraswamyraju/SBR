@@ -253,7 +253,7 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
 
   const handleLogout = () => {
     logout();
-    handleNavigation('home');
+    handleNavigation('auth');
   };
 
   // Filters for requests

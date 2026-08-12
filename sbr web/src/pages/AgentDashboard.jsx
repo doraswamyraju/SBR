@@ -241,7 +241,7 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
       clearInterval(trackingIntervalRef.current);
     }
     logout();
-    handleNavigation('home');
+    handleNavigation('auth');
   };
 
   const assignedJobs = requests.filter(r => r.status === 'Assigned');

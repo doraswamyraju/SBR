@@ -133,7 +133,7 @@ const CustomerDashboard = ({ initialTab, handleNavigation }) => {
 
   const handleLogout = () => {
     logout();
-    handleNavigation('home');
+    handleNavigation('auth');
   };
 
   const pendingRequests = requests.filter(r => r.status === 'Pending');
