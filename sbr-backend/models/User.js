@@ -43,6 +43,11 @@ const UserSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
+    claimedEarnings: {
+      type: Number,
+      default: 0
+    },
+
     // Customer specific fields
 
     address: {
