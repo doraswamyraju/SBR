@@ -416,7 +416,7 @@ const ProductDetail = ({ productId, handleNavigation, openContactModal }) => {
                                         </div>
                                     )}
 
-                                    {/* Price & Referral Commission Card */}
+                                    {/* Price Card */}
                                     {product.basePrice > 0 && (
                                         <div className="w-full mt-4 p-3 bg-blue-50 border border-blue-100 rounded-lg flex items-center justify-between">
                                             <div>
@@ -426,16 +426,9 @@ const ProductDetail = ({ productId, handleNavigation, openContactModal }) => {
                                                     <span className="text-xs text-gray-400 line-through ml-2">₹{product.mrp.toLocaleString()}</span>
                                                 )}
                                             </div>
-                                            {product.commissionValue > 0 && (
-                                                <div className="text-right">
-                                                    <span className="text-xs text-emerald-600 font-semibold block">Referral Earnings</span>
-                                                    <span className="text-sm font-bold text-emerald-700">
-                                                        {product.commissionType === 'percentage' ? `${product.commissionValue}% Bonus` : `₹${product.commissionValue} Reward`}
-                                                    </span>
-                                                </div>
-                                            )}
                                         </div>
                                     )}
+
                                 </div>
 
                                 <h3 className="text-xl font-bold text-brand-dark-blue mb-4">Technical Specifications</h3>
