@@ -13,10 +13,13 @@ import {
   CheckCircle,
   MapPin,
   Calendar,
-  Users
+  Users,
+  Gift
 } from 'lucide-react';
 import OurCustomersTab from '../components/OurCustomersTab';
+import ReferAndEarnTab from '../components/ReferAndEarnTab';
 import './Dashboard.css';
+
 
 const CustomerDashboard = ({ initialTab, handleNavigation }) => {
   const { user, logout, setUser } = useAuth();
@@ -179,6 +182,13 @@ const CustomerDashboard = ({ initialTab, handleNavigation }) => {
           >
             <Users size={18} /> Our Customers
           </button>
+          <button 
+            className={`menu-item ${activeTab === 'refer-and-earn' ? 'active' : ''}`}
+            onClick={() => switchTab('refer-and-earn')}
+          >
+            <Gift size={18} /> Refer & Earn
+          </button>
+
           <button 
             className={`menu-item ${activeTab === 'profile' ? 'active' : ''}`}
             onClick={() => switchTab('profile')}
@@ -561,7 +571,11 @@ const CustomerDashboard = ({ initialTab, handleNavigation }) => {
         {activeTab === 'our-customers' && (
           <OurCustomersTab />
         )}
+        {activeTab === 'refer-and-earn' && (
+          <ReferAndEarnTab />
+        )}
       </main>
+
     </div>
   );
 };

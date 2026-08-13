@@ -25,11 +25,14 @@ import {
   UserCheck,
   UploadCloud,
   FileSpreadsheet,
-  Layers
+  Layers,
+  Gift
 } from 'lucide-react';
 import OurCustomersTab from '../components/OurCustomersTab';
 import AdminProductsTab from '../components/AdminProductsTab';
+import AdminReferralsTab from '../components/AdminReferralsTab';
 import './Dashboard.css';
+
 
 
 const AdminDashboard = ({ initialTab, handleNavigation }) => {
@@ -320,6 +323,13 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
           >
             <Layers size={18} /> Products & Services
           </button>
+          <button 
+            className={`menu-item ${activeTab === 'referrals' ? 'active' : ''}`}
+            onClick={() => switchTab('referrals')}
+          >
+            <Gift size={18} /> Referral Program
+          </button>
+
 
         </div>
         <button className="menu-item logout-btn" onClick={handleLogout}>
@@ -757,7 +767,12 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
         {activeTab === 'products' && (
           <AdminProductsTab />
         )}
+
+        {activeTab === 'referrals' && (
+          <AdminReferralsTab />
+        )}
       </main>
+
 
 
       {/* Map Live Location Modal */}

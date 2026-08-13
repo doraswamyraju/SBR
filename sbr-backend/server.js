@@ -40,6 +40,8 @@ app.use('/api/settings', require('./routes/settingsRoutes'));
 app.use('/api/blogs', require('./routes/blogRoutes'));
 app.use('/api/customer-list', require('./routes/customerListRoutes'));
 app.use('/api/products', require('./routes/productRoutes'));
+app.use('/api/referrals', require('./routes/referralRoutes'));
+
 
 
 // Basic health check route

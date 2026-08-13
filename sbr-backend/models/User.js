@@ -30,7 +30,21 @@ const UserSchema = new mongoose.Schema(
     phone: {
       type: String
     },
+    // Referral Program fields
+    referralCode: {
+      type: String,
+      unique: true,
+      sparse: true
+    },
+    referredBy: {
+      type: String
+    },
+    totalReferralEarnings: {
+      type: Number,
+      default: 0
+    },
     // Customer specific fields
+
     address: {
       type: String
     },
