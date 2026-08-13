@@ -48,4 +48,17 @@ const authorize = (...roles) => {
   };
 };
 
-module.exports = { protect, authorize };
+// Admin middleware
+const admin = (req, res, next) => {
+  if (req.user && (req.user.role === 'ADMIN' || req.user.role === 'admin')) {
+    next();
+  } else {
+    return res.status(403).json({
+      success: false,
+      error: 'Not authorized as an admin'
+    });
+  }
+};
+
+module.exports = { protect, authorize, admin };
+
