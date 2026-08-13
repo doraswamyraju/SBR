@@ -11,6 +11,8 @@ dotenv.config();
 connectDB().then(() => {
   const { seedDefaultBlogs } = require('./controllers/blogController');
   seedDefaultBlogs();
+  const { seedDefaultProducts } = require('./controllers/productController');
+  seedDefaultProducts();
 });
 
 const app = express();
@@ -37,6 +39,8 @@ app.use('/api/upload', require('./routes/uploadRoutes'));
 app.use('/api/settings', require('./routes/settingsRoutes'));
 app.use('/api/blogs', require('./routes/blogRoutes'));
 app.use('/api/customer-list', require('./routes/customerListRoutes'));
+app.use('/api/products', require('./routes/productRoutes'));
+
 
 // Basic health check route
 app.get('/', (req, res) => {

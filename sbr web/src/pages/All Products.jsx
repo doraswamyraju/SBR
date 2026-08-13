@@ -78,17 +78,37 @@ const GoogleReviewsSection = () => {
 
 // --- PRODUCTS PAGE COMPONENT ---
 const ProductsPage = ({ handleNavigation }) => {
-    // --- All Products Page Specific Data ---
-    const allProductsPageData = [
-        { id: 'swh', name: "Solar Water Heaters", image: "https://i.postimg.cc/CZp2b16T/solar-water-heater.png", searchQuery: "solar water heater description features benefits", description: "Harness the power of the sun for efficient, eco-friendly hot water." },
-        { id: 'hmws', name: "HM Hard Water Scalenors", image: "https://i.postimg.cc/sQDwJZY8/scalenor.png", searchQuery: "HM hard water scalenor description benefits", description: "Protect your pipes and appliances with our maintenance-free scalenor." },
-        { id: 'aws', name: "Automatic Water Softeners", image: "https://i.postimg.cc/BPjpr9wB/softener.png", searchQuery: "automatic water softener how it works benefits", description: "Experience the luxury of soft water for healthier skin and hair." },
-        { id: 'rowp', name: "RO Water Plants", image: "https://i.postimg.cc/G4ZpYZDT/ro-plant.png", searchQuery: "RO water plant commercial domestic features", description: "Ensure pure and safe drinking water for your home or business." },
-        { id: 'drop', name: "Domestic RO Purifier", image: "https://placehold.co/400x300/00529B/FFFFFF?text=Domestic+RO", searchQuery: "domestic RO purifier specifications benefits", description: "Get pure and safe drinking water for your home." },
-        { id: 'sps', name: "Solar Power Systems", image: "https://placehold.co/400x300/002D5B/FFC107?text=Solar+Power+System", searchQuery: "solar power systems benefits components", description: "Generate your own clean electricity and reduce your bills." },
-        { id: 'fse', name: "Fenice Solar Energy", image: "https://placehold.co/400x300/002D5B/FFC107?text=Fenice+Solar", searchQuery: "Fenice Solar Energy products features", description: "Advanced solar energy solutions for various applications." },
-        { id: 'hp', name: "Heat Pumps", image: "https://i.postimg.cc/XZzp2ptq/heat-pump.png", searchQuery: "Racold heat pumps features benefits", description: "Energy-efficient water heating with advanced heat pump technology." },
+    // --- All Products Page Fallback Data ---
+    const staticProductsData = [
+        { id: 'swh', slug: 'swh', name: "Solar Water Heaters", image: "https://i.postimg.cc/CZp2b16T/solar-water-heater.png", description: "Harness the power of the sun for efficient, eco-friendly hot water." },
+        { id: 'hmws', slug: 'hmws', name: "HM Hard Water Scalenors", image: "https://i.postimg.cc/sQDwJZY8/scalenor.png", description: "Protect your pipes and appliances with our maintenance-free scalenor." },
+        { id: 'aws', slug: 'aws', name: "Automatic Water Softeners", image: "https://i.postimg.cc/BPjpr9wB/softener.png", description: "Experience the luxury of soft water for healthier skin and hair." },
+        { id: 'rowp', slug: 'rowp', name: "RO Water Plants", image: "https://i.postimg.cc/G4ZpYZDT/ro-plant.png", description: "Ensure pure and safe drinking water for your home or business." },
+        { id: 'drop', slug: 'drop', name: "Domestic RO Purifier", image: "https://placehold.co/400x300/00529B/FFFFFF?text=Domestic+RO", description: "Get pure and safe drinking water for your home." },
+        { id: 'sps', slug: 'sps', name: "Solar Power Systems", image: "https://placehold.co/400x300/002D5B/FFC107?text=Solar+Power+System", description: "Generate your own clean electricity and reduce your bills." },
+        { id: 'fse', slug: 'fse', name: "Fenice Solar Energy", image: "https://placehold.co/400x300/002D5B/FFC107?text=Fenice+Solar", description: "Advanced solar energy solutions for various applications." },
+        { id: 'hp', slug: 'hp', name: "Heat Pumps", image: "https://i.postimg.cc/XZzp2ptq/heat-pump.png", description: "Energy-efficient water heating with advanced heat pump technology." },
     ];
+
+    const [products, setProducts] = useState(staticProductsData);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                const response = await fetch('/api/products');
+                const result = await response.json();
+                if (result.success && result.data && result.data.length > 0) {
+                    setProducts(result.data);
+                }
+            } catch (err) {
+                console.log("Using static products fallback");
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchProducts();
+    }, []);
 
     return (
         <>
@@ -107,20 +127,28 @@ const ProductsPage = ({ handleNavigation }) => {
                     <SectionTitle title="Discover Our Solutions" subtitle="From solar innovations to advanced water purification, find the perfect product for your needs." isInView={true} />
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                        {allProductsPageData.map((product, index) => (
-                            <div key={product.id} className="bg-white/60 backdrop-blur-lg rounded-xl shadow-lg overflow-hidden group text-center h-full flex flex-col border border-white/50 hover:shadow-2xl hover:border-brand-yellow transition-all duration-300 transform hover:-translate-y-2">
-                                <div className="p-4 bg-white">
-                                    <img src={product.image} alt={product.name} className="w-full h-48 object-contain" onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/400x300/CCCCCC/333333?text=${product.name.replace(/\s/g, '+')}`; }} />
+                        {products.map((product, index) => {
+                            const navId = product.slug || product.id;
+                            return (
+                                <div key={product._id || product.id} className="bg-white/60 backdrop-blur-lg rounded-xl shadow-lg overflow-hidden group text-center h-full flex flex-col border border-white/50 hover:shadow-2xl hover:border-brand-yellow transition-all duration-300 transform hover:-translate-y-2">
+                                    <div className="p-4 bg-white relative">
+                                        <img src={product.image} alt={product.name} className="w-full h-48 object-contain" onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/400x300/CCCCCC/333333?text=${product.name.replace(/\s/g, '+')}`; }} />
+                                        {product.basePrice > 0 && (
+                                            <span className="absolute top-3 right-3 bg-brand-blue text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-sm">
+                                                ₹{product.basePrice.toLocaleString()}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="p-6 flex-grow flex flex-col">
+                                        <h3 className="text-xl font-bold text-brand-dark-blue mb-2">{product.name}</h3>
+                                        <p className="text-gray-600 text-sm flex-grow mb-4">{product.description || product.tagline || "Details coming soon..."}</p>
+                                        <button onClick={() => handleNavigation('product-' + navId)} className="mt-auto inline-block bg-brand-blue text-white font-semibold py-2 px-6 rounded-full hover:bg-brand-dark-blue transition-all duration-300 cursor-pointer">
+                                            Learn More
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="p-6 flex-grow flex flex-col">
-                                    <h3 className="text-xl font-bold text-brand-dark-blue mb-2">{product.name}</h3>
-                                    <p className="text-gray-600 text-sm flex-grow mb-4">{product.description || "Details coming soon..."}</p>
-                                    <button onClick={() => handleNavigation('product-' + product.id)} className="mt-auto inline-block bg-brand-blue text-white font-semibold py-2 px-6 rounded-full hover:bg-brand-dark-blue transition-all duration-300">
-                                        Learn More
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             </section>
@@ -130,3 +158,4 @@ const ProductsPage = ({ handleNavigation }) => {
 };
 
 export default ProductsPage;
+

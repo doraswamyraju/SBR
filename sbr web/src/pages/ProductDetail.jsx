@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+
 
 // --- SVG ICONS (Self-contained, no dependencies) ---
 const IconCheckCircle = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="currentColor" viewBox="0 0 24 24"><path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.532-1.676-1.676a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" /></svg>;
@@ -251,7 +252,9 @@ const GoogleReviewsSection = () => {
 
 // --- ProductDetail Page Component ---
 const ProductDetail = ({ productId, handleNavigation, openContactModal }) => {
-    const product = productsData[productId] || productsData['hmws'];
+    const fallbackProduct = productsData[productId] || productsData['hmws'];
+    const [product, setProduct] = useState(fallbackProduct);
+    const [selectedImage, setSelectedImage] = useState(fallbackProduct.image);
     const [activeFaq, setActiveFaq] = useState(null);
 
     // Dynamic state for Quick Booking Form
@@ -259,11 +262,31 @@ const ProductDetail = ({ productId, handleNavigation, openContactModal }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitStatus, setSubmitStatus] = useState(null);
 
-    // Keep state values in sync if productId changes
+    // Fetch dynamic product by productId or slug
     useEffect(() => {
         setSubmitStatus(null);
         setActiveFaq(null);
         setFormData({ name: '', phone: '', address: '', notes: '' });
+
+        const fetchProductDetail = async () => {
+            try {
+                const response = await fetch(`/api/products/${productId}`);
+                const result = await response.json();
+                if (result.success && result.data) {
+                    setProduct(result.data);
+                    setSelectedImage(result.data.image);
+                } else if (productsData[productId]) {
+                    setProduct(productsData[productId]);
+                    setSelectedImage(productsData[productId].image);
+                }
+            } catch (err) {
+                if (productsData[productId]) {
+                    setProduct(productsData[productId]);
+                    setSelectedImage(productsData[productId].image);
+                }
+            }
+        };
+        fetchProductDetail();
     }, [productId]);
 
     const handleInputChange = (e) => {
@@ -301,6 +324,16 @@ const ProductDetail = ({ productId, handleNavigation, openContactModal }) => {
         }
     };
 
+    // Images list for showcase gallery
+    const showcaseImages = product.images && product.images.length > 0 
+        ? product.images 
+        : [product.image];
+
+    // Convert specs Map/Object to entries safely
+    const specsEntries = product.specifications instanceof Map 
+        ? Array.from(product.specifications.entries())
+        : Object.entries(product.specifications || {});
+
     return (
         <div className="bg-brand-light-blue min-h-screen">
             {/* Hero Section */}
@@ -335,38 +368,81 @@ const ProductDetail = ({ productId, handleNavigation, openContactModal }) => {
                                 {product.description}
                             </p>
 
-                            <h3 className="text-2xl font-bold text-brand-dark-blue mb-4">Key Features</h3>
-                            <ul className="space-y-4">
-                                {product.features.map((feature, index) => (
-                                    <li key={index} className="flex items-start bg-brand-light-blue/40 p-4 rounded-lg border border-brand-light-blue">
-                                        <IconCheckCircle className="h-6 w-6 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
-                                        <span className="text-gray-700 text-md leading-relaxed">{feature}</span>
-                                    </li>
-                                ))}
-                            </ul>
+                            {product.features && product.features.length > 0 && (
+                                <>
+                                    <h3 className="text-2xl font-bold text-brand-dark-blue mb-4">Key Features</h3>
+                                    <ul className="space-y-4">
+                                        {product.features.map((feature, index) => (
+                                            <li key={index} className="flex items-start bg-brand-light-blue/40 p-4 rounded-lg border border-brand-light-blue">
+                                                <IconCheckCircle className="h-6 w-6 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
+                                                <span className="text-gray-700 text-md leading-relaxed">{feature}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </>
+                            )}
                         </div>
 
-                        {/* Right Content (Image, Specs Table, Booking Panel) */}
+                        {/* Right Content (Image Gallery, Specs Table, Booking Panel) */}
                         <div className="lg:col-span-5 space-y-8">
-                            {/* Product Card */}
+                            {/* Product Card with Multi-Image Showcase */}
                             <div className="bg-brand-light-blue rounded-xl p-6 border border-gray-200/60 shadow-md">
-                                <div className="bg-white rounded-lg p-6 flex justify-center mb-6">
+                                <div className="bg-white rounded-lg p-6 flex flex-col items-center mb-6">
+                                    {/* Main Display Image */}
                                     <img 
-                                        src={product.image} 
+                                        src={selectedImage || product.image} 
                                         alt={product.name} 
-                                        className="h-64 object-contain"
+                                        className="h-64 object-contain transition-all duration-300"
                                         onError={(e) => { 
                                             e.target.onerror = null; 
                                             e.target.src = `https://placehold.co/400x300/CCCCCC/333333?text=${product.name.replace(/\s/g, '+')}`; 
                                         }} 
                                     />
+
+                                    {/* Showcase Multiple Images Thumbnails */}
+                                    {showcaseImages.length > 1 && (
+                                        <div className="flex items-center gap-2 mt-4 overflow-x-auto max-w-full pb-1">
+                                            {showcaseImages.map((img, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => setSelectedImage(img)}
+                                                    className={`w-14 h-14 rounded-md border-2 overflow-hidden transition-all flex-shrink-0 cursor-pointer ${
+                                                        (selectedImage || product.image) === img ? 'border-brand-yellow shadow-md scale-105' : 'border-gray-200 opacity-70 hover:opacity-100'
+                                                    }`}
+                                                >
+                                                    <img src={img} alt={`Thumb ${idx}`} className="w-full h-full object-cover" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Price & Referral Commission Card */}
+                                    {product.basePrice > 0 && (
+                                        <div className="w-full mt-4 p-3 bg-blue-50 border border-blue-100 rounded-lg flex items-center justify-between">
+                                            <div>
+                                                <span className="text-xs text-gray-500 font-medium block">Starting Price</span>
+                                                <span className="text-xl font-bold text-brand-dark-blue">₹{product.basePrice.toLocaleString()}</span>
+                                                {product.mrp > product.basePrice && (
+                                                    <span className="text-xs text-gray-400 line-through ml-2">₹{product.mrp.toLocaleString()}</span>
+                                                )}
+                                            </div>
+                                            {product.commissionValue > 0 && (
+                                                <div className="text-right">
+                                                    <span className="text-xs text-emerald-600 font-semibold block">Referral Earnings</span>
+                                                    <span className="text-sm font-bold text-emerald-700">
+                                                        {product.commissionType === 'percentage' ? `${product.commissionValue}% Bonus` : `₹${product.commissionValue} Reward`}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <h3 className="text-xl font-bold text-brand-dark-blue mb-4">Technical Specifications</h3>
                                 <div className="overflow-hidden border border-gray-200 rounded-lg bg-white">
                                     <table className="min-w-full divide-y divide-gray-200 text-sm">
                                         <tbody className="divide-y divide-gray-200">
-                                            {Object.entries(product.specifications).map(([key, val]) => (
+                                            {specsEntries.map(([key, val]) => (
                                                 <tr key={key}>
                                                     <td className="px-4 py-3 font-semibold text-brand-dark-blue bg-brand-light-blue/40 w-1/3">{key}</td>
                                                     <td className="px-4 py-3 text-gray-600">{val}</td>
@@ -376,6 +452,7 @@ const ProductDetail = ({ productId, handleNavigation, openContactModal }) => {
                                     </table>
                                 </div>
                             </div>
+
 
                             {/* Service Request / Contact Panel */}
                             <div className="bg-brand-dark-blue text-white rounded-xl p-6 shadow-xl relative overflow-hidden">

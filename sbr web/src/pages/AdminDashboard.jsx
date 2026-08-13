@@ -24,10 +24,13 @@ import {
   FileText,
   UserCheck,
   UploadCloud,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Layers
 } from 'lucide-react';
 import OurCustomersTab from '../components/OurCustomersTab';
+import AdminProductsTab from '../components/AdminProductsTab';
 import './Dashboard.css';
+
 
 const AdminDashboard = ({ initialTab, handleNavigation }) => {
   const { user, logout } = useAuth();
@@ -311,6 +314,13 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
           >
             <FileText size={18} /> Blogs ({blogs.length})
           </button>
+          <button 
+            className={`menu-item ${activeTab === 'products' ? 'active' : ''}`}
+            onClick={() => switchTab('products')}
+          >
+            <Layers size={18} /> Products & Services
+          </button>
+
         </div>
         <button className="menu-item logout-btn" onClick={handleLogout}>
           <LogOut size={18} /> Sign Out
@@ -743,7 +753,12 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
             <OurCustomersTab key={customerListRefreshTrigger} isAdmin={true} />
           </div>
         )}
+
+        {activeTab === 'products' && (
+          <AdminProductsTab />
+        )}
       </main>
+
 
       {/* Map Live Location Modal */}
       {trackingRequest && (
@@ -1092,6 +1107,9 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
     </div>
   );
 };
+
+
+
 
 const AdminBlogsSection = ({ blogs, onRefresh }) => {
   const [modalOpen, setModalOpen] = useState(false);
