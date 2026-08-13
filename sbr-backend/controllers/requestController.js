@@ -1,6 +1,9 @@
 const ServiceRequest = require('../models/ServiceRequest');
 const User = require('../models/User');
+const Referral = require('../models/Referral');
+const Product = require('../models/Product');
 const { sendNotificationToUser } = require('../utils/notificationHelper');
+
 
 // @desc    Create a new service request
 // @route   POST /api/requests
@@ -419,3 +422,94 @@ exports.deleteRequest = async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 };
+
+// @desc    Public website quote/service booking request (with optional Referral Code)
+// @route   POST /api/requests/book OR POST /api/service-requests/book
+// @access  Public
+exports.bookPublicRequest = async (req, res) => {
+  try {
+    const { customerName, name, phone, address, serviceType, description, referralCode } = req.body;
+
+    const finalName = customerName || name || 'Website Lead';
+    const finalPhone = phone || '';
+    const finalAddress = address || 'Tirupati';
+    const finalServiceType = serviceType || 'Solar Water Heaters';
+
+    if (!finalPhone) {
+      return res.status(400).json({ success: false, error: 'Please provide contact phone number.' });
+    }
+
+    // Find or create customer account
+    let customerUser = await User.findOne({ phone: finalPhone });
+    if (!customerUser) {
+      const tempEmail = `lead_${Date.now()}@sriddha.com`;
+      customerUser = await User.create({
+        name: finalName,
+        email: tempEmail,
+        password: `sbr${Math.floor(100000 + Math.random() * 900000)}`,
+        phone: finalPhone,
+        address: finalAddress,
+        role: 'CUSTOMER'
+      });
+    }
+
+    // Create Service Request
+    const request = await ServiceRequest.create({
+      customerId: customerUser._id,
+      serviceType: finalServiceType,
+      description: description || `Requesting quote for ${finalServiceType}`,
+      customerAddress: finalAddress,
+      createdBy: 'CUSTOMER'
+    });
+
+    // Check if referral code is provided
+    if (referralCode && referralCode.trim() !== '') {
+      const cleanCode = referralCode.trim().toUpperCase();
+      const referrerUser = await User.findOne({ referralCode: cleanCode });
+
+      if (referrerUser) {
+        // Calculate reward amount using Product commission rules
+        const prod = await Product.findOne({ name: { $regex: finalServiceType, $options: 'i' } });
+        let reward = 500;
+        if (prod) {
+          if (prod.commissionType === 'percentage') {
+            reward = Math.round((prod.basePrice * prod.commissionValue) / 100);
+          } else {
+            reward = prod.commissionValue || 500;
+          }
+        }
+
+        // Create Referral lead record for referrer
+        await Referral.create({
+          referrerId: referrerUser._id,
+          referralCode: cleanCode,
+          refereeName: finalName,
+          refereePhone: finalPhone,
+          productId: prod ? prod._id : null,
+          productName: prod ? prod.name : finalServiceType,
+          rewardAmount: reward,
+          notes: `Public website booking form lead with referral code: ${cleanCode}`,
+          status: 'Pending'
+        });
+      }
+    }
+
+    // Notify Admins
+    const admins = await User.find({ role: 'ADMIN' });
+    admins.forEach(admin => {
+      sendNotificationToUser(admin._id, {
+        title: 'New Website Service Booking',
+        body: `Booking received from ${finalName} (${finalPhone}) for ${finalServiceType}`
+      });
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Request received! SBR team will contact you shortly.',
+      data: request
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+

@@ -258,7 +258,7 @@ const ProductDetail = ({ productId, handleNavigation, openContactModal }) => {
     const [activeFaq, setActiveFaq] = useState(null);
 
     // Dynamic state for Quick Booking Form
-    const [formData, setFormData] = useState({ name: '', phone: '', address: '', notes: '' });
+    const [formData, setFormData] = useState({ name: '', phone: '', address: '', notes: '', referralCode: '' });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitStatus, setSubmitStatus] = useState(null);
 
@@ -266,7 +266,7 @@ const ProductDetail = ({ productId, handleNavigation, openContactModal }) => {
     useEffect(() => {
         setSubmitStatus(null);
         setActiveFaq(null);
-        setFormData({ name: '', phone: '', address: '', notes: '' });
+        setFormData({ name: '', phone: '', address: '', notes: '', referralCode: '' });
 
         const fetchProductDetail = async () => {
             try {
@@ -307,13 +307,14 @@ const ProductDetail = ({ productId, handleNavigation, openContactModal }) => {
                     phone: formData.phone,
                     address: formData.address,
                     serviceType: product.name,
-                    description: formData.notes || `Requesting details/quote for ${product.name}`
+                    description: formData.notes || `Requesting details/quote for ${product.name}`,
+                    referralCode: formData.referralCode
                 })
             });
 
             if (response.ok) {
                 setSubmitStatus('success');
-                setFormData({ name: '', phone: '', address: '', notes: '' });
+                setFormData({ name: '', phone: '', address: '', notes: '', referralCode: '' });
             } else {
                 setSubmitStatus('error');
             }
@@ -323,6 +324,7 @@ const ProductDetail = ({ productId, handleNavigation, openContactModal }) => {
             setIsSubmitting(false);
         }
     };
+
 
     // Images list for showcase gallery
     const showcaseImages = product.images && product.images.length > 0 
@@ -491,6 +493,17 @@ const ProductDetail = ({ productId, handleNavigation, openContactModal }) => {
                                         />
                                     </div>
                                     <div>
+                                        <label className="block text-xs uppercase tracking-wider text-blue-200 font-bold mb-1">Referral Code (Optional)</label>
+                                        <input 
+                                            type="text" 
+                                            name="referralCode"
+                                            value={formData.referralCode}
+                                            onChange={handleInputChange}
+                                            placeholder="e.g. SBR-JOHN8921" 
+                                            className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-blue-200/50 focus:outline-none focus:ring-2 focus:ring-brand-yellow text-sm uppercase" 
+                                        />
+                                    </div>
+                                    <div>
                                         <label className="block text-xs uppercase tracking-wider text-blue-200 font-bold mb-1">Additional Requirements</label>
                                         <textarea 
                                             name="notes"
@@ -501,6 +514,7 @@ const ProductDetail = ({ productId, handleNavigation, openContactModal }) => {
                                             className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-blue-200/50 focus:outline-none focus:ring-2 focus:ring-brand-yellow text-sm resize-none"
                                         ></textarea>
                                     </div>
+
 
                                     <button 
                                         type="submit" 

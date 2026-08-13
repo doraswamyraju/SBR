@@ -1,6 +1,7 @@
 const express = require('express');
 const {
   createRequest,
+
   getRequests,
   getRequestById,
   updateRequest,
@@ -9,13 +10,19 @@ const {
   updateRequestImage,
   updatePaymentDetails,
   appendAgentLocation,
-  deleteRequest
+  deleteRequest,
+  bookPublicRequest
 } = require('../controllers/requestController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-router.use(protect); // All routes require authentication
+// Public booking routes
+router.post('/book', bookPublicRequest);
+router.post('/public-book', bookPublicRequest);
+
+router.use(protect); // Subsequent routes require authentication
+
 
 router.route('/')
   .post(createRequest)
