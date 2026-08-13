@@ -235,19 +235,12 @@ const ReferAndEarnTab = () => {
             <div className="mt-4 flex items-center gap-3">
               <button
                 onClick={() => setIsClaimModalOpen(true)}
-                disabled={!availableForClaim}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs shadow-lg transition-all cursor-pointer ${
-                  availableForClaim 
-                    ? 'bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 shadow-amber-500/20' 
-                    : 'bg-slate-800 text-slate-400 border border-slate-700 cursor-not-allowed opacity-80'
-                }`}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-extrabold text-xs shadow-lg transition-all cursor-pointer bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-400 hover:from-amber-400 hover:to-yellow-300 text-slate-950 shadow-amber-500/20"
               >
-                <DollarSign className="w-4 h-4" /> 
-                {availableForClaim 
-                  ? `Claim Reward Payout (₹${referralData.availableBalance.toLocaleString()} Available)` 
-                  : `Claim Reward (Min ₹500 Required)`}
+                <DollarSign className="w-4 h-4" /> Request Reward Payout Transfer
               </button>
             </div>
+
           </div>
 
           {/* Referral Code & Action Box */}
@@ -307,15 +300,24 @@ const ReferAndEarnTab = () => {
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-slate-800/70 border border-slate-700/60 shadow-lg flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-amber-950/80 border border-amber-800/50 flex items-center justify-center text-amber-400 flex-shrink-0">
-            <DollarSign className="w-6 h-6" />
+        <div className="p-5 rounded-2xl bg-slate-800/70 border border-slate-700/60 shadow-lg flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-amber-950/80 border border-amber-800/50 flex items-center justify-center text-amber-400 flex-shrink-0">
+              <DollarSign className="w-6 h-6" />
+            </div>
+            <div>
+              <span className="text-xs text-slate-400 font-medium block">Available to Claim</span>
+              <span className="text-xl font-extrabold text-amber-400">₹{(referralData.availableBalance || 0).toLocaleString()}</span>
+            </div>
           </div>
-          <div>
-            <span className="text-xs text-slate-400 font-medium block">Available to Claim</span>
-            <span className="text-xl font-extrabold text-amber-400">₹{(referralData.availableBalance || 0).toLocaleString()}</span>
-          </div>
+          <button
+            onClick={() => setIsClaimModalOpen(true)}
+            className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-xl text-xs font-bold transition-all cursor-pointer flex-shrink-0"
+          >
+            Claim
+          </button>
         </div>
+
 
         <div className="p-5 rounded-2xl bg-slate-800/70 border border-slate-700/60 shadow-lg flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-purple-950/80 border border-purple-800/50 flex items-center justify-center text-purple-400 flex-shrink-0">
