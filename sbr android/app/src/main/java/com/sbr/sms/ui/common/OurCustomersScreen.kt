@@ -33,6 +33,9 @@ fun OurCustomersScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
 
+    var showAddDialog by remember { mutableStateOf(false) }
+    var showClearConfirm by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -73,12 +76,33 @@ fun OurCustomersScreen(
                         )
                     }
 
-                    IconButton(onClick = { viewModel.fetchCustomers() }) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { viewModel.fetchCustomers() }) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Refresh",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        if (isAdmin) {
+                            IconButton(onClick = { showAddDialog = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Add Customer Record",
+                                    tint = Color(0xFF16A34A)
+                                )
+                            }
+                            IconButton(onClick = { showClearConfirm = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Clear All Records",
+                                    tint = Color(0xFFDC2626)
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -232,6 +256,122 @@ fun OurCustomersScreen(
                 ) {
                     Text(text = err)
                 }
+            }
+
+            // Dialogs
+            if (showAddDialog) {
+                var sNo by remember { mutableStateOf("") }
+                var name by remember { mutableStateOf("") }
+                var address by remember { mutableStateOf("") }
+                var product by remember { mutableStateOf("") }
+                var model by remember { mutableStateOf("") }
+                var purchaseDate by remember { mutableStateOf("") }
+                var formError by remember { mutableStateOf<String?>(null) }
+
+                AlertDialog(
+                    onDismissRequest = { showAddDialog = false },
+                    title = { Text("Add Customer Record") },
+                    text = {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            if (formError != null) {
+                                Text(formError!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                            }
+                            OutlinedTextField(
+                                value = sNo,
+                                onValueChange = { sNo = it },
+                                label = { Text("S.No. (Optional)") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            OutlinedTextField(
+                                value = name,
+                                onValueChange = { name = it },
+                                label = { Text("Customer Name *") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            OutlinedTextField(
+                                value = address,
+                                onValueChange = { address = it },
+                                label = { Text("Address") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            OutlinedTextField(
+                                value = product,
+                                onValueChange = { product = it },
+                                label = { Text("Product") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            OutlinedTextField(
+                                value = model,
+                                onValueChange = { model = it },
+                                label = { Text("Model (Optional)") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            OutlinedTextField(
+                                value = purchaseDate,
+                                onValueChange = { purchaseDate = it },
+                                label = { Text("Purchase Date (e.g. 14-Aug-2026)") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                if (name.isBlank()) {
+                                    formError = "Name is required"
+                                } else {
+                                    viewModel.addCustomerRecord(
+                                        CustomerRecordDto(
+                                            sNo = sNo,
+                                            name = name,
+                                            address = address,
+                                            product = product.ifBlank { "General Product" },
+                                            model = model,
+                                            purchaseDate = purchaseDate
+                                        ),
+                                        onSuccess = {
+                                            showAddDialog = false
+                                        }
+                                    )
+                                }
+                            }
+                        ) {
+                            Text("Add")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showAddDialog = false }) {
+                            Text("Cancel")
+                        }
+                    }
+                )
+            }
+
+            if (showClearConfirm) {
+                AlertDialog(
+                    onDismissRequest = { showClearConfirm = false },
+                    title = { Text("Clear All Customer Records?") },
+                    text = { Text("Are you sure you want to delete all verified customer installations? This action cannot be undone.") },
+                    confirmButton = {
+                        Button(
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                            onClick = {
+                                viewModel.clearCustomerList()
+                                showClearConfirm = false
+                            }
+                        ) {
+                            Text("Clear All")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showClearConfirm = false }) {
+                            Text("Cancel")
+                        }
+                    }
+                )
             }
         }
     }

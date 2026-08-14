@@ -82,8 +82,16 @@ interface ApiService {
         @Query("product") product: String? = null
     ): Response<CustomerListResponseDto>
 
+    @POST("api/customer-list")
+    suspend fun addCustomerRecord(
+        @Body record: CustomerRecordDto
+    ): Response<ApiResponse<CustomerRecordDto>>
+
     @DELETE("api/customer-list/{id}")
     suspend fun deleteCustomerRecord(
         @Path("id") id: String
     ): Response<ApiResponse<Map<String, Any>>>
+
+    @DELETE("api/customer-list/clear")
+    suspend fun clearCustomerList(): Response<ApiResponse<Map<String, Any>>>
 }

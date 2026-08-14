@@ -68,6 +68,20 @@ class CustomerListViewModel @Inject constructor(
         }
     }
 
+    fun addCustomerRecord(record: CustomerRecordDto, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            val result = repository.addCustomerRecord(record)
+            result.onSuccess {
+                fetchCustomers()
+                onSuccess()
+            }.onFailure { error ->
+                _errorMessage.value = error.localizedMessage
+            }
+            _isLoading.value = false
+        }
+    }
+
     fun deleteCustomerRecord(id: String) {
         viewModelScope.launch {
             val result = repository.deleteCustomerRecord(id)
@@ -76,6 +90,19 @@ class CustomerListViewModel @Inject constructor(
             }.onFailure { error ->
                 _errorMessage.value = error.localizedMessage
             }
+        }
+    }
+
+    fun clearCustomerList() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            val result = repository.clearCustomerList()
+            result.onSuccess {
+                fetchCustomers()
+            }.onFailure { error ->
+                _errorMessage.value = error.localizedMessage
+            }
+            _isLoading.value = false
         }
     }
 }

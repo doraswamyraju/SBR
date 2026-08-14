@@ -48,6 +48,27 @@ class CustomerListViewModel: ObservableObject {
         isLoading = false
     }
     
+    func addCustomerRecord(record: AddCustomerRecordRequest) async -> Bool {
+        do {
+            struct AddRecordResponse: Codable {
+                let success: Bool
+                let data: CustomerRecord?
+                let error: String?
+            }
+            let res = try await APIClient.shared.post(endpoint: "api/customer-list", body: record, responseType: AddRecordResponse.self)
+            if res.success {
+                await fetchCustomers()
+                return true
+            } else {
+                self.errorMessage = res.error ?? "Failed to add record"
+                return false
+            }
+        } catch {
+            self.errorMessage = error.localizedDescription
+            return false
+        }
+    }
+    
     func deleteRecord(id: String) async {
         do {
             let res = try await APIClient.shared.delete(endpoint: "api/customer-list/\(id)", responseType: GenericAPIResponse.self)
@@ -60,4 +81,26 @@ class CustomerListViewModel: ObservableObject {
             self.errorMessage = error.localizedDescription
         }
     }
+    
+    func clearCustomerList() async {
+        do {
+            let res = try await APIClient.shared.delete(endpoint: "api/customer-list/clear", responseType: GenericAPIResponse.self)
+            if res.success {
+                await fetchCustomers()
+            } else {
+                self.errorMessage = res.error ?? "Failed to clear records"
+            }
+        } catch {
+            self.errorMessage = error.localizedDescription
+        }
+    }
+}
+
+struct AddCustomerRecordRequest: Codable {
+    let sNo: String?
+    let name: String
+    let address: String?
+    let product: String?
+    let model: String?
+    let purchaseDate: String?
 }

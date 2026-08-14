@@ -3,11 +3,53 @@ import SwiftUI
 struct OurCustomersView: View {
     var isAdmin: Bool = false
     @StateObject private var viewModel = CustomerListViewModel()
+    @State private var showingAddSheet = false
+    @State private var showingClearAlert = false
     
     var body: some View {
         VStack(spacing: 0) {
             // Top Filter Header
             VStack(spacing: 12) {
+                // Admin Actions Row (if admin)
+                if isAdmin {
+                    HStack {
+                        Text("Dataset Controls")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.gray)
+                        Spacer()
+                        Button(action: {
+                            showingAddSheet = true
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "plus")
+                                Text("Add Record")
+                            }
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.green.opacity(0.8))
+                            .cornerRadius(8)
+                        }
+                        
+                        Button(action: {
+                            showingClearAlert = true
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "trash")
+                                Text("Clear All")
+                            }
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.red.opacity(0.8))
+                            .cornerRadius(8)
+                        }
+                    }
+                    .padding(.bottom, 4)
+                }
+                
                 // Search Bar
                 HStack {
                     Image(systemName: "magnifyingglass")
@@ -129,6 +171,92 @@ struct OurCustomersView: View {
             Task {
                 await viewModel.fetchCustomers()
             }
+        }
+        .alert(isPresented: $showingClearAlert) {
+            Alert(
+                title: Text("Clear All Customer Records?"),
+                message: Text("Are you sure you want to delete all verified customer installations? This action cannot be undone."),
+                primaryButton: .destructive(Text("Clear All")) {
+                    Task {
+                        await viewModel.clearCustomerList()
+                    }
+                },
+                secondaryButton: .cancel()
+            )
+        }
+        .sheet(isPresented: $showingAddSheet) {
+            AddCustomerRecordView(viewModel: viewModel)
+        }
+    }
+}
+
+struct AddCustomerRecordView: View {
+    @ObservedObject var viewModel: CustomerListViewModel
+    @Environment(\.presentationMode) var presentationMode
+    
+    @State private var sNo = ""
+    @State private var name = ""
+    @State private var address = ""
+    @State private var product = ""
+    @State private var model = ""
+    @State private var purchaseDate = ""
+    @State private var errorMessage: String? = nil
+    @State private var isSaving = false
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("Customer Information")) {
+                    TextField("S.No. (Optional)", text: $sNo)
+                    TextField("Customer Name *", text: $name)
+                    TextField("Address", text: $address)
+                }
+                
+                Section(header: Text("Product Details")) {
+                    TextField("Product", text: $product)
+                    TextField("Model (Optional)", text: $model)
+                    TextField("Purchase Date (e.g. 14-Aug-2026)", text: $purchaseDate)
+                }
+                
+                if let err = errorMessage {
+                    Section {
+                        Text(err)
+                            .foregroundColor(.red)
+                            .font(.system(size: 13))
+                    }
+                }
+            }
+            .navigationTitle("Add Customer Record")
+            .navigationBarItems(
+                leading: Button("Cancel") {
+                    presentationMode.wrappedValue.dismiss()
+                },
+                trailing: Button("Save") {
+                    if name.isEmpty {
+                        errorMessage = "Customer name is required"
+                    } else {
+                        isSaving = true
+                        let req = AddCustomerRecordRequest(
+                            sNo: sNo.isEmpty ? nil : sNo,
+                            name: name,
+                            address: address.isEmpty ? nil : address,
+                            product: product.isEmpty ? "General Product" : product,
+                            model: model.isEmpty ? nil : model,
+                            purchaseDate: purchaseDate.isEmpty ? nil : purchaseDate
+                        )
+                        Task {
+                            let success = await viewModel.addCustomerRecord(record: req)
+                            isSaving = false
+                            if success {
+                                presentationMode.wrappedValue.dismiss()
+                            } else {
+                                errorMessage = viewModel.errorMessage ?? "Failed to save record"
+                            }
+                        }
+                    }
+                }
+                .disabled(isSaving)
+            )
         }
     }
 }
