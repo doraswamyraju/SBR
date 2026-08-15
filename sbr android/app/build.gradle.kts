@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.sbr.sms"
-    compileSdk = 36
+    compileSdk = 35
 
     signingConfigs {
         create("release") {
@@ -23,7 +23,7 @@ android {
     defaultConfig {
         applicationId = "com.sbr.sms"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 35
         versionCode = 3
         versionName = "1.1"
     }
