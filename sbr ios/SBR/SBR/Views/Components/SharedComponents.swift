@@ -200,6 +200,7 @@ struct SidebarNavigationLayout<Content: View, SectionType: Hashable>: View {
                 }
             }
             .ignoresSafeArea()
+            .allowsHitTesting(isDrawerOpen)
         }
     }
 }
