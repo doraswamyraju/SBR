@@ -10,7 +10,7 @@ class ReferralRepository @Inject constructor(
 ) {
     suspend fun getMyReferrals(): Result<ReferralDashboardDto> {
         return try {
-            val response = apiService.getMyReferralData()
+            val response = apiService.getMyReferrals()
             if (response.isSuccessful && response.body() != null && response.body()!!.success) {
                 Result.success(response.body()!!.data ?: throw Exception("Empty dashboard data"))
             } else {

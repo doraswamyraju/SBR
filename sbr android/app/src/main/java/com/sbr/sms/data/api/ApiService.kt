@@ -95,16 +95,58 @@ interface ApiService {
     @DELETE("api/customer-list/clear")
     suspend fun clearCustomerList(): Response<ApiResponse<Map<String, Any>>>
 
-    // Referral endpoints
+    // Products & Services Endpoints
     @GET("api/products")
-    suspend fun getProducts(): Response<ApiResponse<List<ProductDto>>>
+    suspend fun getProducts(
+        @Query("activeOnly") activeOnly: Boolean = false,
+        @Query("category") category: String? = null
+    ): Response<ApiResponse<List<ProductDto>>>
 
+    @POST("api/products")
+    suspend fun createProduct(
+        @Body product: ProductRequest
+    ): Response<ApiResponse<ProductDto>>
+
+    @PUT("api/products/{id}")
+    suspend fun updateProduct(
+        @Path("id") id: String,
+        @Body product: ProductRequest
+    ): Response<ApiResponse<ProductDto>>
+
+    @DELETE("api/products/{id}")
+    suspend fun deleteProduct(
+        @Path("id") id: String
+    ): Response<ApiResponse<Map<String, Any>>>
+
+    // Referral Endpoints
     @GET("api/referrals/my-referrals")
-    suspend fun getMyReferralData(): Response<ApiResponse<ReferralDashboardDto>>
+    suspend fun getMyReferrals(): Response<ApiResponse<ReferralDashboardDto>>
 
     @POST("api/referrals/submit")
-    suspend fun submitReferral(@Body request: SubmitReferralRequest): Response<ApiResponse<ReferralDto>>
+    suspend fun submitReferral(
+        @Body request: SubmitReferralRequest
+    ): Response<ApiResponse<ReferralDto>>
 
     @POST("api/referrals/claim-payout")
-    suspend fun claimPayout(@Body request: ClaimPayoutRequest): Response<ApiResponse<ReferralClaimDto>>
+    suspend fun claimPayout(
+        @Body request: ClaimPayoutRequest
+    ): Response<ApiResponse<ReferralClaimDto>>
+
+    @GET("api/referrals/admin/all")
+    suspend fun getAdminAllReferrals(): Response<ApiResponse<List<ReferralDto>>>
+
+    @GET("api/referrals/admin/claims")
+    suspend fun getAdminAllClaims(): Response<ApiResponse<List<ReferralClaimDto>>>
+
+    @PUT("api/referrals/admin/{id}/status")
+    suspend fun updateReferralStatus(
+        @Path("id") id: String,
+        @Body request: UpdateReferralStatusRequest
+    ): Response<ApiResponse<ReferralDto>>
+
+    @PUT("api/referrals/admin/claims/{id}/status")
+    suspend fun updateClaimStatus(
+        @Path("id") id: String,
+        @Body request: UpdateClaimStatusRequest
+    ): Response<ApiResponse<ReferralClaimDto>>
 }

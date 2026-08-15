@@ -111,50 +111,81 @@ data class CustomerListResponseDto(
     val error: String? = null
 )
 
+// Product DTOs
 data class ProductDto(
-    @SerializedName("id", alternate = ["_id"]) val id: String,
-    val name: String,
+    @SerializedName("id", alternate = ["_id"]) val id: String = "",
+    val name: String = "",
+    val slug: String? = null,
+    val category: String? = null,
+    val image: String? = null,
+    val images: List<String>? = emptyList(),
+    val subtitle: String? = null,
+    val tagline: String? = null,
     val description: String? = null,
+    val features: List<String>? = emptyList(),
     val basePrice: Double? = null,
-    val commissionType: String? = null,
-    val commissionValue: Double? = null
+    val mrp: Double? = null,
+    val commissionType: String? = "fixed",
+    val commissionValue: Double? = null,
+    val isActive: Boolean? = true,
+    val createdAt: String? = null
 )
 
+data class ProductRequest(
+    val name: String,
+    val slug: String? = null,
+    val category: String,
+    val image: String? = null,
+    val images: List<String>? = emptyList(),
+    val subtitle: String? = null,
+    val tagline: String? = null,
+    val description: String? = null,
+    val features: List<String>? = emptyList(),
+    val basePrice: Double? = null,
+    val mrp: Double? = null,
+    val commissionType: String? = "fixed",
+    val commissionValue: Double? = null,
+    val isActive: Boolean = true
+)
+
+// Referral DTOs
 data class ReferralDto(
-    @SerializedName("id", alternate = ["_id"]) val id: String,
-    val referrerId: String,
-    val referralCode: String,
-    val refereeName: String,
-    val refereePhone: String,
+    @SerializedName("id", alternate = ["_id"]) val id: String = "",
+    val referrerId: Any? = null,
+    val referralCode: String = "",
+    val refereeName: String = "",
+    val refereePhone: String = "",
     val productId: String? = null,
-    val productName: String,
+    val productName: String = "",
     val rewardAmount: Double = 0.0,
     val notes: String? = null,
-    val status: String,
+    val status: String = "Pending",
     val purchaseAmount: Double? = null,
     val createdAt: String? = null
 )
 
 data class ReferralClaimDto(
-    @SerializedName("id", alternate = ["_id"]) val id: String,
-    val userId: String,
-    val userName: String,
-    val userPhone: String,
-    val amount: Double,
-    val payoutMethod: String,
-    val payoutDetails: String,
-    val status: String,
+    @SerializedName("id", alternate = ["_id"]) val id: String = "",
+    val userId: Any? = null,
+    val userName: String = "",
+    val userPhone: String = "",
+    val amount: Double = 0.0,
+    val payoutMethod: String = "",
+    val payoutDetails: String = "",
+    val status: String = "Pending",
+    val transactionRef: String? = null,
+    val adminNotes: String? = null,
     val createdAt: String? = null
 )
 
 data class ReferralDashboardDto(
-    val referralCode: String,
-    val totalInvited: Int,
-    val convertedCount: Int,
-    val totalEarnings: Double,
-    val claimedEarnings: Double,
-    val availableBalance: Double,
-    val pendingEarnings: Double,
+    val referralCode: String = "",
+    val totalInvited: Int = 0,
+    val convertedCount: Int = 0,
+    val totalEarnings: Double = 0.0,
+    val claimedEarnings: Double = 0.0,
+    val availableBalance: Double = 0.0,
+    val pendingEarnings: Double = 0.0,
     val referrals: List<ReferralDto> = emptyList(),
     val claims: List<ReferralClaimDto> = emptyList()
 )
@@ -171,4 +202,17 @@ data class ClaimPayoutRequest(
     val amount: Double,
     val payoutMethod: String,
     val payoutDetails: String
+)
+
+data class UpdateReferralStatusRequest(
+    val status: String,
+    val purchaseAmount: Double? = null,
+    val rewardAmount: Double? = null,
+    val notes: String? = null
+)
+
+data class UpdateClaimStatusRequest(
+    val status: String,
+    val transactionRef: String? = null,
+    val adminNotes: String? = null
 )
