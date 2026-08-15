@@ -23,9 +23,13 @@ import com.sbr.sms.ui.auth.AuthViewModel
 import kotlinx.coroutines.launch
 
 import com.sbr.sms.ui.common.OurCustomersScreen
+import com.sbr.sms.ui.common.ProductsCatalogScreen
+import com.sbr.sms.ui.admin.AdminReferralsScreen
 
 enum class AdminSection(val title: String, val icon: ImageVector) {
     Dashboard("Dashboard", Icons.Default.Dashboard),
+    Products("Products & Services", Icons.Default.ShoppingCart),
+    Referrals("Referrals & Rewards", Icons.Default.Share),
     Agents("Agents", Icons.Default.Group),
     Customers("Customers", Icons.Default.People),
     OurCustomers("Our Customers List", Icons.Default.PeopleOutline),
@@ -151,6 +155,8 @@ fun AdminPanelScreen(
                         viewModel = dashboardViewModel,
                         onCardClick = onCardClick
                     )
+                    AdminSection.Products -> ProductsCatalogScreen(isAdmin = true)
+                    AdminSection.Referrals -> AdminReferralsScreen()
                     AdminSection.Agents -> AgentManagementScreen(navController)
                     AdminSection.Customers -> CustomerManagementScreen(navController)
                     AdminSection.OurCustomers -> OurCustomersScreen(isAdmin = true)

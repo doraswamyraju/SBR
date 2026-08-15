@@ -1,16 +1,11 @@
 package com.sbr.sms.ui.customer.viewmodels
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.sbr.sms.data.api.ProductDto
-import com.sbr.sms.data.api.ReferralClaimDto
-import com.sbr.sms.data.api.ReferralDashboardDto
-import com.sbr.sms.data.api.ReferralDto
-import com.sbr.sms.data.api.SubmitReferralRequest
 import com.sbr.sms.data.api.ClaimPayoutRequest
+import com.sbr.sms.data.api.ProductDto
+import com.sbr.sms.data.api.ReferralDashboardDto
+import com.sbr.sms.data.api.SubmitReferralRequest
 import com.sbr.sms.data.repositories.ReferralRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,18 +43,15 @@ class ReferralViewModel @Inject constructor(
     fun loadData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            
             val dashboardResult = repository.getMyReferrals()
             val productsResult = repository.getProducts()
 
             if (dashboardResult.isSuccess) {
-                val dashboardData = dashboardResult.getOrNull()
-                val productsData = productsResult.getOrDefault(emptyList())
                 _uiState.update { 
                     it.copy(
                         isLoading = false,
-                        dashboard = dashboardData,
-                        products = productsData
+                        dashboard = dashboardResult.getOrNull(),
+                        products = productsResult.getOrDefault(emptyList())
                     )
                 }
             } else {
@@ -85,7 +77,7 @@ class ReferralViewModel @Inject constructor(
                         referralSuccessMsg = "Referral lead submitted successfully!"
                     )
                 }
-                loadData() // Refresh dashboard stats and lists
+                loadData()
             } else {
                 _uiState.update { 
                     it.copy(
@@ -109,7 +101,7 @@ class ReferralViewModel @Inject constructor(
                         claimSuccessMsg = "Payout claim request submitted successfully!"
                     )
                 }
-                loadData() // Refresh dashboard stats and lists
+                loadData()
             } else {
                 _uiState.update { 
                     it.copy(

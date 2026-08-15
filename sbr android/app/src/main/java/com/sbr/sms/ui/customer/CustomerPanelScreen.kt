@@ -24,9 +24,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import com.sbr.sms.R
 
 import com.sbr.sms.ui.common.OurCustomersScreen
+import com.sbr.sms.ui.common.ProductsCatalogScreen
 
 enum class CustomerSection(val title: String) {
     Dashboard("Dashboard"),
+    Products("Products & Services"),
     Requests("My Requests"),
     OurCustomers("Our Customers"),
     Referral("Refer & Earn"),
@@ -136,6 +138,7 @@ fun CustomerPanelScreen(
                             navController.navigate(route)
                         }
                     )
+                    CustomerSection.Products -> ProductsCatalogScreen(isAdmin = false)
                     CustomerSection.Requests -> CustomerRequestsScreen(navController)
                     CustomerSection.OurCustomers -> OurCustomersScreen(isAdmin = false)
                     CustomerSection.Referral -> ReferAndEarnScreen()
