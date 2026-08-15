@@ -4,6 +4,17 @@ enum UserRole: String, Codable {
     case admin = "ADMIN"
     case agent = "AGENT"
     case customer = "CUSTOMER"
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let rawStr = (try? container.decode(String.self))?.uppercased() ?? "CUSTOMER"
+        switch rawStr {
+        case "ADMIN": self = .admin
+        case "AGENT": self = .agent
+        case "CUSTOMER": self = .customer
+        default: self = .customer
+        }
+    }
 }
 
 struct UserAddress: Codable, Identifiable, Hashable {

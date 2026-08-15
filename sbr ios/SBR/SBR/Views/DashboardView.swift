@@ -4,7 +4,7 @@ struct DashboardView: View {
     @EnvironmentObject var authVM: AuthViewModel
     
     var body: some View {
-        Group {
+        ZStack {
             if authVM.isAuthenticated, let user = authVM.user {
                 switch user.role {
                 case .admin:
@@ -18,6 +18,7 @@ struct DashboardView: View {
                 AuthView()
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .animation(.default, value: authVM.isAuthenticated)
     }
 }

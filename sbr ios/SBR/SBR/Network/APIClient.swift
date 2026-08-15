@@ -149,6 +149,9 @@ class APIClient {
         }
         
         if httpResponse.statusCode == 401 {
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: NSNotification.Name("UnauthorizedAccess"), object: nil)
+            }
             if let errorObj = try? JSONDecoder().decode(ErrorResponse.self, from: data), let errMsg = errorObj.error {
                 throw APIError.responseError(errMsg)
             }

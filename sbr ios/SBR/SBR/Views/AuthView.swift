@@ -189,7 +189,7 @@ struct AuthView: View {
                     }
                     .disabled(authVM.isLoading)
                     
-                    Spacer()
+                    Spacer().frame(height: 24)
                 }
                 .padding(.horizontal, 24)
             }

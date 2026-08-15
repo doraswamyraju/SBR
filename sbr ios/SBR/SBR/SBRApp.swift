@@ -9,6 +9,7 @@ struct SBRApp: App {
         WindowGroup {
             DashboardView()
                 .environmentObject(authVM)
+                .preferredColorScheme(.light)
         }
     }
 }

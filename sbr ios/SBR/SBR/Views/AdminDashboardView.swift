@@ -278,7 +278,7 @@ struct AdminDashboardContent: View {
                     }
                 }
                 
-                Spacer()
+                Spacer().frame(height: 24)
             }
             .padding(.top)
         }
@@ -286,7 +286,6 @@ struct AdminDashboardContent: View {
             await requestVM.fetchRequests()
             await requestVM.fetchUsers()
         }
-        .scrollBounceBehavior(.always, axes: .vertical)
     }
 }
 

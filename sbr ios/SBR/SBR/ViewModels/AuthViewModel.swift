@@ -15,12 +15,27 @@ class AuthViewModel: ObservableObject {
         let error: String?
     }
     
+    private var cancellables = Set<AnyCancellable>()
+    
     init() {
         restoreSession()
+        
+        NotificationCenter.default.publisher(for: NSNotification.Name("UnauthorizedAccess"))
+            .sink { [weak self] _ in
+                Task { @MainActor in
+                    await self?.logout()
+                }
+            }
+            .store(in: &cancellables)
     }
     
     // Check if token exists on app launch
     func restoreSession() {
+        guard let token = APIClient.shared.getToken(), !token.isEmpty else {
+            self.isAuthenticated = false
+            self.user = nil
+            return
+        }
         if let storedUser = UserDefaults.standard.data(forKey: "auth_user") {
             if let decodedUser = try? JSONDecoder().decode(User.self, from: storedUser) {
                 self.user = decodedUser
@@ -28,7 +43,15 @@ class AuthViewModel: ObservableObject {
                 Task {
                     await uploadFCMToken()
                 }
+            } else {
+                UserDefaults.standard.removeObject(forKey: "auth_user")
+                UserDefaults.standard.removeObject(forKey: "auth_token")
+                self.isAuthenticated = false
+                self.user = nil
             }
+        } else {
+            self.isAuthenticated = false
+            self.user = nil
         }
     }
     

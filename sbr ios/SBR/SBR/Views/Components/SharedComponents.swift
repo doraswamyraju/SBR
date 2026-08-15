@@ -102,7 +102,9 @@ struct SidebarNavigationLayout<Content: View, SectionType: Hashable>: View {
                         .padding(20)
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             
             // Drawer Semi-Transparent Backdrop
             if isDrawerOpen {
@@ -116,92 +118,101 @@ struct SidebarNavigationLayout<Content: View, SectionType: Hashable>: View {
             }
             
             // Left Drawer Menu
-            GeometryReader { geometry in
-                HStack(spacing: 0) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        // Safe area top spacer to prevent status bar cut-offs
-                        Spacer()
-                            .frame(height: max(geometry.safeAreaInsets.top, 44))
-                        
-                        // Drawer Header Banner matching Android title style
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(drawerHeader)
-                                .font(.title2)
-                                .fontWeight(.black)
-                                .foregroundColor(SBRColors.primaryBlue)
+            if isDrawerOpen {
+                GeometryReader { geometry in
+                    HStack(spacing: 0) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            // Safe area top spacer to prevent status bar cut-offs
+                            Spacer()
+                                .frame(height: max(geometry.safeAreaInsets.top, 44))
                             
-                            Divider()
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 12)
-                        
-                        // Scrollable List of Sections
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 4) {
-                                ForEach(sections, id: \.self) { section in
-                                    Button(action: {
-                                        selectedSection = section
-                                        withAnimation {
-                                            isDrawerOpen = false
+                            // Drawer Header Banner matching Android title style
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(drawerHeader)
+                                    .font(.title2)
+                                    .fontWeight(.black)
+                                    .foregroundColor(SBRColors.primaryBlue)
+                                
+                                Divider()
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 12)
+                            
+                            // Scrollable List of Sections
+                            ScrollView {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    ForEach(sections, id: \.self) { section in
+                                        Button(action: {
+                                            selectedSection = section
+                                            withAnimation {
+                                                isDrawerOpen = false
+                                            }
+                                        }) {
+                                            HStack(spacing: 16) {
+                                                Image(systemName: sectionIcon(section))
+                                                    .font(.system(size: 18, weight: .semibold))
+                                                    .foregroundColor(selectedSection == section ? SBRColors.primaryBlue : .gray)
+                                                    .frame(width: 24)
+                                                
+                                                Text(sectionTitle(section))
+                                                    .fontWeight(selectedSection == section ? .bold : .medium)
+                                                    .foregroundColor(selectedSection == section ? SBRColors.primaryBlue : SBRColors.textPrimary)
+                                            }
+                                            .padding(.vertical, 14)
+                                            .padding(.horizontal, 16)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .background(selectedSection == section ? SBRColors.primaryBlue.opacity(0.08) : Color.clear)
+                                            .cornerRadius(8)
                                         }
-                                    }) {
-                                        HStack(spacing: 16) {
-                                            Image(systemName: sectionIcon(section))
-                                                .font(.system(size: 18, weight: .semibold))
-                                                .foregroundColor(selectedSection == section ? SBRColors.primaryBlue : .gray)
-                                                .frame(width: 24)
-                                            
-                                            Text(sectionTitle(section))
-                                                .fontWeight(selectedSection == section ? .bold : .medium)
-                                                .foregroundColor(selectedSection == section ? SBRColors.primaryBlue : SBRColors.textPrimary)
-                                        }
-                                        .padding(.vertical, 14)
-                                        .padding(.horizontal, 16)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .background(selectedSection == section ? SBRColors.primaryBlue.opacity(0.08) : Color.clear)
-                                        .cornerRadius(8)
+                                        .padding(.horizontal, 10)
                                     }
-                                    .padding(.horizontal, 10)
                                 }
                             }
+                            
+                            Spacer()
+                            
+                            // Drawer Footer Logout Button
+                            Button(action: {
+                                onLogout()
+                                withAnimation {
+                                    isDrawerOpen = false
+                                }
+                            }) {
+                                HStack(spacing: 16) {
+                                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                                        .font(.system(size: 18, weight: .bold))
+                                        .foregroundColor(.red)
+                                    
+                                    Text("Logout")
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.red)
+                                }
+                                .padding(.vertical, 14)
+                                .padding(.horizontal, 20)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color.red.opacity(0.06))
+                            }
+                            .padding(.bottom, geometry.safeAreaInsets.bottom + 10)
                         }
+                        .frame(width: 280)
+                        .background(Color.white) // Force light background so text is always readable
+                        .shadow(color: Color.black.opacity(0.12), radius: 8, x: 4, y: 0)
                         
                         Spacer()
-                        
-                        // Drawer Footer Logout Button
-                        Button(action: {
-                            onLogout()
-                            withAnimation {
-                                isDrawerOpen = false
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                    isDrawerOpen = false
+                                }
                             }
-                        }) {
-                            HStack(spacing: 16) {
-                                Image(systemName: "rectangle.portrait.and.arrow.right")
-                                    .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(.red)
-                                
-                                Text("Logout")
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.red)
-                            }
-                            .padding(.vertical, 14)
-                            .padding(.horizontal, 20)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color.red.opacity(0.06))
-                        }
-                        .padding(.bottom, geometry.safeAreaInsets.bottom + 10)
                     }
-                    .frame(width: 280)
-                    .background(Color.white) // Force light background so text is always readable
-                    .shadow(color: Color.black.opacity(0.12), radius: 8, x: 4, y: 0)
-                    .offset(x: isDrawerOpen ? 0 : -280)
-                    
-                    Spacer()
                 }
+                .ignoresSafeArea()
+                .transition(.move(edge: .leading))
             }
-            .ignoresSafeArea()
-            .allowsHitTesting(isDrawerOpen)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(SBRColors.background.ignoresSafeArea())
     }
 }
 

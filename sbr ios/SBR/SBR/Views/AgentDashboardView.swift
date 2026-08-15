@@ -330,14 +330,13 @@ struct AgentDashboardContent: View {
                     }
                 }
                 
-                Spacer()
+                Spacer().frame(height: 24)
             }
             .padding(.top)
         }
         .refreshable {
             await requestVM.fetchRequests()
         }
-        .scrollBounceBehavior(.always, axes: .vertical)
     }
 }
 
