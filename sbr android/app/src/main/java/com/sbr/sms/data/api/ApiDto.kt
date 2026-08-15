@@ -110,3 +110,65 @@ data class CustomerListResponseDto(
     val message: String? = null,
     val error: String? = null
 )
+
+data class ProductDto(
+    @SerializedName("id", alternate = ["_id"]) val id: String,
+    val name: String,
+    val description: String? = null,
+    val basePrice: Double? = null,
+    val commissionType: String? = null,
+    val commissionValue: Double? = null
+)
+
+data class ReferralDto(
+    @SerializedName("id", alternate = ["_id"]) val id: String,
+    val referrerId: String,
+    val referralCode: String,
+    val refereeName: String,
+    val refereePhone: String,
+    val productId: String? = null,
+    val productName: String,
+    val rewardAmount: Double = 0.0,
+    val notes: String? = null,
+    val status: String,
+    val purchaseAmount: Double? = null,
+    val createdAt: String? = null
+)
+
+data class ReferralClaimDto(
+    @SerializedName("id", alternate = ["_id"]) val id: String,
+    val userId: String,
+    val userName: String,
+    val userPhone: String,
+    val amount: Double,
+    val payoutMethod: String,
+    val payoutDetails: String,
+    val status: String,
+    val createdAt: String? = null
+)
+
+data class ReferralDashboardDto(
+    val referralCode: String,
+    val totalInvited: Int,
+    val convertedCount: Int,
+    val totalEarnings: Double,
+    val claimedEarnings: Double,
+    val availableBalance: Double,
+    val pendingEarnings: Double,
+    val referrals: List<ReferralDto> = emptyList(),
+    val claims: List<ReferralClaimDto> = emptyList()
+)
+
+data class SubmitReferralRequest(
+    val refereeName: String,
+    val refereePhone: String,
+    val productId: String? = null,
+    val productName: String,
+    val notes: String? = null
+)
+
+data class ClaimPayoutRequest(
+    val amount: Double,
+    val payoutMethod: String,
+    val payoutDetails: String
+)

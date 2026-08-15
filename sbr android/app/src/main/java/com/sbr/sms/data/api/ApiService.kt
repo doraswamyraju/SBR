@@ -94,4 +94,17 @@ interface ApiService {
 
     @DELETE("api/customer-list/clear")
     suspend fun clearCustomerList(): Response<ApiResponse<Map<String, Any>>>
+
+    // Referral endpoints
+    @GET("api/products")
+    suspend fun getProducts(): Response<ApiResponse<List<ProductDto>>>
+
+    @GET("api/referrals/my-referrals")
+    suspend fun getMyReferralData(): Response<ApiResponse<ReferralDashboardDto>>
+
+    @POST("api/referrals/submit")
+    suspend fun submitReferral(@Body request: SubmitReferralRequest): Response<ApiResponse<ReferralDto>>
+
+    @POST("api/referrals/claim-payout")
+    suspend fun claimPayout(@Body request: ClaimPayoutRequest): Response<ApiResponse<ReferralClaimDto>>
 }

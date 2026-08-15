@@ -29,6 +29,7 @@ enum class CustomerSection(val title: String) {
     Dashboard("Dashboard"),
     Requests("My Requests"),
     OurCustomers("Our Customers"),
+    Referral("Refer & Earn"),
     Payments("Payments"),
     Support("Contact Support"),
     Profile("My Profile")
@@ -137,6 +138,7 @@ fun CustomerPanelScreen(
                     )
                     CustomerSection.Requests -> CustomerRequestsScreen(navController)
                     CustomerSection.OurCustomers -> OurCustomersScreen(isAdmin = false)
+                    CustomerSection.Referral -> ReferAndEarnScreen()
                     CustomerSection.Profile -> CustomerProfileScreen(navController)
                     CustomerSection.Payments -> CustomerPaymentsScreen(navController)
                     CustomerSection.Support -> CustomerSupportScreen(navController)
