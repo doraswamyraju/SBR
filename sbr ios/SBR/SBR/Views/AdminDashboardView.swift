@@ -5,6 +5,8 @@ enum AdminSection: Hashable {
     case dashboard
     case agents
     case customers
+    case products
+    case referrals
     case ourCustomers
     case requests
     case reports
@@ -30,7 +32,7 @@ struct AdminDashboardView: View {
         SidebarNavigationLayout(
             title: sectionTitle(selectedSection),
             drawerHeader: "Welcome Admin",
-            sections: [.dashboard, .agents, .customers, .ourCustomers, .requests, .reports, .payments, .liveTracking, .settings],
+            sections: [.dashboard, .agents, .customers, .products, .referrals, .ourCustomers, .requests, .reports, .payments, .liveTracking, .settings],
             selectedSection: $selectedSection,
             sectionTitle: { sectionTitle($0) },
             sectionIcon: { sectionIcon($0) },
@@ -57,6 +59,10 @@ struct AdminDashboardView: View {
                     AgentManagementView(requestVM: requestVM)
                 case .customers:
                     CustomerManagementView(requestVM: requestVM)
+                case .products:
+                    ProductsCatalogView(isAdmin: true)
+                case .referrals:
+                    AdminReferralsView()
                 case .ourCustomers:
                     OurCustomersView(isAdmin: true)
                 case .requests:
@@ -101,6 +107,8 @@ struct AdminDashboardView: View {
         case .dashboard: return "Dashboard"
         case .agents: return "Agents"
         case .customers: return "Customers"
+        case .products: return "Products & Services"
+        case .referrals: return "Referrals & Claims"
         case .ourCustomers: return "Our Customers List"
         case .requests: return "Requests"
         case .reports: return "Reports"
@@ -115,6 +123,8 @@ struct AdminDashboardView: View {
         case .dashboard: return "square.grid.2x2.fill"
         case .agents: return "person.3.fill"
         case .customers: return "person.2.fill"
+        case .products: return "tag.fill"
+        case .referrals: return "gift.fill"
         case .ourCustomers: return "person.2.circle.fill"
         case .requests: return "list.bullet.rectangle.fill"
         case .reports: return "doc.text.below.ecg.fill"

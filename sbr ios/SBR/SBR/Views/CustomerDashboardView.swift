@@ -3,6 +3,8 @@ import SwiftUI
 enum CustomerSection: Hashable {
     case dashboard
     case requests
+    case products
+    case referrals
     case ourCustomers
     case payments
     case support
@@ -39,7 +41,7 @@ struct CustomerDashboardView: View {
         SidebarNavigationLayout(
             title: sectionTitle(selectedSection),
             drawerHeader: "Customer Panel",
-            sections: [.dashboard, .requests, .ourCustomers, .payments, .support, .profile],
+            sections: [.dashboard, .requests, .products, .referrals, .ourCustomers, .payments, .support, .profile],
             selectedSection: $selectedSection,
             sectionTitle: { sectionTitle($0) },
             sectionIcon: { sectionIcon($0) },
@@ -64,6 +66,10 @@ struct CustomerDashboardView: View {
                     )
                 case .requests:
                     CustomerRequestsListView(requestVM: requestVM, onSelectRequest: { selectedRequestDetail = $0 })
+                case .products:
+                    ProductsCatalogView(isAdmin: false)
+                case .referrals:
+                    ReferAndEarnView()
                 case .ourCustomers:
                     OurCustomersView(isAdmin: false)
                 case .payments:
@@ -102,6 +108,8 @@ struct CustomerDashboardView: View {
         switch section {
         case .dashboard: return "Dashboard"
         case .requests: return "My Requests"
+        case .products: return "Products & Services"
+        case .referrals: return "Refer & Earn"
         case .ourCustomers: return "Our Customers"
         case .payments: return "Payments"
         case .support: return "Contact Support"
@@ -113,6 +121,8 @@ struct CustomerDashboardView: View {
         switch section {
         case .dashboard: return "square.grid.2x2.fill"
         case .requests: return "wrench.and.screwdriver.fill"
+        case .products: return "tag.fill"
+        case .referrals: return "gift.fill"
         case .ourCustomers: return "person.2.fill"
         case .payments: return "creditcard.fill"
         case .support: return "questionmark.bubble.fill"
