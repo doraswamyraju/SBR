@@ -199,7 +199,7 @@ struct AdminReferralsView: View {
                             TextField("Reward Amount (₹)", text: $rewardAmount)
                                 .keyboardType(.numberPad)
                             
-                            TextField("Notes", text: $referNotes)
+                            TextField("Notes", text: $referralNotes)
                         }
                     }
                     .navigationTitle("Update Referral Lead")
