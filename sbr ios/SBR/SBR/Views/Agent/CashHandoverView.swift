@@ -157,7 +157,7 @@ struct CashHandoverView: View {
                                 .foregroundColor(.white)
                                 .cornerRadius(12)
                             }
-                            .disabled(isSubmitting || (dailySummary?.totalCollectedCash ?? 0) < 0)
+                            .disabled(isSubmitting || (dailySummary?.totalCollectedCash ?? 0) <= 0)
                         }
                         .padding()
                         .background(Color(.systemBackground))
@@ -168,6 +168,17 @@ struct CashHandoverView: View {
                 .padding()
             }
             .navigationTitle("Cash Handover")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: loadSummary) {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                }
+            }
+            .refreshable {
+                loadSummary()
+            }
             .onAppear(perform: loadSummary)
             .alert("Success", isPresented: $showSuccessAlert) {
                 Button("OK") { loadSummary() }
@@ -185,11 +196,11 @@ struct CashHandoverView: View {
                     endpoint: "api/handovers/agent-daily-summary",
                     responseType: ApiResponse<AgentDailySummary>.self
                 )
-                if res.success, let data = res.data {
-                    DispatchQueue.main.async {
+                DispatchQueue.main.async {
+                    if res.success, let data = res.data {
                         self.dailySummary = data
-                        self.isLoading = false
                     }
+                    self.isLoading = false
                 }
             } catch {
                 DispatchQueue.main.async {
@@ -204,14 +215,16 @@ struct CashHandoverView: View {
         guard let summary = dailySummary else { return }
         isSubmitting = true
         struct SubmitBody: Encodable {
+            let date: String
             let totalCollectedCash: Double
-            let completedRequests: [String]
+            let completedRequestIds: [String]
             let agentNotes: String
         }
         
         let body = SubmitBody(
+            date: summary.date,
             totalCollectedCash: summary.totalCollectedCash,
-            completedRequests: summary.completedRequestIds,
+            completedRequestIds: summary.completedRequestIds,
             agentNotes: agentNotes
         )
         
@@ -226,6 +239,7 @@ struct CashHandoverView: View {
                     self.isSubmitting = false
                     if res.success {
                         self.showSuccessAlert = true
+                        self.loadSummary()
                     }
                 }
             } catch {
@@ -257,6 +271,7 @@ struct StatusBadgeView: View {
         case .submitted: return .orange
         case .acknowledged: return .green
         case .discrepancy: return .red
+        case .notSubmitted: return .gray
         }
     }
 }

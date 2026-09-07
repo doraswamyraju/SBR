@@ -2,12 +2,16 @@ const CashHandover = require('../models/CashHandover');
 const ServiceRequest = require('../models/ServiceRequest');
 const User = require('../models/User');
 
-// Helper to get formatted date string YYYY-MM-DD in local time
+// Helper to get formatted date string YYYY-MM-DD in local/IST time
 const getTodayString = (dateObj = new Date()) => {
   const d = new Date(dateObj);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
+  // Account for IST (UTC+5:30) offset or local date
+  const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+  const istOffset = 5.5 * 3600000;
+  const istDate = new Date(utc + istOffset);
+  const year = istDate.getFullYear();
+  const month = String(istDate.getMonth() + 1).padStart(2, '0');
+  const day = String(istDate.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
 
@@ -19,17 +23,28 @@ exports.getAgentDailySummary = async (req, res) => {
     const agentId = req.user._id;
     const targetDateStr = req.query.date || getTodayString();
 
-    const startOfDay = new Date(`${targetDateStr}T00:00:00.000Z`);
-    const endOfDay = new Date(`${targetDateStr}T23:59:59.999Z`);
-
-    // Find completed requests by this agent on the target date with Cash payment
-    const completedRequests = await ServiceRequest.find({
+    // Fetch all cash payment requests for this agent that are either Completed or Paid
+    const cashRequests = await ServiceRequest.find({
       assignedAgentId: agentId,
-      status: 'Completed',
-      paymentStatus: 'Paid',
-      paymentMethod: { $regex: /^cash$/i },
-      completedAt: { $gte: startOfDay, $lte: endOfDay }
-    }).select('_id serviceType customerAddress paymentAmount paymentMethod completedAt');
+      $or: [
+        { status: { $in: ['Completed', 'completed', 'Paid', 'paid'] } },
+        { paymentStatus: { $in: ['Paid', 'paid'] } }
+      ],
+      paymentMethod: { $regex: /^cash$/i }
+    }).select('_id serviceType customerAddress paymentAmount paymentMethod completedAt paymentTimestamp updatedAt');
+
+    const isSameDate = (dateVal) => {
+      if (!dateVal) return false;
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return false;
+      const utcStr = d.toISOString().slice(0, 10);
+      const istStr = getTodayString(d);
+      return utcStr === targetDateStr || istStr === targetDateStr;
+    };
+
+    const completedRequests = cashRequests.filter(req => {
+      return isSameDate(req.completedAt) || isSameDate(req.paymentTimestamp) || isSameDate(req.updatedAt);
+    });
 
     const totalCash = completedRequests.reduce((sum, req) => sum + (Number(req.paymentAmount) || 0), 0);
 
@@ -39,16 +54,24 @@ exports.getAgentDailySummary = async (req, res) => {
       date: targetDateStr
     }).populate('storeInchargeId', 'name phone email');
 
+    const hasSubmitted = !!existingHandover;
+
     res.status(200).json({
       success: true,
       data: {
+        agentId: agentId.toString(),
         date: targetDateStr,
         totalCash,
+        totalCollectedCash: totalCash,
         requestCount: completedRequests.length,
+        completedJobsCount: completedRequests.length,
         completedRequests,
-        alreadySubmitted: !!existingHandover,
+        completedRequestIds: completedRequests.map(r => r._id.toString()),
+        alreadySubmitted: hasSubmitted,
+        hasSubmittedHandover: hasSubmitted,
         handoverStatus: existingHandover ? existingHandover.status : 'NOT_SUBMITTED',
-        existingHandover
+        existingHandover,
+        latestHandover: existingHandover
       }
     });
   } catch (error) {
@@ -63,14 +86,17 @@ exports.getAgentDailySummary = async (req, res) => {
 exports.submitHandover = async (req, res) => {
   try {
     const agentId = req.user._id;
-    let { date, totalCollectedCash, completedRequestIds, denominations, agentNotes } = req.body;
+    let { date, totalCollectedCash, totalCash, completedRequestIds, completedRequests, denominations, agentNotes } = req.body;
 
     const targetDate = date || getTodayString();
-    const amount = Number(totalCollectedCash);
+    const rawAmount = totalCollectedCash !== undefined ? totalCollectedCash : totalCash;
+    const amount = Number(rawAmount);
 
     if (isNaN(amount) || amount < 0) {
       return res.status(400).json({ success: false, error: 'Valid collected cash amount is required.' });
     }
+
+    const requestIds = completedRequestIds || (Array.isArray(completedRequests) ? completedRequests.map(r => (typeof r === 'object' && r._id ? r._id : r)) : []);
 
     // Check if there is an existing handover
     let existing = await CashHandover.findOne({ agentId, date: targetDate });
@@ -85,7 +111,7 @@ exports.submitHandover = async (req, res) => {
     if (existing && existing.status === 'SUBMITTED') {
       // Update existing pending submission
       existing.totalCollectedCash = amount;
-      existing.completedRequests = completedRequestIds || existing.completedRequests;
+      existing.completedRequests = requestIds.length > 0 ? requestIds : existing.completedRequests;
       existing.denominations = denominations || existing.denominations;
       existing.agentNotes = agentNotes !== undefined ? agentNotes : existing.agentNotes;
       existing.submittedAt = new Date();
@@ -103,7 +129,7 @@ exports.submitHandover = async (req, res) => {
       agentId,
       date: targetDate,
       totalCollectedCash: amount,
-      completedRequests: completedRequestIds || [],
+      completedRequests: requestIds,
       denominations: denominations || {},
       agentNotes: agentNotes || '',
       status: 'SUBMITTED',
