@@ -5,7 +5,7 @@ import kotlinx.parcelize.Parcelize
 import java.util.Date
 
 enum class UserRole {
-    ADMIN, AGENT, CUSTOMER
+    ADMIN, AGENT, CUSTOMER, STORE_INCHARGE
 }
 
 @Parcelize
@@ -50,3 +50,11 @@ data class Customer(
     val isRecurring: Boolean = false,
     val nextServiceDate: Date? = null
 ) : User(id, name, email, UserRole.CUSTOMER)
+
+@Parcelize
+data class StoreIncharge(
+    override val id: String = "",
+    override val name: String = "",
+    override val email: String? = null,
+    val phone: String? = null
+) : User(id, name, email, UserRole.STORE_INCHARGE)

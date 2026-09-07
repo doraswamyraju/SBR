@@ -459,3 +459,238 @@ exports.deleteProduct = async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 };
+
+// POS Sync Secret for inter-service authentication
+const POS_SYNC_TOKEN = process.env.POS_SYNC_SECRET || 'sbr_pos_sms_sync_secret_2026';
+
+const verifySyncAuth = (req) => {
+  const headerToken = req.headers['x-pos-sync-token'];
+  if (headerToken && headerToken === POS_SYNC_TOKEN) {
+    return true;
+  }
+  if (req.headers.authorization && req.headers.authorization.includes(POS_SYNC_TOKEN)) {
+    return true;
+  }
+  if (req.user && (req.user.role === 'admin' || req.user.role === 'ADMIN')) {
+    return true;
+  }
+  return false;
+};
+
+// @desc    Sync single product from SBR POS
+// @route   POST /api/products/sync-from-pos
+// @access  Protected (POS Token or Admin)
+exports.syncFromPos = async (req, res) => {
+  try {
+    if (!verifySyncAuth(req)) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Invalid POS Sync Token' });
+    }
+
+    const {
+      pos_product_id,
+      id,
+      name,
+      sku,
+      price,
+      basePrice,
+      mrp,
+      stock_level,
+      stockLevel,
+      min_stock_level,
+      minStockLevel,
+      category,
+      description,
+      action
+    } = req.body;
+
+    const targetPosId = pos_product_id || id;
+    if (!targetPosId && !sku && !name) {
+      return res.status(400).json({ success: false, error: 'Missing product identification (pos_product_id, sku, or name)' });
+    }
+
+    if (action === 'delete') {
+      const deleted = await Product.findOneAndUpdate(
+        { $or: [{ posProductId: targetPosId }, { sku: sku }] },
+        { isActive: false, lastSyncedAt: new Date() },
+        { new: true }
+      );
+      return res.status(200).json({
+        success: true,
+        message: 'Product deactivated in SMS',
+        data: deleted
+      });
+    }
+
+    const effectivePrice = Number(price !== undefined ? price : basePrice) || 0;
+    const effectiveMrp = Number(mrp) || Math.round(effectivePrice * 1.15);
+    const effectiveStock = Number(stock_level !== undefined ? stock_level : stockLevel) || 0;
+    const effectiveMinStock = Number(min_stock_level !== undefined ? min_stock_level : minStockLevel) || 0;
+    const effectiveCategory = (category && category.trim()) || 'General Spares';
+    const effectiveName = (name && name.trim()) || `POS Item #${targetPosId}`;
+
+    // Find existing product by posProductId or sku
+    let query = [];
+    if (targetPosId) query.push({ posProductId: targetPosId });
+    if (sku && sku.trim()) query.push({ sku: sku.trim() });
+
+    let product = query.length > 0 ? await Product.findOne({ $or: query }) : null;
+
+    if (product) {
+      // Update existing record
+      product.name = effectiveName;
+      if (sku) product.sku = sku.trim();
+      if (targetPosId) product.posProductId = targetPosId;
+      product.basePrice = effectivePrice;
+      product.mrp = effectiveMrp;
+      product.stockLevel = effectiveStock;
+      product.minStockLevel = effectiveMinStock;
+      if (category) product.category = effectiveCategory;
+      if (description) product.description = description.trim();
+      product.lastSyncedAt = new Date();
+      product.isActive = true;
+
+      await product.save();
+      return res.status(200).json({
+        success: true,
+        message: 'Product synced (updated) successfully',
+        action: 'updated',
+        data: product
+      });
+    } else {
+      // Create new product
+      let slug = slugify(effectiveName);
+      const existingSlug = await Product.findOne({ slug });
+      if (existingSlug) {
+        slug = `${slug}-${targetPosId || Date.now().toString().slice(-4)}`;
+      }
+
+      const newProduct = await Product.create({
+        slug,
+        name: effectiveName,
+        sku: sku ? sku.trim() : undefined,
+        posProductId: targetPosId,
+        category: effectiveCategory,
+        image: 'https://placehold.co/400x300/00529B/FFFFFF?text=' + encodeURIComponent(effectiveName),
+        images: ['https://placehold.co/400x300/00529B/FFFFFF?text=' + encodeURIComponent(effectiveName)],
+        description: description || `Original SBR spare part / finished product synced from Central POS.`,
+        basePrice: effectivePrice,
+        mrp: effectiveMrp,
+        stockLevel: effectiveStock,
+        minStockLevel: effectiveMinStock,
+        commissionType: 'percentage',
+        commissionValue: 5,
+        isActive: true,
+        lastSyncedAt: new Date()
+      });
+
+      return res.status(201).json({
+        success: true,
+        message: 'Product synced (created) successfully',
+        action: 'created',
+        data: newProduct
+      });
+    }
+  } catch (error) {
+    console.error('POS Sync Error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Bulk sync all products from SBR POS
+// @route   POST /api/products/sync-bulk-from-pos
+// @access  Protected (POS Token or Admin)
+exports.syncBulkFromPos = async (req, res) => {
+  try {
+    if (!verifySyncAuth(req)) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Invalid POS Sync Token' });
+    }
+
+    const { products } = req.body;
+    if (!Array.isArray(products) || products.length === 0) {
+      return res.status(400).json({ success: false, error: 'No products array provided for bulk sync' });
+    }
+
+    let createdCount = 0;
+    let updatedCount = 0;
+    let errors = [];
+
+    for (const item of products) {
+      try {
+        const targetPosId = item.pos_product_id || item.id;
+        const sku = item.sku ? item.sku.trim() : null;
+        const name = (item.name && item.name.trim()) || `POS Item #${targetPosId}`;
+        const price = Number(item.price !== undefined ? item.price : item.basePrice) || 0;
+        const mrp = Number(item.mrp) || Math.round(price * 1.15);
+        const stock = Number(item.stock_level !== undefined ? item.stock_level : item.stockLevel) || 0;
+        const minStock = Number(item.min_stock_level !== undefined ? item.min_stock_level : item.minStockLevel) || 0;
+        const category = (item.category && item.category.trim()) || 'General Spares';
+        const description = item.description || '';
+
+        let query = [];
+        if (targetPosId) query.push({ posProductId: targetPosId });
+        if (sku) query.push({ sku: sku });
+
+        let existing = query.length > 0 ? await Product.findOne({ $or: query }) : null;
+
+        if (existing) {
+          existing.name = name;
+          if (sku) existing.sku = sku;
+          if (targetPosId) existing.posProductId = targetPosId;
+          existing.basePrice = price;
+          existing.mrp = mrp;
+          existing.stockLevel = stock;
+          existing.minStockLevel = minStock;
+          if (item.category) existing.category = category;
+          if (description) existing.description = description;
+          existing.lastSyncedAt = new Date();
+          existing.isActive = true;
+          await existing.save();
+          updatedCount++;
+        } else {
+          let slug = slugify(name);
+          const existingSlug = await Product.findOne({ slug });
+          if (existingSlug) {
+            slug = `${slug}-${targetPosId || Math.floor(Math.random() * 1000)}`;
+          }
+
+          await Product.create({
+            slug,
+            name,
+            sku: sku || undefined,
+            posProductId: targetPosId,
+            category,
+            image: 'https://placehold.co/400x300/00529B/FFFFFF?text=' + encodeURIComponent(name),
+            images: ['https://placehold.co/400x300/00529B/FFFFFF?text=' + encodeURIComponent(name)],
+            description: description || `Original SBR spare part / finished product synced from Central POS.`,
+            basePrice: price,
+            mrp: mrp,
+            stockLevel: stock,
+            minStockLevel: minStock,
+            commissionType: 'percentage',
+            commissionValue: 5,
+            isActive: true,
+            lastSyncedAt: new Date()
+          });
+          createdCount++;
+        }
+      } catch (itemErr) {
+        errors.push({ id: item.id || item.pos_product_id, error: itemErr.message });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Bulk sync completed: ${createdCount} created, ${updatedCount} updated.`,
+      summary: {
+        totalReceived: products.length,
+        created: createdCount,
+        updated: updatedCount,
+        errors: errors.length > 0 ? errors : undefined
+      }
+    });
+  } catch (error) {
+    console.error('POS Bulk Sync Error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+

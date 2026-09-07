@@ -24,6 +24,7 @@ import Auth from './pages/Auth';
 import AdminDashboard from './pages/AdminDashboard';
 import CustomerDashboard from './pages/CustomerDashboard';
 import AgentDashboard from './pages/AgentDashboard';
+import StoreInchargeDashboard from './pages/StoreInchargeDashboard';
 import ProductDetail from './pages/ProductDetail';
 import BlogDetail from './pages/BlogDetail';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -52,6 +53,11 @@ const parsePath = () => {
     if (path === '/agent') return { pageId: 'agent-dashboard', tab: 'jobs' };
     if (path.startsWith('/agent/')) {
         return { pageId: 'agent-dashboard', tab: path.substring(7) };
+    }
+    if (path === '/store' || path === '/store-incharge') return { pageId: 'store-incharge-dashboard', tab: 'dispatch' };
+    if (path.startsWith('/store/') || path.startsWith('/store-incharge/')) {
+        const segs = path.split('/');
+        return { pageId: 'store-incharge-dashboard', tab: segs[2] || 'dispatch' };
     }
     if (path === '/about') return { pageId: 'about' };
     if (path === '/products') return { pageId: 'products' };
@@ -209,6 +215,7 @@ function AppContent() {
             if (pageId === 'admin-dashboard') tab = 'overview';
             else if (pageId === 'customer-dashboard') tab = 'overview';
             else if (pageId === 'agent-dashboard') tab = 'jobs';
+            else if (pageId === 'store-incharge-dashboard') tab = 'dispatch';
             else if (pageId.startsWith('product-')) {
                 productId = pageId.substring(8);
                 pageId = 'product-detail';
@@ -253,6 +260,8 @@ function AppContent() {
             path = tab && tab !== 'overview' ? `/customer/${tab}` : '/customer';
         } else if (pageId === 'agent-dashboard') {
             path = tab && tab !== 'jobs' ? `/agent/${tab}` : '/agent';
+        } else if (pageId === 'store-incharge-dashboard') {
+            path = tab && tab !== 'dispatch' ? `/store-incharge/${tab}` : '/store-incharge';
         } else if (pageId === 'about') path = '/about';
         else if (pageId === 'products') path = '/products';
         else if (pageId === 'privacy') path = '/privacy';
@@ -286,6 +295,15 @@ function AppContent() {
         { src: "https://i.postimg.cc/BPjpr9wB/softener.png", alt: "Automatic Water Softners", title: "Automatic Water Softners" },
     ];
 
+    const getDashboardForRole = (role) => {
+        if (!role) return 'customer-dashboard';
+        const upper = role.toUpperCase();
+        if (upper === 'ADMIN') return 'admin-dashboard';
+        if (upper === 'STORE_INCHARGE') return 'store-incharge-dashboard';
+        if (upper === 'AGENT') return 'agent-dashboard';
+        return 'customer-dashboard';
+    };
+
     // --- Render Logic based on currentPage ---
     const renderPage = () => {
         // Ensure authentication is ready before rendering pages that might depend on it
@@ -298,27 +316,31 @@ function AppContent() {
         }
 
         // Authentication guard and redirect logic
-        if (['admin-dashboard', 'customer-dashboard', 'agent-dashboard'].includes(currentPage)) {
+        if (['admin-dashboard', 'customer-dashboard', 'agent-dashboard', 'store-incharge-dashboard'].includes(currentPage)) {
             if (!user) {
                 setTimeout(() => handleNavigation('auth'), 0);
                 return null;
             }
             if (currentPage === 'admin-dashboard' && user.role !== 'ADMIN') {
-                setTimeout(() => handleNavigation(`${user.role.toLowerCase()}-dashboard`), 0);
+                setTimeout(() => handleNavigation(getDashboardForRole(user.role)), 0);
                 return null;
             }
             if (currentPage === 'customer-dashboard' && user.role !== 'CUSTOMER') {
-                setTimeout(() => handleNavigation(`${user.role.toLowerCase()}-dashboard`), 0);
+                setTimeout(() => handleNavigation(getDashboardForRole(user.role)), 0);
                 return null;
             }
             if (currentPage === 'agent-dashboard' && user.role !== 'AGENT') {
-                setTimeout(() => handleNavigation(`${user.role.toLowerCase()}-dashboard`), 0);
+                setTimeout(() => handleNavigation(getDashboardForRole(user.role)), 0);
+                return null;
+            }
+            if (currentPage === 'store-incharge-dashboard' && !['STORE_INCHARGE', 'ADMIN'].includes(user.role)) {
+                setTimeout(() => handleNavigation(getDashboardForRole(user.role)), 0);
                 return null;
             }
         }
 
         if (currentPage === 'auth' && user) {
-            setTimeout(() => handleNavigation(`${user.role.toLowerCase()}-dashboard`), 0);
+            setTimeout(() => handleNavigation(getDashboardForRole(user.role)), 0);
             return null;
         }
 
@@ -344,6 +366,8 @@ function AppContent() {
                 return <CustomerDashboard initialTab={currentTab} handleNavigation={handleNavigation} />;
             case 'agent-dashboard':
                 return <AgentDashboard initialTab={currentTab} handleNavigation={handleNavigation} />;
+            case 'store-incharge-dashboard':
+                return <StoreInchargeDashboard initialTab={currentTab} handleNavigation={handleNavigation} />;
             case 'privacy':
                 return <PrivacyPolicy />;
             default:
@@ -351,7 +375,7 @@ function AppContent() {
         }
     };
 
-    const isDashboard = ['auth', 'admin-dashboard', 'customer-dashboard', 'agent-dashboard'].includes(currentPage);
+    const isDashboard = ['auth', 'admin-dashboard', 'customer-dashboard', 'agent-dashboard', 'store-incharge-dashboard'].includes(currentPage);
 
     return (
         <>

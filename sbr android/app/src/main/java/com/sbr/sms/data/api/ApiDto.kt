@@ -216,3 +216,38 @@ data class UpdateClaimStatusRequest(
     val transactionRef: String? = null,
     val adminNotes: String? = null
 )
+
+// Cash Handover DTOs
+data class HandoverSubmitRequest(
+    val totalCollectedCash: Double,
+    val completedRequests: List<String>,
+    val agentNotes: String? = null
+)
+
+data class HandoverAcknowledgeRequest(
+    val acknowledgedAmount: Double,
+    val inchargeNotes: String? = null
+)
+
+// Indent Requisition DTOs
+data class CreateIndentItemDto(
+    val productId: String,
+    val name: String,
+    val sku: String? = null,
+    val requestedQuantity: Int
+)
+
+data class CreateIndentRequest(
+    val items: List<CreateIndentItemDto>,
+    val urgency: String = "MEDIUM",
+    val agentRemarks: String? = null
+)
+
+data class DispatchIndentRequest(
+    val inchargeRemarks: String? = null
+)
+
+data class RejectIndentRequest(
+    val inchargeRemarks: String? = null
+)
+

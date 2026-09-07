@@ -16,6 +16,14 @@ enum RequestStatus: String, Codable {
     case paid = "Paid"
 }
 
+struct RequiredComponent: Codable, Identifiable {
+    var id: String { productId ?? name }
+    let productId: String?
+    let name: String
+    let sku: String?
+    let quantity: Int
+}
+
 struct ServiceRequest: Codable, Identifiable {
     let id: String
     let customerId: User?
@@ -36,6 +44,7 @@ struct ServiceRequest: Codable, Identifiable {
     let paymentMethod: String?
     let paymentTimestamp: String?
     let locationPath: [LocationPoint]?
+    let requiredComponents: [RequiredComponent]?
     let requestReview: Bool?
     let createdAt: String
     let updatedAt: String
@@ -74,7 +83,7 @@ struct ServiceRequest: Codable, Identifiable {
     enum CodingKeys: String, CodingKey {
         case id
         case _id
-        case customerId, assignedAgentId, serviceType, description, customerAddress, latitude, longitude, status, createdBy, acceptedAt, completedAt, beforeImageUrl, afterImageUrl, paymentAmount, paymentStatus, paymentMethod, paymentTimestamp, locationPath, requestReview, createdAt, updatedAt
+        case customerId, assignedAgentId, serviceType, description, customerAddress, latitude, longitude, status, createdBy, acceptedAt, completedAt, beforeImageUrl, afterImageUrl, paymentAmount, paymentStatus, paymentMethod, paymentTimestamp, locationPath, requiredComponents, requestReview, createdAt, updatedAt
     }
     
     private static func decodeDate(from container: KeyedDecodingContainer<CodingKeys>, key: CodingKeys) -> String? {
@@ -155,6 +164,7 @@ struct ServiceRequest: Codable, Identifiable {
         self.paymentMethod = try container.decodeIfPresent(String.self, forKey: .paymentMethod)
         self.paymentTimestamp = Self.decodeDate(from: container, key: .paymentTimestamp)
         self.locationPath = try container.decodeIfPresent([LocationPoint].self, forKey: .locationPath)
+        self.requiredComponents = try container.decodeIfPresent([RequiredComponent].self, forKey: .requiredComponents)
         self.requestReview = try container.decodeIfPresent(Bool.self, forKey: .requestReview)
         
         self.createdAt = Self.decodeDate(from: container, key: .createdAt) ?? ""
@@ -182,6 +192,7 @@ struct ServiceRequest: Codable, Identifiable {
         try container.encodeIfPresent(paymentMethod, forKey: .paymentMethod)
         try container.encodeIfPresent(paymentTimestamp, forKey: .paymentTimestamp)
         try container.encodeIfPresent(locationPath, forKey: .locationPath)
+        try container.encodeIfPresent(requiredComponents, forKey: .requiredComponents)
         try container.encodeIfPresent(requestReview, forKey: .requestReview)
         try container.encode(createdAt, forKey: .createdAt)
         try container.encode(updatedAt, forKey: .updatedAt)

@@ -43,6 +43,9 @@ app.use('/api/blogs', require('./routes/blogRoutes'));
 app.use('/api/customer-list', require('./routes/customerListRoutes'));
 app.use('/api/products', require('./routes/productRoutes'));
 app.use('/api/referrals', require('./routes/referralRoutes'));
+app.use('/api/handovers', require('./routes/handoverRoutes'));
+app.use('/api/agent-inventory', require('./routes/agentInventoryRoutes'));
+app.use('/api/indents', require('./routes/agentInventoryRoutes'));
 
 
 

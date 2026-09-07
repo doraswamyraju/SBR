@@ -13,6 +13,8 @@ struct DashboardView: View {
                     AgentDashboardView()
                 case .customer:
                     CustomerDashboardView()
+                case .storeIncharge:
+                    StoreInchargeDashboardView()
                 }
             } else {
                 AuthView()

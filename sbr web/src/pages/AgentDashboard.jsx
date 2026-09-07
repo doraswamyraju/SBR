@@ -15,7 +15,10 @@ import {
   DollarSign,
   AlertCircle,
   User,
-  Users
+  Users,
+  Package,
+  AlertTriangle,
+  Plus
 } from 'lucide-react';
 import OurCustomersTab from '../components/OurCustomersTab';
 import './Dashboard.css';
@@ -52,6 +55,146 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [completionLoading, setCompletionLoading] = useState(false);
   const [completionError, setCompletionError] = useState('');
+
+  // EOD Cash Handover state
+  const [dailyCashSummary, setDailyCashSummary] = useState(null);
+  const [loadingSummary, setLoadingSummary] = useState(false);
+  const [handoverNotes, setHandoverNotes] = useState('');
+  const [submittingHandover, setSubmittingHandover] = useState(false);
+  const [handoverSuccessMsg, setHandoverSuccessMsg] = useState('');
+  const [handoverErrorMsg, setHandoverErrorMsg] = useState('');
+  const [myHandovers, setMyHandovers] = useState([]);
+
+  const fetchDailyCashSummary = async () => {
+    setLoadingSummary(true);
+    try {
+      const [sumRes, myRes] = await Promise.all([
+        api.get('api/handovers/agent-daily-summary'),
+        api.get('api/handovers/my-submissions')
+      ]);
+      if (sumRes.success) setDailyCashSummary(sumRes.data);
+      if (myRes.success) setMyHandovers(myRes.data || []);
+    } catch (err) {
+      console.error('Failed to load daily cash summary:', err);
+    } finally {
+      setLoadingSummary(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'cash-handover') {
+      fetchDailyCashSummary();
+    }
+  }, [activeTab]);
+
+  const handleSubmitHandover = async (e) => {
+    e.preventDefault();
+    if (!dailyCashSummary) return;
+    setSubmittingHandover(true);
+    setHandoverErrorMsg('');
+    setHandoverSuccessMsg('');
+    try {
+      const res = await api.post('api/handovers/submit', {
+        date: dailyCashSummary.date,
+        totalCollectedCash: dailyCashSummary.totalCash,
+        completedRequestIds: (dailyCashSummary.completedRequests || []).map(r => r._id),
+        agentNotes: handoverNotes
+      });
+      if (res.success) {
+        setHandoverSuccessMsg('Cash handover submitted successfully to Store In-Charge!');
+        await fetchDailyCashSummary();
+      }
+    } catch (err) {
+      setHandoverErrorMsg(err.message || 'Failed to submit cash handover');
+    } finally {
+      setSubmittingHandover(false);
+    }
+  };
+
+  // Van Stock & Indents state
+  const [vanInventory, setVanInventory] = useState([]);
+  const [loadingVanInventory, setLoadingVanInventory] = useState(false);
+  const [myIndents, setMyIndents] = useState([]);
+  const [loadingMyIndents, setLoadingMyIndents] = useState(false);
+  const [shortageModalData, setShortageModalData] = useState(null);
+
+  // Manual indent modal state
+  const [showManualIndentModal, setShowManualIndentModal] = useState(false);
+  const [manualIndentPartName, setManualIndentPartName] = useState('');
+  const [manualIndentQty, setManualIndentQty] = useState(2);
+  const [manualIndentRemarks, setManualIndentRemarks] = useState('');
+  const [submittingManualIndent, setSubmittingManualIndent] = useState(false);
+
+  const fetchVanStockAndIndents = async () => {
+    setLoadingVanInventory(true);
+    setLoadingMyIndents(true);
+    try {
+      const [invRes, indRes] = await Promise.all([
+        api.get('api/agent-inventory/my-stock'),
+        api.get('api/indents/my-indents')
+      ]);
+      if (invRes.success) setVanInventory(invRes.data || []);
+      if (indRes.success) setMyIndents(indRes.data || []);
+    } catch (err) {
+      console.error('Failed to load van stock or indents:', err);
+    } finally {
+      setLoadingVanInventory(false);
+      setLoadingMyIndents(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'van-stock') {
+      fetchVanStockAndIndents();
+    }
+  }, [activeTab]);
+
+  const handleRaiseIndentFromShortage = async () => {
+    if (!shortageModalData) return;
+    try {
+      const items = shortageModalData.missingComponents.map(c => ({
+        posProductId: c.posProductId,
+        productName: c.name,
+        sku: c.sku,
+        requestedQuantity: c.shortageQuantity || c.requiredQuantity || 1
+      }));
+      const res = await api.post('api/indents/create', {
+        serviceRequestId: shortageModalData.requestId,
+        items,
+        agentRemarks: `Auto-generated indent for missing parts to accept service #${shortageModalData.requestId}`
+      });
+      if (res.success) {
+        alert('Indent request successfully submitted to Store In-Charge! You will be notified once parts are dispatched.');
+        setShortageModalData(null);
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to raise indent');
+    }
+  };
+
+  const handleManualIndentSubmit = async (e) => {
+    e.preventDefault();
+    if (!manualIndentPartName || manualIndentQty <= 0) return;
+    setSubmittingManualIndent(true);
+    try {
+      const res = await api.post('api/indents/create', {
+        items: [{ productName: manualIndentPartName, requestedQuantity: Number(manualIndentQty) }],
+        agentRemarks: manualIndentRemarks
+      });
+      if (res.success) {
+        alert('Parts requisition indent submitted to Store In-Charge!');
+        setShowManualIndentModal(false);
+        setManualIndentPartName('');
+        setManualIndentQty(2);
+        setManualIndentRemarks('');
+        await fetchVanStockAndIndents();
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to submit indent');
+    } finally {
+      setSubmittingManualIndent(false);
+    }
+  };
 
   const fetchJobs = async () => {
     setLoading(true);
@@ -90,7 +233,15 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
         ));
       }
     } catch (err) {
-      alert(err.message || 'Failed to update job status');
+      if (err.stockShortage && err.missingComponents) {
+        setShortageModalData({
+          requestId,
+          missingComponents: err.missingComponents,
+          message: err.message
+        });
+      } else {
+        alert(err.message || 'Failed to update job status');
+      }
     }
   };
 
@@ -291,6 +442,18 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
             onClick={() => switchTab('completed')}
           >
             <CheckCircle size={18} /> Completed ({completedJobs.length})
+          </button>
+          <button 
+            className={`menu-item ${activeTab === 'cash-handover' ? 'active' : ''}`}
+            onClick={() => switchTab('cash-handover')}
+          >
+            <DollarSign size={18} /> EOD Cash Handover
+          </button>
+          <button 
+            className={`menu-item ${activeTab === 'van-stock' ? 'active' : ''}`}
+            onClick={() => switchTab('van-stock')}
+          >
+            <Package size={18} /> Van Stock & Indents
           </button>
           <button 
             className={`menu-item ${activeTab === 'our-customers' ? 'active' : ''}`}
@@ -657,7 +820,506 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
         {activeTab === 'our-customers' && (
           <OurCustomersTab />
         )}
+
+        {/* EOD Cash Handover Tab */}
+        {activeTab === 'cash-handover' && (
+          <div className="tab-content" style={{ animation: 'fadeIn 0.3s ease' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div>
+                <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 5px 0', color: '#ffffff' }}>
+                  End-of-Day (EOD) Cash Handover
+                </h2>
+                <p style={{ color: '#9ca3af', fontSize: '13px', margin: 0 }}>
+                  Reconcile and submit cash collected from today's completed service jobs to Store In-Charge.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={fetchDailyCashSummary}
+                className="btn-secondary"
+                style={{ padding: '8px 14px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <RefreshCw size={14} className={loadingSummary ? 'animate-spin' : ''} /> Refresh
+              </button>
+            </div>
+
+            {loadingSummary ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>Calculating daily cash summary...</div>
+            ) : (
+              <div>
+                {/* Daily Summary Card */}
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.1) 100%)',
+                  border: '1px solid rgba(129, 140, 248, 0.25)',
+                  borderRadius: '16px',
+                  padding: '20px',
+                  marginBottom: '25px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '15px'
+                }}>
+                  <div>
+                    <span style={{ fontSize: '12px', color: '#a5b4fc', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Today's Cash Collection ({dailyCashSummary?.date || 'Today'})
+                    </span>
+                    <h3 style={{ fontSize: '32px', fontWeight: '900', color: '#ffffff', margin: '5px 0' }}>
+                      ₹{dailyCashSummary?.totalCash || 0}
+                    </h3>
+                    <p style={{ fontSize: '12px', color: '#cbd5e1', margin: 0 }}>
+                      {dailyCashSummary?.requestCount || 0} Cash payment job(s) completed today
+                    </p>
+                  </div>
+
+                  <div>
+                    {dailyCashSummary?.alreadySubmitted ? (
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '6px 14px',
+                          borderRadius: '20px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          background: dailyCashSummary.handoverStatus === 'ACKNOWLEDGED'
+                            ? 'rgba(16, 185, 129, 0.2)'
+                            : dailyCashSummary.handoverStatus === 'DISCREPANCY'
+                            ? 'rgba(239, 68, 68, 0.2)'
+                            : 'rgba(168, 85, 247, 0.2)',
+                          color: dailyCashSummary.handoverStatus === 'ACKNOWLEDGED'
+                            ? '#34d399'
+                            : dailyCashSummary.handoverStatus === 'DISCREPANCY'
+                            ? '#f87171'
+                            : '#c084fc',
+                          border: '1px solid currentColor'
+                        }}>
+                          {dailyCashSummary.handoverStatus === 'ACKNOWLEDGED' ? '✓ Reconciled & Acknowledged' : dailyCashSummary.handoverStatus === 'DISCREPANCY' ? '⚠ Discrepancy Flagged' : '⏳ Submitted (Pending In-Charge)'}
+                        </span>
+                        {dailyCashSummary.existingHandover?.acknowledgedAmount !== null && dailyCashSummary.existingHandover?.acknowledgedAmount !== undefined && (
+                          <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '6px' }}>
+                            Acknowledged: <strong>₹{dailyCashSummary.existingHandover.acknowledgedAmount}</strong>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span style={{
+                        display: 'inline-block',
+                        padding: '6px 14px',
+                        borderRadius: '20px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        background: 'rgba(245, 158, 11, 0.2)',
+                        color: '#fbbf24',
+                        border: '1px solid rgba(245, 158, 11, 0.4)'
+                      }}>
+                        Pending Submission
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {handoverSuccessMsg && (
+                  <div style={{ background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#34d399', padding: '12px 16px', borderRadius: '10px', fontSize: '13px', marginBottom: '20px' }}>
+                    {handoverSuccessMsg}
+                  </div>
+                )}
+
+                {handoverErrorMsg && (
+                  <div style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#f87171', padding: '12px 16px', borderRadius: '10px', fontSize: '13px', marginBottom: '20px' }}>
+                    {handoverErrorMsg}
+                  </div>
+                )}
+
+                {/* Submission Form (Only if not already acknowledged) */}
+                {(!dailyCashSummary?.alreadySubmitted || dailyCashSummary?.handoverStatus === 'SUBMITTED') && (
+                  <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '16px', padding: '20px', marginBottom: '25px' }}>
+                    <h4 style={{ fontSize: '16px', fontWeight: 'bold', color: '#ffffff', margin: '0 0 15px 0' }}>
+                      {dailyCashSummary?.alreadySubmitted ? 'Update Handover Notes' : 'Submit Handover to Store In-Charge'}
+                    </h4>
+
+                    {dailyCashSummary?.completedRequests && dailyCashSummary.completedRequests.length > 0 ? (
+                      <div style={{ marginBottom: '15px' }}>
+                        <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '8px' }}>Jobs included in this batch:</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '10px' }}>
+                          {dailyCashSummary.completedRequests.map((r) => (
+                            <div key={r._id} style={{ background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', fontSize: '12px' }}>
+                              <div style={{ fontWeight: 'bold', color: '#ffffff' }}>{r.serviceType}</div>
+                              <div style={{ color: '#94a3b8', fontSize: '11px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.customerAddress}</div>
+                              <div style={{ color: '#34d399', fontWeight: 'bold', marginTop: '4px' }}>₹{r.paymentAmount}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '15px' }}>
+                        No completed cash jobs logged today. You can still submit ₹0 or manual collection.
+                      </p>
+                    )}
+
+                    <form onSubmit={handleSubmitHandover}>
+                      <div style={{ marginBottom: '15px' }}>
+                        <label style={{ display: 'block', fontSize: '12px', color: '#cbd5e1', marginBottom: '6px' }}>
+                          Notes / Handover Remarks (Optional)
+                        </label>
+                        <textarea
+                          rows="2"
+                          value={handoverNotes}
+                          onChange={(e) => setHandoverNotes(e.target.value)}
+                          placeholder="e.g. Submitted at central desk, ₹500 x 2 notes..."
+                          style={{ width: '100%', padding: '10px', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', outline: 'none', fontSize: '13px' }}
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={submittingHandover}
+                        className="btn-primary"
+                        style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', boxShadow: 'none' }}
+                      >
+                        {submittingHandover ? 'Submitting...' : dailyCashSummary?.alreadySubmitted ? 'Update Submission' : 'Submit EOD Cash Collection'}
+                      </button>
+                    </form>
+                  </div>
+                )}
+
+                {/* Past Submissions History */}
+                <div>
+                  <h4 style={{ fontSize: '16px', fontWeight: 'bold', color: '#ffffff', margin: '0 0 15px 0' }}>
+                    My Past Handover Submissions
+                  </h4>
+
+                  {myHandovers.length === 0 ? (
+                    <p style={{ color: '#9ca3af', fontSize: '13px' }}>No previous submissions recorded.</p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {myHandovers.map((h) => (
+                        <div key={h._id} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', padding: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                          <div>
+                            <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#ffffff' }}>{h.date}</span>
+                            <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
+                              Declared: <strong>₹{h.totalCollectedCash}</strong>
+                              {h.acknowledgedAmount !== null && ` | Received: ₹${h.acknowledgedAmount}`}
+                            </div>
+                            {h.inchargeNotes && (
+                              <div style={{ fontSize: '11px', color: '#a5b4fc', marginTop: '4px', fontStyle: 'italic' }}>
+                                In-Charge: "{h.inchargeNotes}"
+                              </div>
+                            )}
+                          </div>
+
+                          <div>
+                            <span style={{
+                              padding: '4px 10px',
+                              borderRadius: '12px',
+                              fontSize: '11px',
+                              fontWeight: 'bold',
+                              background: h.status === 'ACKNOWLEDGED'
+                                ? 'rgba(16, 185, 129, 0.2)'
+                                : h.status === 'DISCREPANCY'
+                                ? 'rgba(239, 68, 68, 0.2)'
+                                : 'rgba(168, 85, 247, 0.2)',
+                              color: h.status === 'ACKNOWLEDGED'
+                                ? '#34d399'
+                                : h.status === 'DISCREPANCY'
+                                ? '#f87171'
+                                : '#c084fc'
+                            }}>
+                              {h.status}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Van Stock & Indents Tab */}
+        {activeTab === 'van-stock' && (
+          <div className="tab-content" style={{ animation: 'fadeIn 0.3s ease' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
+              <div>
+                <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 5px 0', color: '#ffffff' }}>
+                  Van Stock & Spare Parts
+                </h2>
+                <p style={{ color: '#9ca3af', fontSize: '13px', margin: 0 }}>
+                  Manage items carried in your vehicle kit and request stock refills from Store In-Charge.
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowManualIndentModal(true)}
+                  className="btn-primary"
+                  style={{ padding: '8px 14px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', boxShadow: 'none' }}
+                >
+                  <Plus size={14} /> Request Parts Indent
+                </button>
+                <button
+                  type="button"
+                  onClick={fetchVanStockAndIndents}
+                  className="btn-secondary"
+                  style={{ padding: '8px 14px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <RefreshCw size={14} className={loadingVanInventory ? 'animate-spin' : ''} /> Refresh
+                </button>
+              </div>
+            </div>
+
+            {loadingVanInventory ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>Loading your van stock...</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+                {/* Current Van Stock Grid */}
+                <div>
+                  <h3 style={{ fontSize: '15px', fontWeight: 'bold', color: '#cbd5e1', marginBottom: '12px' }}>
+                    Current Kit Inventory ({vanInventory.length} Items)
+                  </h3>
+
+                  {vanInventory.length === 0 ? (
+                    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '12px', padding: '30px', textAlign: 'center', color: '#9ca3af', fontSize: '13px' }}>
+                      <Package size={28} style={{ color: '#6366f1', margin: '0 auto 10px auto' }} />
+                      <p style={{ margin: '0 0 5px 0', fontWeight: 'bold', color: '#ffffff' }}>Your van inventory is currently empty</p>
+                      <p style={{ margin: 0 }}>Use "Request Parts Indent" or ask Store In-Charge to allocate stock.</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '15px' }}>
+                      {vanInventory.map((item) => {
+                        const isLow = item.quantity <= item.minThreshold;
+                        return (
+                          <div
+                            key={item._id}
+                            style={{
+                              background: 'rgba(255,255,255,0.03)',
+                              border: isLow ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid rgba(255,255,255,0.06)',
+                              borderRadius: '12px',
+                              padding: '15px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              justifyContent: 'space-between'
+                            }}
+                          >
+                            <div>
+                              <span style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'uppercase' }}>{item.category || 'Spare Part'}</span>
+                              <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: '#ffffff', margin: '4px 0 8px 0' }}>{item.productName}</h4>
+                              {item.sku && <p style={{ fontSize: '11px', color: '#64748b', margin: 0 }}>SKU: {item.sku}</p>}
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '15px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                              <div>
+                                <span style={{ fontSize: '11px', color: '#9ca3af' }}>Stock:</span>
+                                <span style={{ fontSize: '20px', fontWeight: 'bold', color: isLow ? '#fbbf24' : '#34d399', marginLeft: '6px' }}>{item.quantity}</span>
+                              </div>
+                              {isLow && (
+                                <span style={{ fontSize: '10px', fontWeight: 'bold', background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', padding: '2px 6px', borderRadius: '4px' }}>
+                                  Low Stock
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* My Indent Requisitions History */}
+                <div>
+                  <h3 style={{ fontSize: '15px', fontWeight: 'bold', color: '#cbd5e1', marginBottom: '12px' }}>
+                    My Indent Requisitions
+                  </h3>
+
+                  {myIndents.length === 0 ? (
+                    <p style={{ color: '#9ca3af', fontSize: '13px' }}>No indent requests submitted yet.</p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {myIndents.map((ind) => (
+                        <div
+                          key={ind._id}
+                          style={{
+                            background: 'rgba(255,255,255,0.02)',
+                            border: '1px solid rgba(255,255,255,0.05)',
+                            borderRadius: '12px',
+                            padding: '15px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: '10px'
+                          }}
+                        >
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#ffffff' }}>
+                                {new Date(ind.requestedAt).toLocaleDateString()}
+                              </span>
+                              {ind.serviceRequestId && (
+                                <span style={{ fontSize: '11px', color: '#818cf8', background: 'rgba(99, 102, 241, 0.15)', padding: '2px 8px', borderRadius: '10px' }}>
+                                  Job: {ind.serviceRequestId.serviceType}
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '6px' }}>
+                              Parts: {ind.items?.map(it => `${it.productName} (x${it.requestedQuantity})`).join(', ')}
+                            </div>
+                            {ind.inchargeRemarks && (
+                              <div style={{ fontSize: '11px', color: '#34d399', marginTop: '4px', fontStyle: 'italic' }}>
+                                Store: "{ind.inchargeRemarks}"
+                              </div>
+                            )}
+                          </div>
+
+                          <div>
+                            <span style={{
+                              padding: '4px 10px',
+                              borderRadius: '12px',
+                              fontSize: '11px',
+                              fontWeight: 'bold',
+                              background: ind.status === 'DISPATCHED'
+                                ? 'rgba(16, 185, 129, 0.2)'
+                                : ind.status === 'REJECTED'
+                                ? 'rgba(239, 68, 68, 0.2)'
+                                : 'rgba(245, 158, 11, 0.2)',
+                              color: ind.status === 'DISPATCHED'
+                                ? '#34d399'
+                                : ind.status === 'REJECTED'
+                                ? '#f87171'
+                                : '#fbbf24'
+                            }}>
+                              {ind.status}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </main>
+
+      {/* SHORTAGE MODAL (PRE-ACCEPTANCE INTERCEPT) */}
+      {shortageModalData && (
+        <div className="modal-backdrop" onClick={() => setShortageModalData(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
+              <div style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', padding: '10px', borderRadius: '12px' }}>
+                <AlertTriangle size={24} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', color: '#ffffff' }}>Insufficient Van Kit Inventory</h3>
+                <p style={{ margin: 0, fontSize: '12px', color: '#9ca3af' }}>You lack spare parts to accept this service request.</p>
+              </div>
+            </div>
+
+            <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: '12px', padding: '15px', marginBottom: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#e2e8f0', marginBottom: '10px' }}>Required vs Available Stock:</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {shortageModalData.missingComponents.map((comp, idx) => (
+                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}>
+                    <span style={{ color: '#ffffff', fontWeight: '500' }}>{comp.name}</span>
+                    <span style={{ color: '#f87171', fontWeight: 'bold' }}>
+                      Need {comp.requiredQuantity} (Have: {comp.availableQuantity})
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '20px' }}>
+              Clicking below will automatically submit an indent to the Store In-Charge. Once approved and dispatched, you will be able to accept this job.
+            </p>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ flex: 1, padding: '10px', fontSize: '13px' }}
+                onClick={() => setShortageModalData(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                style={{ flex: 1.5, padding: '10px', fontSize: '13px', background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', boxShadow: 'none' }}
+                onClick={handleRaiseIndentFromShortage}
+              >
+                Raise Indent to Store
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MANUAL INDENT CREATION MODAL */}
+      {showManualIndentModal && (
+        <div className="modal-backdrop" onClick={() => setShowManualIndentModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '420px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', color: '#ffffff' }}>Request Spare Parts Indent</h3>
+              <button
+                type="button"
+                style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
+                onClick={() => setShowManualIndentModal(false)}
+              >
+                <AlertCircle size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleManualIndentSubmit} className="dashboard-form">
+              <div className="input-group">
+                <label>Part / Component Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. 10 inch Spun Filter, RO Pump 75 GPD"
+                  value={manualIndentPartName}
+                  onChange={(e) => setManualIndentPartName(e.target.value)}
+                  style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px', outline: 'none' }}
+                />
+              </div>
+
+              <div className="input-group">
+                <label>Requested Quantity *</label>
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  value={manualIndentQty}
+                  onChange={(e) => setManualIndentQty(e.target.value)}
+                  style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px', outline: 'none' }}
+                />
+              </div>
+
+              <div className="input-group">
+                <label>Reason / Remarks (Optional)</label>
+                <textarea
+                  rows="2"
+                  value={manualIndentRemarks}
+                  onChange={(e) => setManualIndentRemarks(e.target.value)}
+                  placeholder="e.g. Daily refill for regular maintenance kit"
+                  style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px', outline: 'none', fontSize: '12px' }}
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={submittingManualIndent}
+                style={{ marginTop: '10px', background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', boxShadow: 'none' }}
+              >
+                {submittingManualIndent ? 'Submitting Indent...' : 'Submit Indent to Store'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Complete Job & Record Payment Modal */}
       {completingRequestId && (

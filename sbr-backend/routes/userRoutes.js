@@ -16,7 +16,7 @@ const router = express.Router();
 router.use(protect); // All routes require authentication
 
 router.route('/')
-  .get(authorize('ADMIN'), getAllUsers);
+  .get(authorize('STORE_INCHARGE', 'ADMIN', 'admin'), getAllUsers);
 
 router.put('/profile', updateProfile);
 router.delete('/profile', deleteProfile);

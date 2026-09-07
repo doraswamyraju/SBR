@@ -85,6 +85,16 @@ const ServiceRequestSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    requiredComponents: [
+      {
+        posProductId: { type: Number, default: null },
+        productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null },
+        name: { type: String, required: true },
+        sku: { type: String, default: '' },
+        quantity: { type: Number, required: true, default: 1 },
+        unitPrice: { type: Number, default: 0 }
+      }
+    ],
     locationPath: {
       type: [LocationPointSchema],
       default: []

@@ -17,9 +17,31 @@ const productSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  sku: {
+    type: String,
+    trim: true,
+    sparse: true
+  },
+  posProductId: {
+    type: Number,
+    index: true,
+    sparse: true
+  },
+  stockLevel: {
+    type: Number,
+    default: 0
+  },
+  minStockLevel: {
+    type: Number,
+    default: 0
+  },
+  lastSyncedAt: {
+    type: Date,
+    default: Date.now
+  },
   image: {
     type: String,
-    required: true
+    default: 'https://placehold.co/400x300/00529B/FFFFFF?text=SBR+Product'
   },
   images: [{
     type: String

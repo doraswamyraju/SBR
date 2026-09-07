@@ -4,6 +4,8 @@ enum AgentSection: Hashable {
     case dashboard
     case newRequests
     case activeService
+    case vanInventory
+    case cashHandover
     case ourCustomers
     case payments
     case profile
@@ -29,7 +31,7 @@ struct AgentDashboardView: View {
         SidebarNavigationLayout(
             title: sectionTitle(selectedSection),
             drawerHeader: "Agent Panel",
-            sections: [.dashboard, .newRequests, .activeService, .ourCustomers, .payments, .profile],
+            sections: [.dashboard, .newRequests, .activeService, .vanInventory, .cashHandover, .ourCustomers, .payments, .profile],
             selectedSection: $selectedSection,
             sectionTitle: { sectionTitle($0) },
             sectionIcon: { sectionIcon($0) },
@@ -59,6 +61,10 @@ struct AgentDashboardView: View {
                         pickerImageType: $pickerImageType,
                         activeJobForUpload: $activeJobForUpload
                     )
+                case .vanInventory:
+                    AgentInventoryView()
+                case .cashHandover:
+                    CashHandoverView()
                 case .ourCustomers:
                     OurCustomersView(isAdmin: false)
                 case .payments:
@@ -133,6 +139,8 @@ struct AgentDashboardView: View {
         case .dashboard: return "Dashboard"
         case .newRequests: return "New Requests"
         case .activeService: return "Active Service"
+        case .vanInventory: return "Van Inventory & Kits"
+        case .cashHandover: return "EOD Cash Handover"
         case .ourCustomers: return "Our Customers"
         case .payments: return "Payments"
         case .profile: return "My Profile"
@@ -144,6 +152,8 @@ struct AgentDashboardView: View {
         case .dashboard: return "square.grid.2x2.fill"
         case .newRequests: return "list.bullet.rectangle.fill"
         case .activeService: return "wrench.and.screwdriver.fill"
+        case .vanInventory: return "shippingbox.fill"
+        case .cashHandover: return "banknote.fill"
         case .ourCustomers: return "person.2.fill"
         case .payments: return "creditcard.fill"
         case .profile: return "person.crop.circle.fill"

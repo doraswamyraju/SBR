@@ -33,10 +33,10 @@ router.route('/:id')
   .put(updateRequest)
   .delete(authorize('ADMIN'), deleteRequest);
 
-router.put('/:id/assign', authorize('ADMIN'), assignRequest);
-router.put('/:id/status', authorize('AGENT', 'ADMIN'), updateRequestStatus);
-router.put('/:id/image', authorize('AGENT', 'ADMIN'), updateRequestImage);
-router.put('/:id/payment', authorize('AGENT', 'ADMIN'), updatePaymentDetails);
+router.put('/:id/assign', authorize('STORE_INCHARGE', 'ADMIN', 'admin'), assignRequest);
+router.put('/:id/status', authorize('STORE_INCHARGE', 'AGENT', 'ADMIN', 'admin'), updateRequestStatus);
+router.put('/:id/image', authorize('AGENT', 'ADMIN', 'admin'), updateRequestImage);
+router.put('/:id/payment', authorize('STORE_INCHARGE', 'AGENT', 'ADMIN', 'admin'), updatePaymentDetails);
 router.post('/:id/location', authorize('AGENT'), appendAgentLocation);
 
 module.exports = router;

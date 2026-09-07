@@ -2,6 +2,13 @@ package com.sbr.sms.data.models
 
 import java.util.Date
 
+data class RequiredComponent(
+    val productId: String? = null,
+    val name: String = "",
+    val sku: String? = null,
+    val quantity: Int = 1
+)
+
 data class ServiceRequest(
     var id: String = "",
     val customerId: String = "",
@@ -20,5 +27,6 @@ data class ServiceRequest(
     val paymentStatus: String = "Pending",
     val paymentMethod: String? = null,
     val paymentTimestamp: Date? = null,
-    val locationPath: List<AgentLocation> = emptyList()
+    val locationPath: List<AgentLocation> = emptyList(),
+    val requiredComponents: List<RequiredComponent> = emptyList()
 )

@@ -31,6 +31,8 @@ enum class AgentSection(val title: String, val icon: ImageVector) {
     Dashboard("Dashboard", Icons.Default.Dashboard),
     NewRequests("New Requests", Icons.AutoMirrored.Filled.List),
     ActiveService("Active Service", Icons.Default.Construction),
+    VanInventory("Van Kit Inventory", Icons.Default.Inventory2),
+    CashHandover("EOD Cash Handover", Icons.Default.AccountBalanceWallet),
     OurCustomers("Our Customers", Icons.Default.People),
     Payments("Payments", Icons.Default.Payment),
     Profile("My Profile", Icons.Default.Person)
@@ -100,6 +102,7 @@ fun AgentPanelScreen(
                                     modifier = Modifier
                                         .size(32.dp)
                                         .clip(RoundedCornerShape(6.dp))
+                                        .background(Color.White)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                             }
@@ -128,6 +131,8 @@ fun AgentPanelScreen(
                         )
                         AgentSection.NewRequests -> AgentRequestsScreen(navController = navController, viewModel = viewModel)
                         AgentSection.ActiveService -> AgentActiveRequestsScreen(viewModel = viewModel)
+                        AgentSection.VanInventory -> AgentInventoryScreen()
+                        AgentSection.CashHandover -> AgentCashHandoverScreen()
                         AgentSection.OurCustomers -> OurCustomersScreen(isAdmin = false)
                         AgentSection.Payments -> AgentPaymentsScreen(navController = navController)
                         AgentSection.Profile -> AgentProfileScreen(navController = navController)

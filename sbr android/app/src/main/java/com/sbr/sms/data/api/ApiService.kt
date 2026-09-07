@@ -149,4 +149,60 @@ interface ApiService {
         @Path("id") id: String,
         @Body request: UpdateClaimStatusRequest
     ): Response<ApiResponse<ReferralClaimDto>>
+
+    // Cash Handover Endpoints
+    @GET("api/handovers/agent-daily-summary")
+    suspend fun getAgentDailySummary(): Response<ApiResponse<com.sbr.sms.data.models.AgentDailySummary>>
+
+    @POST("api/handovers/submit")
+    suspend fun submitCashHandover(
+        @Body request: HandoverSubmitRequest
+    ): Response<ApiResponse<com.sbr.sms.data.models.CashHandover>>
+
+    @GET("api/handovers/pending")
+    suspend fun getPendingHandovers(): Response<ApiResponse<List<com.sbr.sms.data.models.CashHandover>>>
+
+    @GET("api/handovers/all")
+    suspend fun getAllHandovers(): Response<ApiResponse<List<com.sbr.sms.data.models.CashHandover>>>
+
+    @POST("api/handovers/{id}/acknowledge")
+    suspend fun acknowledgeHandover(
+        @Path("id") id: String,
+        @Body request: HandoverAcknowledgeRequest
+    ): Response<ApiResponse<com.sbr.sms.data.models.CashHandover>>
+
+    // Agent Inventory & Indents Endpoints
+    @GET("api/agent-inventory/my-stock")
+    suspend fun getMyVanStock(): Response<ApiResponse<List<com.sbr.sms.data.models.AgentInventoryItem>>>
+
+    @GET("api/agent-inventory/agent/{agentId}")
+    suspend fun getAgentVanStock(
+        @Path("agentId") agentId: String
+    ): Response<ApiResponse<List<com.sbr.sms.data.models.AgentInventoryItem>>>
+
+    @GET("api/indents/pending")
+    suspend fun getPendingIndents(): Response<ApiResponse<List<com.sbr.sms.data.models.AgentIndent>>>
+
+    @GET("api/indents/my-indents")
+    suspend fun getMyIndents(): Response<ApiResponse<List<com.sbr.sms.data.models.AgentIndent>>>
+
+    @GET("api/indents/all")
+    suspend fun getAllIndents(): Response<ApiResponse<List<com.sbr.sms.data.models.AgentIndent>>>
+
+    @POST("api/indents/create")
+    suspend fun createIndent(
+        @Body request: CreateIndentRequest
+    ): Response<ApiResponse<com.sbr.sms.data.models.AgentIndent>>
+
+    @POST("api/indents/{id}/dispatch")
+    suspend fun dispatchIndent(
+        @Path("id") id: String,
+        @Body request: DispatchIndentRequest
+    ): Response<ApiResponse<com.sbr.sms.data.models.AgentIndent>>
+
+    @POST("api/indents/{id}/reject")
+    suspend fun rejectIndent(
+        @Path("id") id: String,
+        @Body request: RejectIndentRequest
+    ): Response<ApiResponse<com.sbr.sms.data.models.AgentIndent>>
 }

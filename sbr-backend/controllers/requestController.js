@@ -211,11 +211,66 @@ exports.updateRequestStatus = async (req, res) => {
 
     const updates = { status };
     if (status === 'Accepted') {
+      // Check required components against agent's AgentInventory
+      if (request.requiredComponents && request.requiredComponents.length > 0) {
+        const AgentInventory = require('../models/AgentInventory');
+        const missingComponents = [];
+
+        for (const comp of request.requiredComponents) {
+          const reqQty = Number(comp.quantity) || 1;
+          let invQuery = { agentId: req.user._id };
+          if (comp.posProductId) invQuery.posProductId = comp.posProductId;
+          else invQuery.productName = comp.name;
+
+          const invItem = await AgentInventory.findOne(invQuery);
+          const availableQty = invItem ? invItem.quantity : 0;
+
+          if (availableQty < reqQty) {
+            missingComponents.push({
+              posProductId: comp.posProductId,
+              name: comp.name,
+              sku: comp.sku || '',
+              requiredQuantity: reqQty,
+              availableQuantity: availableQty,
+              shortageQuantity: reqQty - availableQty
+            });
+          }
+        }
+
+        if (missingComponents.length > 0) {
+          return res.status(400).json({
+            success: false,
+            stockShortage: true,
+            message: 'Insufficient van kit inventory to accept this service request. Please raise an indent to Store In-Charge.',
+            missingComponents
+          });
+        }
+      }
       updates.acceptedAt = Date.now();
     } else if (status === 'Completed') {
       updates.completedAt = Date.now();
       if (requestReview === true || requestReview === 'true') {
         updates.requestReview = true;
+      }
+
+      // Deduct requiredComponents from AgentInventory
+      if (request.requiredComponents && request.requiredComponents.length > 0) {
+        try {
+          const AgentInventory = require('../models/AgentInventory');
+          for (const comp of request.requiredComponents) {
+            const usedQty = Number(comp.quantity) || 1;
+            let invQuery = { agentId: request.assignedAgentId };
+            if (comp.posProductId) invQuery.posProductId = comp.posProductId;
+            else invQuery.productName = comp.name;
+
+            await AgentInventory.findOneAndUpdate(
+              invQuery,
+              { $inc: { quantity: -usedQty }, lastUpdated: new Date() }
+            );
+          }
+        } catch (invErr) {
+          console.error('Error deducting agent inventory on job completion:', invErr);
+        }
       }
     }
 

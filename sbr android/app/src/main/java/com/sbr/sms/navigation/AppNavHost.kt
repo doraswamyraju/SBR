@@ -31,11 +31,14 @@ import com.sbr.sms.ui.customer.CustomerPanelScreen
 import com.sbr.sms.ui.details.CustomerRequestDetailScreen
 import com.sbr.sms.ui.details.RequestDetailScreen
 
+import com.sbr.sms.ui.storeincharge.StoreInchargeDashboardScreen
+
 sealed class AppRoutes(val route: String) {
     object AuthFlow : AppRoutes("authFlow")
     object AdminPanel : AppRoutes("adminPanel")
     object AgentPanel : AppRoutes("agentPanel")
     object CustomerPanel : AppRoutes("customerPanel")
+    object StoreInchargePanel : AppRoutes("storeInchargePanel")
     object AdminAddEditCustomer : AppRoutes("adminAddEditCustomer?customerId={customerId}") {
         fun createRoute(customerId: String?): String {
             return customerId?.let { "adminAddEditCustomer?customerId=$it" } ?: "adminAddEditCustomer"
@@ -88,6 +91,7 @@ fun AppNavHost(viewModel: AuthViewModel = hiltViewModel()) {
         composable(AppRoutes.AdminPanel.route) { AdminPanelScreen(navController) }
         composable(AppRoutes.AgentPanel.route) { AgentPanelScreen(navController) }
         composable(AppRoutes.CustomerPanel.route) { CustomerPanelScreen(navController) }
+        composable(AppRoutes.StoreInchargePanel.route) { StoreInchargeDashboardScreen() }
         composable(
             route = AppRoutes.AdminAddEditCustomer.route,
             arguments = listOf(navArgument("customerId") {
@@ -160,6 +164,7 @@ fun AuthGate(
                         UserRole.ADMIN -> AppRoutes.AdminPanel.route
                         UserRole.AGENT -> AppRoutes.AgentPanel.route
                         UserRole.CUSTOMER -> AppRoutes.CustomerPanel.route
+                        UserRole.STORE_INCHARGE -> AppRoutes.StoreInchargePanel.route
                     }
                 }
 

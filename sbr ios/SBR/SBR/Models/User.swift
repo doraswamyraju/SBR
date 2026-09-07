@@ -4,6 +4,7 @@ enum UserRole: String, Codable {
     case admin = "ADMIN"
     case agent = "AGENT"
     case customer = "CUSTOMER"
+    case storeIncharge = "STORE_INCHARGE"
     
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
@@ -12,6 +13,7 @@ enum UserRole: String, Codable {
         case "ADMIN": self = .admin
         case "AGENT": self = .agent
         case "CUSTOMER": self = .customer
+        case "STORE_INCHARGE": self = .storeIncharge
         default: self = .customer
         }
     }

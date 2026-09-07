@@ -1,0 +1,34 @@
+const express = require('express');
+const {
+  getMyInventory,
+  getAgentInventory,
+  getAllAgentInventories,
+  transferStockToAgent,
+  createIndent,
+  getPendingIndents,
+  getAllIndents,
+  getMyIndents,
+  dispatchIndent,
+  rejectIndent
+} = require('../controllers/agentInventoryController');
+const { protect, authorize } = require('../middleware/authMiddleware');
+
+const router = express.Router();
+
+router.use(protect);
+
+// Agent Inventory routes
+router.get('/my-stock', authorize('AGENT', 'ADMIN', 'admin'), getMyInventory);
+router.get('/agent/:agentId', authorize('STORE_INCHARGE', 'ADMIN', 'admin'), getAgentInventory);
+router.get('/all', authorize('STORE_INCHARGE', 'ADMIN', 'admin'), getAllAgentInventories);
+router.post('/transfer', authorize('STORE_INCHARGE', 'ADMIN', 'admin'), transferStockToAgent);
+
+// Agent Indent routes
+router.post('/indents/create', authorize('AGENT', 'ADMIN', 'admin'), createIndent);
+router.get('/indents/pending', authorize('STORE_INCHARGE', 'ADMIN', 'admin'), getPendingIndents);
+router.get('/indents/all', authorize('STORE_INCHARGE', 'ADMIN', 'admin'), getAllIndents);
+router.get('/indents/my-indents', authorize('AGENT', 'ADMIN', 'admin'), getMyIndents);
+router.post('/indents/:id/dispatch', authorize('STORE_INCHARGE', 'ADMIN', 'admin'), dispatchIndent);
+router.post('/indents/:id/reject', authorize('STORE_INCHARGE', 'ADMIN', 'admin'), rejectIndent);
+
+module.exports = router;

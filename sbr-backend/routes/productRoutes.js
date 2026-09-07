@@ -4,11 +4,17 @@ const {
   getProductByIdentifier,
   createProduct,
   updateProduct,
-  deleteProduct
+  deleteProduct,
+  syncFromPos,
+  syncBulkFromPos
 } = require('../controllers/productController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
 const router = express.Router();
+
+// Cross-System Sync routes (Authenticated via POS token or Admin JWT)
+router.post('/sync-from-pos', syncFromPos);
+router.post('/sync-bulk-from-pos', syncBulkFromPos);
 
 // Public routes
 router.get('/', getProducts);
