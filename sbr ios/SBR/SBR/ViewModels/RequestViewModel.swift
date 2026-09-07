@@ -21,7 +21,6 @@ class RequestViewModel: ObservableObject {
             .sink { _ in
                 Task {
                     await self.fetchRequests()
-                    await self.fetchUsers()
                 }
             }
             .store(in: &cancellables)
@@ -31,7 +30,6 @@ class RequestViewModel: ObservableObject {
             .sink { _ in
                 Task {
                     await self.fetchRequests()
-                    await self.fetchUsers()
                 }
             }
             .store(in: &cancellables)
@@ -62,19 +60,15 @@ class RequestViewModel: ObservableObject {
     
     // Fetch all users (for Admin dashboard)
     func fetchUsers() async {
-        isLoading = true
-        errorMessage = nil
         do {
             let res = try await APIClient.shared.get(endpoint: "api/users", responseType: StandardResponse<[User]>.self)
             if res.success, let data = res.data {
                 self.users = data
-            } else {
-                self.errorMessage = res.error ?? "Failed to fetch users"
             }
         } catch {
-            self.errorMessage = error.localizedDescription
+            // Silently ignore authorization errors for non-admin roles
+            print("fetchUsers not authorized or error: \(error.localizedDescription)")
         }
-        isLoading = false
     }
     
     func bookRequest(serviceType: String, description: String, address: String, latitude: Double? = nil, longitude: Double? = nil) async -> Bool {

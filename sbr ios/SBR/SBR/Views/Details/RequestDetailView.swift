@@ -404,8 +404,10 @@ struct RequestDetailView: View {
             }
         }
         .onAppear {
-            Task {
-                await requestVM.fetchUsers()
+            if authVM.user?.role == .admin || authVM.user?.role == .storeIncharge {
+                Task {
+                    await requestVM.fetchUsers()
+                }
             }
             if (currentRequest.status == .completed || currentRequest.status == .paid) && currentRequest.requestReview == true {
                 fetchReviewUrl()
