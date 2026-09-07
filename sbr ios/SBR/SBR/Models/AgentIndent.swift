@@ -61,6 +61,16 @@ struct IndentItem: Codable, Identifiable {
         self.requestedQuantity = requestedQuantity
         self.dispatchedQuantity = dispatchedQuantity
     }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(posProductId, forKey: .posProductId)
+        try container.encodeIfPresent(productId, forKey: .productId)
+        try container.encode(name, forKey: .name)
+        try container.encodeIfPresent(sku, forKey: .sku)
+        try container.encode(requestedQuantity, forKey: .requestedQuantity)
+        try container.encodeIfPresent(dispatchedQuantity, forKey: .dispatchedQuantity)
+    }
 }
 
 struct AgentIndent: Codable, Identifiable {
@@ -105,5 +115,22 @@ struct AgentIndent: Codable, Identifiable {
         self.dispatchedAt = try? container.decodeIfPresent(String.self, forKey: .dispatchedAt)
         self.createdAt = try? container.decodeIfPresent(String.self, forKey: .createdAt)
         self.updatedAt = try? container.decodeIfPresent(String.self, forKey: .updatedAt)
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(_id, forKey: ._id)
+        try container.encodeIfPresent(agentId, forKey: .agentId)
+        try container.encodeIfPresent(serviceRequestId, forKey: .serviceRequestId)
+        try container.encode(items, forKey: .items)
+        try container.encode(status, forKey: .status)
+        try container.encodeIfPresent(urgency, forKey: .urgency)
+        try container.encodeIfPresent(agentRemarks, forKey: .agentRemarks)
+        try container.encodeIfPresent(inchargeRemarks, forKey: .inchargeRemarks)
+        try container.encodeIfPresent(storeInchargeId, forKey: .storeInchargeId)
+        try container.encodeIfPresent(requestedAt, forKey: .requestedAt)
+        try container.encodeIfPresent(dispatchedAt, forKey: .dispatchedAt)
+        try container.encodeIfPresent(createdAt, forKey: .createdAt)
+        try container.encodeIfPresent(updatedAt, forKey: .updatedAt)
     }
 }

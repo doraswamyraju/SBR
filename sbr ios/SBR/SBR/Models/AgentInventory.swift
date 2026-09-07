@@ -65,4 +65,21 @@ struct AgentInventoryItem: Codable, Identifiable {
         self.createdAt = try? container.decodeIfPresent(String.self, forKey: .createdAt)
         self.updatedAt = try? container.decodeIfPresent(String.self, forKey: .updatedAt)
     }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(_id, forKey: ._id)
+        try container.encodeIfPresent(agentId, forKey: .agentId)
+        try container.encodeIfPresent(posProductId, forKey: .posProductId)
+        try container.encodeIfPresent(productId, forKey: .productId)
+        try container.encode(productName, forKey: .productName)
+        try container.encodeIfPresent(sku, forKey: .sku)
+        try container.encodeIfPresent(category, forKey: .category)
+        try container.encode(quantity, forKey: .quantity)
+        try container.encodeIfPresent(minThreshold, forKey: .minThreshold)
+        try container.encodeIfPresent(unitPrice, forKey: .unitPrice)
+        try container.encodeIfPresent(lastUpdated, forKey: .lastUpdated)
+        try container.encodeIfPresent(createdAt, forKey: .createdAt)
+        try container.encodeIfPresent(updatedAt, forKey: .updatedAt)
+    }
 }
