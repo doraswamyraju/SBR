@@ -1,6 +1,7 @@
 import SwiftUI
 import MapKit
 import CoreLocation
+import Combine
 
 // Dedicated One-Shot GPS Location Provider
 class SingleLocationFetcher: NSObject, ObservableObject, CLLocationManagerDelegate {
