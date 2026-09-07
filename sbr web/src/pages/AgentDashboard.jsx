@@ -523,10 +523,21 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
   };
 
   // --- Completion & Payment Breakdown Logic ---
+  const [completionParts, setCompletionParts] = useState([]);
+
   const openCompleteModal = (job) => {
     setCompletingRequestId(job._id);
-    const partsTotal = (job.requiredComponents || []).reduce(
-      (sum, c) => sum + ((Number(c.quantity) || 1) * (Number(c.unitPrice) || 0)),
+    const initialParts = (job.requiredComponents || []).map(c => ({
+      posProductId: c.posProductId || null,
+      productId: c.productId || null,
+      name: c.name || c.productName,
+      sku: c.sku || '',
+      quantity: Number(c.quantity) || 1,
+      unitPrice: Number(c.unitPrice || c.price) || 0
+    }));
+    setCompletionParts(initialParts);
+    const partsTotal = initialParts.reduce(
+      (sum, c) => sum + (c.quantity * c.unitPrice),
       0
     );
     const defService = 250;
@@ -537,18 +548,75 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
     setPaymentAmount(String(Math.max(0, partsTotal + defService - defDiscount)));
     setPaymentMethod('Cash');
     setCompletionError('');
+    fetchVanStockAndIndents();
+    fetchCatalogProducts();
   };
 
-  const handlePricingChange = (newServiceCharge, newDiscount) => {
-    const job = requests.find(r => r._id === completingRequestId);
-    const partsTotal = (job?.requiredComponents || []).reduce(
+  const addCompletionPartRow = () => {
+    setCompletionParts(prev => [
+      ...prev,
+      { posProductId: null, productId: null, name: '', sku: '', quantity: 1, unitPrice: 0 }
+    ]);
+  };
+
+  const removeCompletionPartRow = (index) => {
+    setCompletionParts(prev => {
+      const updated = prev.filter((_, i) => i !== index);
+      recalcPaymentTotal(updated, serviceCharge, discountAmount);
+      return updated;
+    });
+  };
+
+  const handleSelectCompletionPart = (index, productObjOrName) => {
+    setCompletionParts(prev => {
+      const updated = [...prev];
+      if (typeof productObjOrName === 'object' && productObjOrName !== null) {
+        updated[index] = {
+          ...updated[index],
+          posProductId: productObjOrName.posProductId || productObjOrName.id || null,
+          productId: productObjOrName._id || null,
+          name: productObjOrName.name || '',
+          sku: productObjOrName.sku || '',
+          unitPrice: Number(productObjOrName.price || productObjOrName.unitPrice || 0)
+        };
+      } else {
+        updated[index] = {
+          ...updated[index],
+          name: productObjOrName,
+          posProductId: null,
+          productId: null,
+          unitPrice: 0
+        };
+      }
+      recalcPaymentTotal(updated, serviceCharge, discountAmount);
+      return updated;
+    });
+  };
+
+  const updateCompletionPartQty = (index, qty) => {
+    setCompletionParts(prev => {
+      const updated = [...prev];
+      updated[index] = {
+        ...updated[index],
+        quantity: Math.max(1, parseInt(qty) || 1)
+      };
+      recalcPaymentTotal(updated, serviceCharge, discountAmount);
+      return updated;
+    });
+  };
+
+  const recalcPaymentTotal = (parts, sc, disc) => {
+    const pTotal = parts.reduce(
       (sum, c) => sum + ((Number(c.quantity) || 1) * (Number(c.unitPrice) || 0)),
       0
     );
-    const sc = Math.max(0, Number(newServiceCharge) || 0);
-    const disc = Math.max(0, Number(newDiscount) || 0);
-    const net = Math.max(0, (partsTotal + sc) - disc);
-    setPaymentAmount(String(net));
+    const scNum = Math.max(0, Number(sc) || 0);
+    const discNum = Math.max(0, Number(disc) || 0);
+    setPaymentAmount(String(Math.max(0, (pTotal + scNum) - discNum)));
+  };
+
+  const handlePricingChange = (newServiceCharge, newDiscount) => {
+    recalcPaymentTotal(completionParts, newServiceCharge, newDiscount);
   };
 
   const handleCompleteJobSubmit = async (e) => {
@@ -557,8 +625,8 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
     setCompletionError('');
 
     try {
-      const activeJob = requests.find(r => r._id === completingRequestId);
-      const partsTotal = (activeJob?.requiredComponents || []).reduce(
+      const validParts = completionParts.filter(p => p.name && p.name.trim() && p.quantity > 0);
+      const partsTotal = validParts.reduce(
         (sum, c) => sum + ((Number(c.quantity) || 1) * (Number(c.unitPrice) || 0)),
         0
       );
@@ -566,20 +634,22 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
       const parsedDiscount = parseFloat(discountAmount) || 0;
       const parsedAmount = Math.max(0, (partsTotal + parsedService) - parsedDiscount);
 
-      // 1. Post payment details with full breakdown
+      // 1. Post payment details with full breakdown & updated parts
       const paymentRes = await api.put(`api/requests/${completingRequestId}/payment`, {
         amount: parsedAmount,
         method: paymentMethod,
         inventoryTotal: partsTotal,
         serviceCharge: parsedService,
         discount: parsedDiscount,
-        discountRemarks: discountRemarks
+        discountRemarks: discountRemarks,
+        requiredComponents: validParts
       });
 
-      // 2. Update status to completed
+      // 2. Update status to completed & deduct inventory
       if (paymentRes.success) {
         const statusRes = await api.put(`api/requests/${completingRequestId}/status`, {
-          status: 'Completed'
+          status: 'Completed',
+          requiredComponents: validParts
         });
 
         if (statusRes.success) {
@@ -1933,30 +2003,91 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
 
               <form onSubmit={handleCompleteJobSubmit} className="dashboard-form">
                 
-                {/* 1. Spare Parts Price Breakdown */}
+                {/* 1. Spare Parts / Inventory Used (Editable) */}
                 <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '14px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                     <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#334155', textTransform: 'uppercase' }}>
-                      1. Spare Parts / Inventory Used
+                      1. Spare Parts Used ({completionParts.length})
                     </span>
                     <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#0f172a' }}>
-                      ₹{partsTotal}
+                      Parts Subtotal: ₹{completionParts.reduce((sum, c) => sum + ((Number(c.quantity) || 1) * (Number(c.unitPrice) || 0)), 0)}
                     </span>
                   </div>
-                  {partsList.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', color: '#475569' }}>
-                      {partsList.map((p, i) => (
-                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>• {p.name} × {p.quantity}</span>
-                          <span>₹{(Number(p.unitPrice) || 0) * (Number(p.quantity) || 1)}</span>
+
+                  {/* List of currently attached parts */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto', paddingRight: '2px' }}>
+                    {completionParts.map((item, idx) => (
+                      <div key={idx} style={{ background: '#ffffff', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <div style={{ flex: 1 }}>
+                          {item.name ? (
+                            <div style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a' }}>
+                              {item.name} {item.unitPrice > 0 ? <span style={{ color: '#059669', fontSize: '11px' }}>(₹{item.unitPrice} ea)</span> : ''}
+                            </div>
+                          ) : (
+                            <select
+                              value={item.posProductId ? `pos_${item.posProductId}` : (item.productId ? `sms_${item.productId}` : item.name)}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const matched = catalogProducts.find(p => `pos_${p.posProductId || p.id}` === val || `sms_${p._id}` === val || p.name === val);
+                                if (matched) {
+                                  handleSelectCompletionPart(idx, matched);
+                                } else {
+                                  handleSelectCompletionPart(idx, val);
+                                }
+                              }}
+                              required
+                              style={{ width: '100%', background: '#ffffff', color: '#0f172a', border: '1px solid #cbd5e1', padding: '6px', borderRadius: '6px', fontSize: '12px' }}
+                            >
+                              <option value="">-- Pick Extra Part from Van Kit --</option>
+                              {catalogProducts.map(p => {
+                                const vItem = vanInventory.find(v => 
+                                  (p.posProductId && Number(v.posProductId) === Number(p.posProductId)) || 
+                                  (v.productName && v.productName.trim().toLowerCase() === p.name?.trim().toLowerCase())
+                                );
+                                const vQty = vItem ? vItem.quantity : 0;
+                                return (
+                                  <option key={p._id || p.id} value={p.posProductId ? `pos_${p.posProductId}` : (p._id ? `sms_${p._id}` : p.name)}>
+                                    {p.name} — Van Stock: {vQty} | ₹{p.price || p.unitPrice || 0}
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic' }}>
-                      No spare parts used (Pure service/inspection)
-                    </div>
-                  )}
+
+                        <div style={{ width: '65px' }}>
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.quantity}
+                            onChange={(e) => updateCompletionPartQty(idx, e.target.value)}
+                            style={{ width: '100%', background: '#ffffff', color: '#0f172a', border: '1px solid #cbd5e1', padding: '4px', borderRadius: '6px', textAlign: 'center', fontWeight: 'bold', fontSize: '12px' }}
+                          />
+                        </div>
+
+                        <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#0f172a', minWidth: '45px', textAlign: 'right' }}>
+                          ₹{(Number(item.unitPrice) || 0) * (Number(item.quantity) || 1)}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => removeCompletionPartRow(idx)}
+                          style={{ background: '#fee2e2', border: 'none', color: '#dc2626', padding: '6px', borderRadius: '6px', cursor: 'pointer' }}
+                          title="Remove part"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={addCompletionPartRow}
+                    style={{ width: '100%', marginTop: '8px', padding: '6px', background: '#eff6ff', border: '1px dashed #93c5fd', color: '#2563eb', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                  >
+                    <Plus size={12} /> + Add Extra Part from Van Kit
+                  </button>
                 </div>
 
                 {/* 2. Service Charge Input */}

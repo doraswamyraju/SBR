@@ -272,11 +272,27 @@ exports.updateRequestStatus = async (req, res) => {
         updates.requestReview = true;
       }
 
-      // Deduct requiredComponents from AgentInventory
-      if (request.requiredComponents && request.requiredComponents.length > 0) {
+      // If updated parts list is supplied upon completion
+      if (Array.isArray(req.body.requiredComponents)) {
+        updates.requiredComponents = req.body.requiredComponents.map(c => ({
+          posProductId: c.posProductId || null,
+          productId: c.productId || null,
+          name: c.name || c.productName,
+          sku: c.sku || '',
+          quantity: Number(c.quantity) || 1,
+          unitPrice: Number(c.unitPrice || c.price) || 0
+        }));
+        updates.inventoryTotal = updates.requiredComponents.reduce(
+          (sum, it) => sum + (it.quantity * it.unitPrice), 0
+        );
+      }
+
+      // Deduct final components from AgentInventory
+      const componentsToDeduct = updates.requiredComponents || request.requiredComponents;
+      if (componentsToDeduct && componentsToDeduct.length > 0) {
         try {
           const AgentInventory = require('../models/AgentInventory');
-          for (const comp of request.requiredComponents) {
+          for (const comp of componentsToDeduct) {
             const usedQty = Number(comp.quantity) || 1;
             let invQuery = { agentId: request.assignedAgentId };
             if (comp.posProductId) invQuery.posProductId = comp.posProductId;
@@ -393,7 +409,7 @@ exports.updateRequestImage = async (req, res) => {
 // @access  Private (Agent or Admin)
 exports.updatePaymentDetails = async (req, res) => {
   try {
-    const { amount, method, inventoryTotal, serviceCharge, discount, discountRemarks } = req.body;
+    const { amount, method, inventoryTotal, serviceCharge, discount, discountRemarks, requiredComponents } = req.body;
     if (amount === undefined || !method) {
       return res.status(400).json({ success: false, error: 'Please provide payment amount and method' });
     }
@@ -416,7 +432,22 @@ exports.updatePaymentDetails = async (req, res) => {
       paymentTimestamp: Date.now()
     };
 
-    if (inventoryTotal !== undefined) payUpdates.inventoryTotal = Number(inventoryTotal) || 0;
+    if (Array.isArray(requiredComponents)) {
+      payUpdates.requiredComponents = requiredComponents.map(c => ({
+        posProductId: c.posProductId || null,
+        productId: c.productId || null,
+        name: c.name || c.productName,
+        sku: c.sku || '',
+        quantity: Number(c.quantity) || 1,
+        unitPrice: Number(c.unitPrice || c.price) || 0
+      }));
+      payUpdates.inventoryTotal = payUpdates.requiredComponents.reduce(
+        (sum, it) => sum + (it.quantity * it.unitPrice), 0
+      );
+    } else if (inventoryTotal !== undefined) {
+      payUpdates.inventoryTotal = Number(inventoryTotal) || 0;
+    }
+
     if (serviceCharge !== undefined) payUpdates.serviceCharge = Number(serviceCharge) || 0;
     if (discount !== undefined) payUpdates.discount = Number(discount) || 0;
     if (discountRemarks !== undefined) payUpdates.discountRemarks = discountRemarks || '';

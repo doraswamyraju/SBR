@@ -117,13 +117,16 @@ class RequestViewModel: ObservableObject {
     }
     
     // Update Request Status (Agent)
-    func updateStatus(requestId: String, status: RequestStatus, requestReview: Bool = false) async -> Bool {
+    func updateStatus(requestId: String, status: RequestStatus, requiredComponents: [RequiredComponent]? = nil, requestReview: Bool = false) async -> Bool {
         isLoading = true
         errorMessage = nil
-        let body: [String: AnyEncodable] = [
+        var body: [String: AnyEncodable] = [
             "status": AnyEncodable(status.rawValue),
             "requestReview": AnyEncodable(requestReview)
         ]
+        if let comps = requiredComponents {
+            body["requiredComponents"] = AnyEncodable(comps)
+        }
         do {
             let res = try await APIClient.shared.put(endpoint: "api/requests/\(requestId)/status", body: body, responseType: StandardResponse<ServiceRequest>.self)
             isLoading = false
@@ -140,26 +143,46 @@ class RequestViewModel: ObservableObject {
         }
     }
     
-    // Complete Job & Record Payment (Agent)
-    func completeJob(requestId: String, amount: Double, method: String, requestReview: Bool = false) async -> Bool {
+    // Complete Job & Record Payment with Itemized Split (Agent)
+    func completeJob(
+        requestId: String,
+        amount: Double,
+        method: String,
+        inventoryTotal: Double = 0,
+        serviceCharge: Double = 0,
+        discount: Double = 0,
+        discountRemarks: String = "",
+        requiredComponents: [RequiredComponent]? = nil,
+        requestReview: Bool = false
+    ) async -> Bool {
         isLoading = true
         errorMessage = nil
         
-        let paymentBody: [String: AnyEncodable] = [
+        var paymentBody: [String: AnyEncodable] = [
             "amount": AnyEncodable(amount),
-            "method": AnyEncodable(method)
+            "method": AnyEncodable(method),
+            "inventoryTotal": AnyEncodable(inventoryTotal),
+            "serviceCharge": AnyEncodable(serviceCharge),
+            "discount": AnyEncodable(discount),
+            "discountRemarks": AnyEncodable(discountRemarks)
         ]
+        if let comps = requiredComponents {
+            paymentBody["requiredComponents"] = AnyEncodable(comps)
+        }
         
-        let statusBody: [String: AnyEncodable] = [
+        var statusBody: [String: AnyEncodable] = [
             "status": AnyEncodable(RequestStatus.completed.rawValue),
             "requestReview": AnyEncodable(requestReview)
         ]
+        if let comps = requiredComponents {
+            statusBody["requiredComponents"] = AnyEncodable(comps)
+        }
         
         do {
-            // 1. Record payment details
+            // 1. Record payment details with split
             let paymentRes = try await APIClient.shared.put(endpoint: "api/requests/\(requestId)/payment", body: paymentBody, responseType: StandardResponse<ServiceRequest>.self)
             
-            // 2. Mark request completed
+            // 2. Mark request completed & deduct components
             if paymentRes.success {
                 let statusRes = try await APIClient.shared.put(endpoint: "api/requests/\(requestId)/status", body: statusBody, responseType: StandardResponse<ServiceRequest>.self)
                 isLoading = false

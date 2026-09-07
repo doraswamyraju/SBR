@@ -18,10 +18,21 @@ enum RequestStatus: String, Codable {
 
 struct RequiredComponent: Codable, Identifiable {
     var id: String { productId ?? name }
+    let posProductId: Int?
     let productId: String?
     let name: String
     let sku: String?
     let quantity: Int
+    let unitPrice: Double?
+    
+    init(posProductId: Int? = nil, productId: String? = nil, name: String, sku: String? = nil, quantity: Int = 1, unitPrice: Double? = nil) {
+        self.posProductId = posProductId
+        self.productId = productId
+        self.name = name
+        self.sku = sku
+        self.quantity = quantity
+        self.unitPrice = unitPrice
+    }
 }
 
 struct ServiceRequest: Codable, Identifiable {
@@ -40,6 +51,11 @@ struct ServiceRequest: Codable, Identifiable {
     let beforeImageUrl: String?
     let afterImageUrl: String?
     let paymentAmount: Double?
+    let inventoryTotal: Double?
+    let serviceCharge: Double?
+    let discount: Double?
+    let discountRemarks: String?
+    let finalAmount: Double?
     let paymentStatus: String?
     let paymentMethod: String?
     let paymentTimestamp: String?
@@ -83,7 +99,7 @@ struct ServiceRequest: Codable, Identifiable {
     enum CodingKeys: String, CodingKey {
         case id
         case _id
-        case customerId, assignedAgentId, serviceType, description, customerAddress, latitude, longitude, status, createdBy, acceptedAt, completedAt, beforeImageUrl, afterImageUrl, paymentAmount, paymentStatus, paymentMethod, paymentTimestamp, locationPath, requiredComponents, requestReview, createdAt, updatedAt
+        case customerId, assignedAgentId, serviceType, description, customerAddress, latitude, longitude, status, createdBy, acceptedAt, completedAt, beforeImageUrl, afterImageUrl, paymentAmount, inventoryTotal, serviceCharge, discount, discountRemarks, finalAmount, paymentStatus, paymentMethod, paymentTimestamp, locationPath, requiredComponents, requestReview, createdAt, updatedAt
     }
     
     private static func decodeDate(from container: KeyedDecodingContainer<CodingKeys>, key: CodingKeys) -> String? {
@@ -160,6 +176,11 @@ struct ServiceRequest: Codable, Identifiable {
         self.beforeImageUrl = try container.decodeIfPresent(String.self, forKey: .beforeImageUrl)
         self.afterImageUrl = try container.decodeIfPresent(String.self, forKey: .afterImageUrl)
         self.paymentAmount = Self.decodeDouble(from: container, key: .paymentAmount)
+        self.inventoryTotal = Self.decodeDouble(from: container, key: .inventoryTotal)
+        self.serviceCharge = Self.decodeDouble(from: container, key: .serviceCharge)
+        self.discount = Self.decodeDouble(from: container, key: .discount)
+        self.discountRemarks = try container.decodeIfPresent(String.self, forKey: .discountRemarks)
+        self.finalAmount = Self.decodeDouble(from: container, key: .finalAmount)
         self.paymentStatus = try container.decodeIfPresent(String.self, forKey: .paymentStatus)
         self.paymentMethod = try container.decodeIfPresent(String.self, forKey: .paymentMethod)
         self.paymentTimestamp = Self.decodeDate(from: container, key: .paymentTimestamp)
@@ -188,6 +209,11 @@ struct ServiceRequest: Codable, Identifiable {
         try container.encodeIfPresent(beforeImageUrl, forKey: .beforeImageUrl)
         try container.encodeIfPresent(afterImageUrl, forKey: .afterImageUrl)
         try container.encodeIfPresent(paymentAmount, forKey: .paymentAmount)
+        try container.encodeIfPresent(inventoryTotal, forKey: .inventoryTotal)
+        try container.encodeIfPresent(serviceCharge, forKey: .serviceCharge)
+        try container.encodeIfPresent(discount, forKey: .discount)
+        try container.encodeIfPresent(discountRemarks, forKey: .discountRemarks)
+        try container.encodeIfPresent(finalAmount, forKey: .finalAmount)
         try container.encodeIfPresent(paymentStatus, forKey: .paymentStatus)
         try container.encodeIfPresent(paymentMethod, forKey: .paymentMethod)
         try container.encodeIfPresent(paymentTimestamp, forKey: .paymentTimestamp)

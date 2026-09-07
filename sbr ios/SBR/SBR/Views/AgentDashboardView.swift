@@ -23,6 +23,9 @@ struct AgentDashboardView: View {
     @State private var pickerImageType = "before"
     @State private var activeJobForUpload: ServiceRequest? = nil
     
+    @State private var assessingJob: ServiceRequest? = nil
+    @State private var completingJob: ServiceRequest? = nil
+    
     private var activeJob: ServiceRequest? {
         requestVM.requests.first(where: { $0.status == .accepted || $0.status == .inProgress })
     }
@@ -50,16 +53,18 @@ struct AgentDashboardView: View {
                         authVM: authVM,
                         onNavigateToSection: { selectedSection = $0 },
                         selectedRequestDetail: $selectedRequestDetail,
-                        onShowCompletedRequests: { showingCompletedRequestsSheet = true }
+                        onShowCompletedRequests: { showingCompletedRequestsSheet = true },
+                        onAssessJob: { assessingJob = $0 }
                     )
                 case .newRequests:
-                    AgentNewRequestsView(requestVM: requestVM)
+                    AgentNewRequestsView(requestVM: requestVM, onAssessJob: { assessingJob = $0 })
                 case .activeService:
                     AgentActiveServiceView(
                         requestVM: requestVM,
                         showingImagePicker: $showingImagePicker,
                         pickerImageType: $pickerImageType,
-                        activeJobForUpload: $activeJobForUpload
+                        activeJobForUpload: $activeJobForUpload,
+                        onCompleteJob: { completingJob = $0 }
                     )
                 case .vanInventory:
                     AgentInventoryView()
@@ -76,6 +81,16 @@ struct AgentDashboardView: View {
         }
         .sheet(item: $selectedRequestDetail) { job in
             RequestDetailView(request: job, requestVM: requestVM)
+        }
+        .sheet(item: $assessingJob) { job in
+            AgentAssessmentSheet(job: job, requestVM: requestVM) {
+                assessingJob = nil
+            }
+        }
+        .sheet(item: $completingJob) { job in
+            AgentPaymentBreakdownSheet(job: job, requestVM: requestVM) {
+                completingJob = nil
+            }
         }
         .onAppear {
             Task {
@@ -168,6 +183,7 @@ struct AgentDashboardContent: View {
     let onNavigateToSection: (AgentSection) -> Void
     @Binding var selectedRequestDetail: ServiceRequest?
     var onShowCompletedRequests: (() -> Void)? = nil
+    var onAssessJob: ((ServiceRequest) -> Void)? = nil
     
     private var offers: [ServiceRequest] {
         requestVM.requests.filter({ $0.status == .assigned })
@@ -309,14 +325,9 @@ struct AgentDashboardContent: View {
                                     }
                                     
                                     Button(action: {
-                                        Task {
-                                            let success = await requestVM.updateStatus(requestId: job.id, status: .accepted)
-                                            if success {
-                                                await requestVM.fetchRequests()
-                                            }
-                                        }
+                                        onAssessJob?(job)
                                     }) {
-                                        Text("Accept")
+                                        Text("Assess & Accept")
                                             .font(.subheadline)
                                             .fontWeight(.bold)
                                             .foregroundColor(.white)
@@ -353,6 +364,7 @@ struct AgentDashboardContent: View {
 // New Assigned Requests list view screen
 struct AgentNewRequestsView: View {
     @ObservedObject var requestVM: RequestViewModel
+    var onAssessJob: ((ServiceRequest) -> Void)? = nil
     
     var body: some View {
         VStack {
@@ -399,14 +411,9 @@ struct AgentNewRequestsView: View {
                             }
                             
                             Button(action: {
-                                Task {
-                                    let success = await requestVM.updateStatus(requestId: job.id, status: .accepted)
-                                    if success {
-                                        await requestVM.fetchRequests()
-                                    }
-                                }
+                                onAssessJob?(job)
                             }) {
-                                Text("Accept")
+                                Text("Assess & Accept")
                                     .font(.subheadline)
                                     .fontWeight(.bold)
                                     .foregroundColor(.white)
@@ -443,16 +450,12 @@ struct AgentNewRequestsView: View {
 }
 
 // Active service details and action handlers
-// Active service details and action handlers
 struct AgentActiveServiceView: View {
     @ObservedObject var requestVM: RequestViewModel
     @Binding var showingImagePicker: Bool
     @Binding var pickerImageType: String
     @Binding var activeJobForUpload: ServiceRequest?
-    
-    @State private var showingPaymentDialog = false
-    @State private var collectAmount = ""
-    @State private var paymentMethod = "Cash"
+    var onCompleteJob: ((ServiceRequest) -> Void)? = nil
     
     private var activeJob: ServiceRequest? {
         requestVM.requests.first(where: { $0.status == .accepted || $0.status == .inProgress })
@@ -527,6 +530,42 @@ struct AgentActiveServiceView: View {
                                         .font(.caption)
                                         .foregroundColor(.gray)
                                 }
+                            }
+                            
+                            // Allocated Spares Section (if any)
+                            if let comps = job.requiredComponents, !comps.isEmpty {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        Image(systemName: "shippingbox.fill")
+                                            .foregroundColor(.orange)
+                                        Text("Allocated Spare Parts")
+                                            .font(.subheadline)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(SBRColors.textPrimary)
+                                        Spacer()
+                                        if let total = job.inventoryTotal, total > 0 {
+                                            Text("₹\(Int(total))")
+                                                .font(.subheadline)
+                                                .fontWeight(.bold)
+                                                .foregroundColor(.orange)
+                                        }
+                                    }
+                                    
+                                    ForEach(comps) { comp in
+                                        HStack {
+                                            Text("• \(comp.name)")
+                                                .font(.footnote)
+                                                .foregroundColor(SBRColors.textPrimary)
+                                            Spacer()
+                                            Text("Qty: \(comp.quantity) \(comp.unitPrice != nil ? "(@ ₹\(Int(comp.unitPrice!)))" : "")")
+                                                .font(.footnote)
+                                                .foregroundColor(.gray)
+                                        }
+                                    }
+                                }
+                                .padding(12)
+                                .background(Color.orange.opacity(0.08))
+                                .cornerRadius(10)
                             }
                             
                             if job.paymentStatus == "Paid" {
@@ -616,11 +655,12 @@ struct AgentActiveServiceView: View {
                                             .cornerRadius(8)
                                     }
                                     .disabled(requestVM.isLoading)
-                                } else if job.paymentStatus != "Paid" {
+                                } else {
+                                    // Step 6: Payment Split with Spares, Service Charge, Discount & Review options
                                     Button(action: {
-                                        showingPaymentDialog = true
+                                        onCompleteJob?(job)
                                     }) {
-                                        Label("Update Payment Details", systemImage: "creditcard.fill")
+                                        Label("Step 6: Payment Split & Close Service", systemImage: "creditcard.fill")
                                             .font(.subheadline)
                                             .fontWeight(.bold)
                                             .foregroundColor(.white)
@@ -630,43 +670,6 @@ struct AgentActiveServiceView: View {
                                             .cornerRadius(8)
                                     }
                                     .disabled(requestVM.isLoading)
-                                } else {
-                                    VStack(spacing: 12) {
-                                        Text("Payment Collected: ₹\(Int(job.paymentAmount ?? 0))")
-                                            .font(.footnote)
-                                            .fontWeight(.bold)
-                                            .foregroundColor(.green)
-                                            .frame(maxWidth: .infinity, alignment: .center)
-                                            .padding(.vertical, 4)
-                                        
-                                        Button(action: {
-                                            closeService(job, requestReview: true)
-                                        }) {
-                                            Label("Close Service & Request Review", systemImage: "checkmark.seal.fill")
-                                                .font(.subheadline)
-                                                .fontWeight(.bold)
-                                                .foregroundColor(.white)
-                                                .frame(maxWidth: .infinity)
-                                                .padding(.vertical, 12)
-                                                .background(SBRColors.primaryBlue)
-                                                .cornerRadius(8)
-                                        }
-                                        .disabled(requestVM.isLoading)
-                                        
-                                        Button(action: {
-                                            closeService(job, requestReview: false)
-                                        }) {
-                                            Label("Close Service (No Review)", systemImage: "checkmark.circle.fill")
-                                                .font(.subheadline)
-                                                .fontWeight(.bold)
-                                                .foregroundColor(.white)
-                                                .frame(maxWidth: .infinity)
-                                                .padding(.vertical, 12)
-                                                .background(Color.gray)
-                                                .cornerRadius(8)
-                                        }
-                                        .disabled(requestVM.isLoading)
-                                    }
                                 }
                             default:
                                 Text("This job is complete.")
@@ -695,65 +698,9 @@ struct AgentActiveServiceView: View {
             }
         }
         .background(Color(red: 0.97, green: 0.98, blue: 1.0))
-        .sheet(isPresented: $showingPaymentDialog) {
-            if let job = activeJob {
-                PaymentDialogView(amount: $collectAmount, method: $paymentMethod, onCancel: {
-                    showingPaymentDialog = false
-                }, onSubmit: {
-                    handlePaymentOnlySubmit(jobId: job.id)
-                })
-            }
-        }
-    }
-    
-    // Extracted helper actions to speed up compiler type-checking
-    private func uploadBeforeAndStartWork(_ job: ServiceRequest) {
-        Task {
-            let mockData = UIImage(systemName: "camera.fill")?.pngData() ?? Data()
-            let uploadSuccess = await requestVM.uploadRequestImage(requestId: job.id, imageData: mockData, type: "before")
-            if uploadSuccess {
-                let statusSuccess = await requestVM.updateStatus(requestId: job.id, status: .inProgress)
-                if statusSuccess {
-                    await requestVM.fetchRequests()
-                }
-            }
-        }
-    }
-    
-    private func uploadAfterImageOnly(_ job: ServiceRequest) {
-        Task {
-            let mockData = UIImage(systemName: "camera.fill")?.pngData() ?? Data()
-            let uploadSuccess = await requestVM.uploadRequestImage(requestId: job.id, imageData: mockData, type: "after")
-            if uploadSuccess {
-                await requestVM.fetchRequests()
-            }
-        }
-    }
-    
-    private func handlePaymentOnlySubmit(jobId: String) {
-        Task {
-            let amountVal = Double(collectAmount) ?? 0.0
-            let success = await requestVM.recordPayment(requestId: jobId, amount: amountVal, method: paymentMethod)
-            if success {
-                showingPaymentDialog = false
-                collectAmount = ""
-                await requestVM.fetchRequests()
-            }
-        }
-    }
-    
-    private func closeService(_ job: ServiceRequest, requestReview: Bool) {
-        Task {
-            let success = await requestVM.updateStatus(requestId: job.id, status: .completed, requestReview: requestReview)
-            if success {
-                requestVM.stopLocationTracking()
-                await requestVM.fetchRequests()
-            }
-        }
     }
 }
 
-// Side list item shell for Agent My Profile view
 // Side list item shell for Agent My Profile view (matched with Android screen)
 struct AgentProfileScreenView: View {
     @ObservedObject var authVM: AuthViewModel
@@ -1001,43 +948,668 @@ struct ProfileStatRow: View {
     }
 }
 
-// Complete Job Payment Dialogue View
-struct PaymentDialogView: View {
-    @Binding var amount: String
-    @Binding var method: String
-    let onCancel: () -> Void
-    let onSubmit: () -> Void
+// MARK: - Step 3: Agent Assessment Sheet
+struct AgentAssessmentSheet: View {
+    let job: ServiceRequest
+    @ObservedObject var requestVM: RequestViewModel
+    let onDismiss: () -> Void
+    
+    @State private var assessmentType: String = "service_only" // "service_only" or "spare_parts"
+    @State private var vanItems: [AgentInventoryItem] = []
+    @State private var selectedComponents: [RequiredComponent] = []
+    @State private var isLoadingVanStock = false
+    @State private var selectedInventoryItemId: String = ""
+    @State private var partQuantity: Int = 1
+    @State private var isSubmitting = false
+    @State private var alertMessage: String? = nil
+    @State private var showAlert = false
     
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Payment Details").foregroundColor(.gray)) {
-                    TextField("Amount Collected (INR)", text: $amount)
-                        .keyboardType(.numberPad)
+                Section(header: Text("1. Call & Assess Customer Request").foregroundColor(.gray)) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(job.serviceType)
+                            .font(.headline)
+                            .foregroundColor(SBRColors.textPrimary)
+                        Text("Customer: \(job.customerId?.name ?? "Client")")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        Text("Address: \(job.customerAddress)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.vertical, 4)
                     
-                    Picker("Method", selection: $method) {
-                        Text("Cash").tag("Cash")
-                        Text("UPI / Online").tag("UPI / Online")
-                        Text("Card").tag("Card")
+                    if let phone = job.customerId?.phone {
+                        Button(action: {
+                            if let url = URL(string: "tel:\(phone)") {
+                                UIApplication.shared.open(url)
+                            }
+                        }) {
+                            Label("Call Customer: \(phone)", systemImage: "phone.fill")
+                                .font(.subheadline)
+                                .fontWeight(.bold)
+                                .foregroundColor(SBRColors.primaryBlue)
+                        }
+                    }
+                }
+                
+                Section(header: Text("2. Job Requirement Assessment").foregroundColor(.gray)) {
+                    Picker("Requirement", selection: $assessmentType) {
+                        Text("Service Only").tag("service_only")
+                        Text("Requires Spares").tag("spare_parts")
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                }
+                
+                if assessmentType == "spare_parts" {
+                    Section(header: Text("3. Allocate Parts from Van Stock").foregroundColor(.gray)) {
+                        if isLoadingVanStock {
+                            HStack {
+                                ProgressView()
+                                Text("Loading van inventory...")
+                                    .font(.footnote)
+                                    .foregroundColor(.gray)
+                            }
+                        } else if vanItems.isEmpty {
+                            Text("No spare parts found in your van inventory.")
+                                .font(.footnote)
+                                .foregroundColor(.red)
+                        } else {
+                            Picker("Select Spare Part", selection: $selectedInventoryItemId) {
+                                Text("Choose a part").tag("")
+                                ForEach(vanItems) { item in
+                                    Text("\(item.productId?.name ?? "Part") (Stock: \(item.quantity)) - ₹\(Int(item.productId?.price ?? 0))")
+                                        .tag(item.id)
+                                }
+                            }
+                            
+                            if !selectedInventoryItemId.isEmpty {
+                                Stepper("Quantity: \(partQuantity)", value: $partQuantity, in: 1...50)
+                                
+                                Button(action: addPartToSelection) {
+                                    Label("Add Part to Job", systemImage: "plus.circle.fill")
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(SBRColors.primaryBlue)
+                                }
+                            }
+                        }
+                    }
+                    
+                    if !selectedComponents.isEmpty {
+                        Section(header: Text("Allocated Parts Summary").foregroundColor(.gray)) {
+                            ForEach(selectedComponents) { comp in
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(comp.name)
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                        Text("Qty: \(comp.quantity) × ₹\(Int(comp.unitPrice ?? 0))")
+                                            .font(.caption)
+                                            .foregroundColor(.gray)
+                                    }
+                                    Spacer()
+                                    Text("₹\(Int(Double(comp.quantity) * (comp.unitPrice ?? 0.0)))")
+                                        .font(.subheadline)
+                                        .fontWeight(.bold)
+                                    
+                                    Button(action: {
+                                        selectedComponents.removeAll(where: { $0.id == comp.id })
+                                    }) {
+                                        Image(systemName: "trash")
+                                            .foregroundColor(.red)
+                                    }
+                                    .buttonStyle(BorderlessButtonStyle())
+                                    .padding(.leading, 8)
+                                }
+                            }
+                            
+                            HStack {
+                                Text("Estimated Parts Total")
+                                    .fontWeight(.bold)
+                                Spacer()
+                                Text("₹\(Int(estimatedPartsTotal))")
+                                    .fontWeight(.bold)
+                                    .foregroundColor(SBRColors.primaryBlue)
+                            }
+                        }
                     }
                 }
                 
                 Section {
-                    Button(action: onSubmit) {
-                        Text("Confirm & Close Job")
-                            .fontWeight(.bold)
-                            .foregroundColor(.green)
+                    Button(action: confirmAcceptance) {
+                        HStack {
+                            Spacer()
+                            if isSubmitting {
+                                ProgressView().tint(.white)
+                            } else {
+                                Text(assessmentType == "service_only" ? "Confirm & Accept (Service Only)" : "Confirm & Allocate Spares (₹\(Int(estimatedPartsTotal)))")
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.white)
+                            }
+                            Spacer()
+                        }
                     }
-                    .disabled(amount.isEmpty)
+                    .padding(.vertical, 4)
+                    .listRowBackground(SBRColors.primaryBlue)
+                    .disabled(isSubmitting || (assessmentType == "spare_parts" && selectedComponents.isEmpty))
+                }
+            }
+            .navigationTitle("Assess & Accept")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { onDismiss() }
+                }
+            }
+            .onAppear {
+                fetchVanStock()
+            }
+            .alert("Notice", isPresented: $showAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(alertMessage ?? "")
+            }
+        }
+    }
+    
+    private var estimatedPartsTotal: Double {
+        selectedComponents.reduce(0.0) { $0 + (Double($1.quantity) * ($1.unitPrice ?? 0.0)) }
+    }
+    
+    private func fetchVanStock() {
+        isLoadingVanStock = true
+        Task {
+            do {
+                let res = try await APIClient.shared.get(
+                    endpoint: "api/agent-inventory/my-stock",
+                    responseType: APIResponse<[AgentInventoryItem]>.self
+                )
+                DispatchQueue.main.async {
+                    self.vanItems = res.data ?? []
+                    self.isLoadingVanStock = false
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.isLoadingVanStock = false
+                }
+            }
+        }
+    }
+    
+    private func addPartToSelection() {
+        guard let item = vanItems.first(where: { $0.id == selectedInventoryItemId }) else { return }
+        let prodName = item.productId?.name ?? "Spare Part"
+        let prodSku = item.productId?.sku
+        let prodPrice = item.productId?.price ?? 0.0
+        let prodId = item.productId?._id ?? item.id
+        
+        if let idx = selectedComponents.firstIndex(where: { $0.productId == prodId || $0.name == prodName }) {
+            let existing = selectedComponents[idx]
+            selectedComponents[idx] = RequiredComponent(
+                posProductId: existing.posProductId,
+                productId: prodId,
+                name: prodName,
+                sku: prodSku,
+                quantity: existing.quantity + partQuantity,
+                unitPrice: prodPrice
+            )
+        } else {
+            selectedComponents.append(RequiredComponent(
+                productId: prodId,
+                name: prodName,
+                sku: prodSku,
+                quantity: partQuantity,
+                unitPrice: prodPrice
+            ))
+        }
+        
+        selectedInventoryItemId = ""
+        partQuantity = 1
+    }
+    
+    private func confirmAcceptance() {
+        isSubmitting = true
+        Task {
+            let compsToSend = assessmentType == "spare_parts" ? selectedComponents : []
+            let success = await requestVM.updateStatus(
+                requestId: job.id,
+                status: .accepted,
+                requiredComponents: compsToSend
+            )
+            DispatchQueue.main.async {
+                self.isSubmitting = false
+                if success {
+                    self.onDismiss()
+                    Task { await self.requestVM.fetchRequests() }
+                } else {
+                    self.alertMessage = self.requestVM.errorMessage ?? "Failed to accept request"
+                    self.showAlert = true
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Step 6: Payment Breakdown Sheet with Dynamic Extra Spares & Google Review Options
+struct AgentPaymentBreakdownSheet: View {
+    let job: ServiceRequest
+    @ObservedObject var requestVM: RequestViewModel
+    let onDismiss: () -> Void
+    
+    @State private var components: [RequiredComponent] = []
+    @State private var serviceChargeText: String = "350"
+    @State private var discountText: String = "0"
+    @State private var discountRemarks: String = ""
+    @State private var paymentMethod: String = "Cash"
+    
+    // Dynamic parts addition during Step 6
+    @State private var showAddExtraPartSheet = false
+    @State private var vanItems: [AgentInventoryItem] = []
+    @State private var selectedExtraItemId: String = ""
+    @State private var extraQuantity: Int = 1
+    @State private var extraUnitPrice: String = ""
+    @State private var isLoadingVanStock = false
+    @State private var isSubmitting = false
+    @State private var alertMessage: String? = nil
+    @State private var showAlert = false
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                // Job Summary Header
+                Section(header: Text("Job Details").foregroundColor(.gray)) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(job.serviceType)
+                            .font(.headline)
+                            .foregroundColor(SBRColors.textPrimary)
+                        Text("Customer: \(job.customerId?.name ?? "Client")")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        Text(job.customerAddress)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.vertical, 2)
+                }
+                
+                // Step 6 Dynamic Parts Used Section
+                Section(header: HStack {
+                    Text("1. Spare Parts Used")
+                        .foregroundColor(.gray)
+                    Spacer()
+                    Button(action: { showAddExtraPartSheet = true }) {
+                        HStack(spacing: 3) {
+                            Image(systemName: "plus.circle.fill")
+                            Text("Add Extra Part")
+                        }
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundColor(SBRColors.primaryBlue)
+                    }
+                }) {
+                    if components.isEmpty {
+                        Text("No spare parts recorded. Tap '+ Add Extra Part' if any spares were used on site.")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                            .padding(.vertical, 4)
+                    } else {
+                        ForEach(components) { comp in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(comp.name)
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                    Text("Qty: \(comp.quantity) × ₹\(Int(comp.unitPrice ?? 0))")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                }
+                                Spacer()
+                                Text("₹\(Int(Double(comp.quantity) * (comp.unitPrice ?? 0.0)))")
+                                    .font(.subheadline)
+                                    .fontWeight(.bold)
+                                
+                                Button(action: {
+                                    components.removeAll(where: { $0.id == comp.id })
+                                }) {
+                                    Image(systemName: "trash")
+                                        .foregroundColor(.red)
+                                }
+                                .buttonStyle(BorderlessButtonStyle())
+                                .padding(.leading, 8)
+                            }
+                        }
+                        
+                        HStack {
+                            Text("Parts Subtotal")
+                                .fontWeight(.semibold)
+                            Spacer()
+                            Text("₹\(Int(inventorySubtotal))")
+                                .fontWeight(.bold)
+                                .foregroundColor(SBRColors.primaryBlue)
+                        }
+                    }
+                }
+                
+                // Service Charge & Store Discount Breakdown
+                Section(header: Text("2. Service Charge & Store Discount").foregroundColor(.gray)) {
+                    HStack {
+                        Text("Service Charge (₹)")
+                            .font(.subheadline)
+                        Spacer()
+                        TextField("350", text: $serviceChargeText)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 100)
+                    }
                     
-                    Button(action: onCancel) {
-                        Text("Cancel")
-                            .foregroundColor(.red)
+                    HStack {
+                        Text("Store Discount (₹)")
+                            .font(.subheadline)
+                        Spacer()
+                        TextField("0", text: $discountText)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 100)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("⚠️ Store In-Charge Verification:")
+                            .font(.caption2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.orange)
+                        Text("Any discount entered here must be confirmed with the Store In-Charge or Admin.")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.vertical, 2)
+                    
+                    TextField("Reason for discount (optional)", text: $discountRemarks)
+                        .font(.footnote)
+                }
+                
+                // Payment Method & Summary
+                Section(header: Text("3. Payment Method & Final Amount").foregroundColor(.gray)) {
+                    Picker("Payment Method", selection: $paymentMethod) {
+                        Text("Cash").tag("Cash")
+                        Text("UPI").tag("UPI")
+                        Text("Card").tag("Card")
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    
+                    VStack(spacing: 8) {
+                        HStack {
+                            Text("Parts Subtotal:")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text("₹\(Int(inventorySubtotal))")
+                                .font(.subheadline)
+                        }
+                        HStack {
+                            Text("Service Charge:")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text("+ ₹\(Int(serviceChargeValue))")
+                                .font(.subheadline)
+                        }
+                        if discountValue > 0 {
+                            HStack {
+                                Text("Discount:")
+                                    .font(.subheadline)
+                                    .foregroundColor(.red)
+                                Spacer()
+                                Text("- ₹\(Int(discountValue))")
+                                    .font(.subheadline)
+                                    .foregroundColor(.red)
+                            }
+                        }
+                        Divider()
+                        HStack {
+                            Text("Net Total Payable:")
+                                .font(.headline)
+                                .fontWeight(.bold)
+                            Spacer()
+                            Text("₹\(Int(netTotal))")
+                                .font(.title3)
+                                .fontWeight(.heavy)
+                                .foregroundColor(SBRColors.primaryBlue)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+                
+                // Closeout Buttons: With Google Review vs Without Review
+                Section {
+                    VStack(spacing: 12) {
+                        Button(action: { completeJobAction(requestReview: true) }) {
+                            HStack {
+                                Spacer()
+                                if isSubmitting {
+                                    ProgressView().tint(.white)
+                                } else {
+                                    Label("Collect ₹\(Int(netTotal)) & Close with Review", systemImage: "star.fill")
+                                        .font(.subheadline)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.white)
+                                }
+                                Spacer()
+                            }
+                        }
+                        .padding(.vertical, 4)
+                        .listRowBackground(SBRColors.primaryBlue)
+                        .disabled(isSubmitting)
+                        
+                        Button(action: { completeJobAction(requestReview: false) }) {
+                            HStack {
+                                Spacer()
+                                Label("Collect ₹\(Int(netTotal)) & Close (No Review)", systemImage: "checkmark.circle.fill")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                            }
+                        }
+                        .padding(.vertical, 2)
+                        .disabled(isSubmitting)
                     }
                 }
             }
-            .navigationTitle("Job Closeout")
+            .navigationTitle("Payment & Completion")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { onDismiss() }
+                }
+            }
+            .onAppear {
+                initValues()
+            }
+            .sheet(isPresented: $showAddExtraPartSheet) {
+                addExtraPartSheet
+            }
+            .alert("Notice", isPresented: $showAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(alertMessage ?? "")
+            }
+        }
+    }
+    
+    private var inventorySubtotal: Double {
+        components.reduce(0.0) { $0 + (Double($1.quantity) * ($1.unitPrice ?? 0.0)) }
+    }
+    
+    private var serviceChargeValue: Double {
+        Double(serviceChargeText) ?? 0.0
+    }
+    
+    private var discountValue: Double {
+        Double(discountText) ?? 0.0
+    }
+    
+    private var netTotal: Double {
+        max(0.0, inventorySubtotal + serviceChargeValue - discountValue)
+    }
+    
+    private func initValues() {
+        if let existing = job.requiredComponents, !existing.isEmpty {
+            self.components = existing
+        }
+        if let sc = job.serviceCharge, sc > 0 {
+            self.serviceChargeText = "\(Int(sc))"
+        }
+        if let disc = job.discount, disc > 0 {
+            self.discountText = "\(Int(disc))"
+        }
+        if let remarks = job.discountRemarks {
+            self.discountRemarks = remarks
+        }
+        fetchVanStock()
+    }
+    
+    private func fetchVanStock() {
+        isLoadingVanStock = true
+        Task {
+            do {
+                let res = try await APIClient.shared.get(
+                    endpoint: "api/agent-inventory/my-stock",
+                    responseType: APIResponse<[AgentInventoryItem]>.self
+                )
+                DispatchQueue.main.async {
+                    self.vanItems = res.data ?? []
+                    self.isLoadingVanStock = false
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.isLoadingVanStock = false
+                }
+            }
+        }
+    }
+    
+    // Modal to add extra part from van inventory
+    private var addExtraPartSheet: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("Select Extra Spare Part").foregroundColor(.gray)) {
+                    if isLoadingVanStock {
+                        ProgressView("Loading stock...")
+                    } else if vanItems.isEmpty {
+                        Text("No stock items found in your van.")
+                            .foregroundColor(.red)
+                    } else {
+                        Picker("Select Part", selection: $selectedExtraItemId) {
+                            Text("Choose Part").tag("")
+                            ForEach(vanItems) { item in
+                                Text("\(item.productId?.name ?? "Part") (Stock: \(item.quantity)) - ₹\(Int(item.productId?.price ?? 0))")
+                                    .tag(item.id)
+                            }
+                        }
+                        .onChange(of: selectedExtraItemId) { newId in
+                            if let item = vanItems.first(where: { $0.id == newId }) {
+                                extraUnitPrice = "\(Int(item.productId?.price ?? 0))"
+                            }
+                        }
+                        
+                        Stepper("Quantity: \(extraQuantity)", value: $extraQuantity, in: 1...50)
+                        
+                        HStack {
+                            Text("Unit Price (₹)")
+                            Spacer()
+                            TextField("Price", text: $extraUnitPrice)
+                                .keyboardType(.numberPad)
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 100)
+                        }
+                    }
+                }
+                
+                Section {
+                    Button(action: addExtraPart) {
+                        HStack {
+                            Spacer()
+                            Text("Add to Job Summary")
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                            Spacer()
+                        }
+                    }
+                    .listRowBackground(SBRColors.primaryBlue)
+                    .disabled(selectedExtraItemId.isEmpty)
+                }
+            }
+            .navigationTitle("Add Extra Spare Part")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { showAddExtraPartSheet = false }
+                }
+            }
+        }
+    }
+    
+    private func addExtraPart() {
+        guard let item = vanItems.first(where: { $0.id == selectedExtraItemId }) else { return }
+        let prodName = item.productId?.name ?? "Spare Part"
+        let prodSku = item.productId?.sku
+        let prodPrice = Double(extraUnitPrice) ?? (item.productId?.price ?? 0.0)
+        let prodId = item.productId?._id ?? item.id
+        
+        if let idx = components.firstIndex(where: { $0.productId == prodId || $0.name == prodName }) {
+            let existing = components[idx]
+            components[idx] = RequiredComponent(
+                posProductId: existing.posProductId,
+                productId: prodId,
+                name: prodName,
+                sku: prodSku,
+                quantity: existing.quantity + extraQuantity,
+                unitPrice: prodPrice
+            )
+        } else {
+            components.append(RequiredComponent(
+                productId: prodId,
+                name: prodName,
+                sku: prodSku,
+                quantity: extraQuantity,
+                unitPrice: prodPrice
+            ))
+        }
+        
+        selectedExtraItemId = ""
+        extraQuantity = 1
+        extraUnitPrice = ""
+        showAddExtraPartSheet = false
+    }
+    
+    private func completeJobAction(requestReview: Bool) {
+        isSubmitting = true
+        Task {
+            let success = await requestVM.completeJob(
+                requestId: job.id,
+                inventoryTotal: inventorySubtotal,
+                serviceCharge: serviceChargeValue,
+                discount: discountValue,
+                discountRemarks: discountRemarks.isEmpty ? nil : discountRemarks,
+                finalAmount: netTotal,
+                paymentMethod: paymentMethod,
+                requiredComponents: components,
+                requestReview: requestReview
+            )
+            
+            DispatchQueue.main.async {
+                self.isSubmitting = false
+                if success {
+                    self.requestVM.stopLocationTracking()
+                    self.onDismiss()
+                    Task { await self.requestVM.fetchRequests() }
+                } else {
+                    self.alertMessage = self.requestVM.errorMessage ?? "Failed to close service."
+                    self.showAlert = true
+                }
+            }
         }
     }
 }
