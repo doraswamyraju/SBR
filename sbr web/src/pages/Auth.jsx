@@ -16,6 +16,7 @@ const Auth = ({ handleNavigation }) => {
 
   const handleRedirect = (userRole) => {
     if (userRole === 'ADMIN') handleNavigation('admin-dashboard');
+    else if (userRole === 'STORE_INCHARGE') handleNavigation('store-incharge-dashboard');
     else if (userRole === 'AGENT') handleNavigation('agent-dashboard');
     else handleNavigation('customer-dashboard');
   };
@@ -136,6 +137,7 @@ const Auth = ({ handleNavigation }) => {
                 >
                   <option value="CUSTOMER">Customer / Client</option>
                   <option value="AGENT">Service Agent</option>
+                  <option value="STORE_INCHARGE">Store In-Charge</option>
                 </select>
               </div>
             </>

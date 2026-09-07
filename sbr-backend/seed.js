@@ -22,6 +22,13 @@ const users = [
     specialization: 'Solar Installer'
   },
   {
+    name: 'Store In-Charge',
+    email: 'store@sbr.com',
+    password: 'store123',
+    role: 'STORE_INCHARGE',
+    phone: '1234567899'
+  },
+  {
     name: 'Customer One',
     email: 'customer1@sbr.com',
     password: 'customer123',
