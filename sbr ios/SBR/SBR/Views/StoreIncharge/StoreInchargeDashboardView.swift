@@ -380,19 +380,19 @@ struct StoreInchargeDashboardView: View {
         do {
             async let reqRes = APIClient.shared.get(
                 endpoint: "api/requests",
-                responseType: ApiResponse<[ServiceRequest]>.self
+                responseType: APIResponse<[ServiceRequest]>.self
             )
             async let usersRes = APIClient.shared.get(
                 endpoint: "api/users",
-                responseType: ApiResponse<[User]>.self
+                responseType: APIResponse<[User]>.self
             )
             async let handRes = APIClient.shared.get(
                 endpoint: "api/handovers/pending",
-                responseType: ApiResponse<[CashHandover]>.self
+                responseType: APIResponse<[CashHandover]>.self
             )
             async let indRes = APIClient.shared.get(
                 endpoint: "api/indents/pending",
-                responseType: ApiResponse<[AgentIndent]>.self
+                responseType: APIResponse<[AgentIndent]>.self
             )
             
             let (r, u, h, ind) = try await (reqRes, usersRes, handRes, indRes)

@@ -18,47 +18,53 @@ struct AgentInventoryView: View {
     @State private var showAlert = false
     
     var body: some View {
-        NavigationView {
-            VStack(spacing: 0) {
+        VStack(spacing: 0) {
+            // Action Header with Raise Indent button
+            HStack {
                 // Tab Picker
                 Picker("Tab", selection: $selectedTab) {
-                    Text("Van Kit Stock").tag(0)
-                    Text("Requisitions / Indents").tag(1)
+                    Text("Van Kit Stock (\(items.count))").tag(0)
+                    Text("Requisitions / Indents (\(indents.count))").tag(1)
                 }
                 .pickerStyle(SegmentedPickerStyle())
-                .padding()
                 
-                if isLoading {
-                    Spacer()
-                    ProgressView("Loading inventory data...")
-                    Spacer()
-                } else if selectedTab == 0 {
-                    vanStockList
-                } else {
-                    indentsList
-                }
-            }
-            .navigationTitle("Van Inventory & Kits")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showIndentSheet = true }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "plus.circle.fill")
-                            Text("Raise Indent")
-                        }
+                Button(action: { showIndentSheet = true }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "plus.circle.fill")
+                        Text("Raise Indent")
                     }
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(SBRColors.primaryBlue)
+                    .cornerRadius(8)
                 }
             }
-            .sheet(isPresented: $showIndentSheet) {
-                raiseIndentSheet
+            .padding(.horizontal)
+            .padding(.vertical, 10)
+            
+            if isLoading {
+                Spacer()
+                ProgressView("Loading inventory data...")
+                Spacer()
+            } else if selectedTab == 0 {
+                vanStockList
+            } else {
+                indentsList
             }
-            .alert("Notice", isPresented: $showAlert) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(alertMessage)
-            }
-            .onAppear(perform: loadData)
         }
+        .background(Color(red: 0.97, green: 0.98, blue: 1.0))
+        .sheet(isPresented: $showIndentSheet) {
+            raiseIndentSheet
+        }
+        .alert("Notice", isPresented: $showAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(alertMessage)
+        }
+        .onAppear(perform: loadData)
     }
     
     // Van Stock List View
@@ -66,6 +72,7 @@ struct AgentInventoryView: View {
         Group {
             if items.isEmpty {
                 VStack(spacing: 12) {
+                    Spacer()
                     Image(systemName: "shippingbox")
                         .font(.system(size: 48))
                         .foregroundColor(.gray)
@@ -75,6 +82,7 @@ struct AgentInventoryView: View {
                         showIndentSheet = true
                     }
                     .padding(.top, 8)
+                    Spacer()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -82,13 +90,18 @@ struct AgentInventoryView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(item.productId?.name ?? "Unknown Component")
+                                Text(item.displayName)
                                     .font(.headline)
                                     .foregroundColor(.primary)
-                                if let sku = item.productId?.sku, !sku.isEmpty {
+                                if let sku = item.sku, !sku.isEmpty {
                                     Text("SKU: \(sku)")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
+                                }
+                                if let cat = item.category, !cat.isEmpty {
+                                    Text("Category: \(cat)")
+                                        .font(.caption2)
+                                        .foregroundColor(.gray)
                                 }
                             }
                             Spacer()
@@ -102,7 +115,7 @@ struct AgentInventoryView: View {
                                     HStack(spacing: 2) {
                                         Image(systemName: "exclamationmark.triangle.fill")
                                             .font(.caption2)
-                                        Text("Low (Min: \(item.minAlertThreshold))")
+                                        Text("Low (Min: \(item.minThreshold ?? 1))")
                                             .font(.caption2)
                                             .fontWeight(.bold)
                                     }
@@ -113,6 +126,7 @@ struct AgentInventoryView: View {
                     }
                     .padding(.vertical, 4)
                 }
+                .listStyle(PlainListStyle())
                 .refreshable {
                     loadData()
                 }
@@ -125,11 +139,13 @@ struct AgentInventoryView: View {
         Group {
             if indents.isEmpty {
                 VStack(spacing: 12) {
+                    Spacer()
                     Image(systemName: "doc.text.magnifyingglass")
                         .font(.system(size: 48))
                         .foregroundColor(.gray)
                     Text("No past or active indents raised.")
                         .foregroundColor(.secondary)
+                    Spacer()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -179,6 +195,7 @@ struct AgentInventoryView: View {
                     }
                     .padding(.vertical, 4)
                 }
+                .listStyle(PlainListStyle())
                 .refreshable {
                     loadData()
                 }
@@ -191,10 +208,15 @@ struct AgentInventoryView: View {
         NavigationView {
             Form {
                 Section(header: Text("Select Spare Part / Component")) {
-                    Picker("Product", selection: $selectedProductId) {
-                        Text("Select a Product").tag("")
-                        ForEach(products) { prod in
-                            Text("\(prod.name) (Central: \(prod.stockLevel ?? 0))").tag(prod.id)
+                    if products.isEmpty {
+                        Text("Loading product catalog...")
+                            .foregroundColor(.gray)
+                    } else {
+                        Picker("Product", selection: $selectedProductId) {
+                            Text("Select a Product").tag("")
+                            ForEach(products) { prod in
+                                Text("\(prod.name) (Central: \(prod.basePrice != nil ? "₹\(Int(prod.basePrice!))" : "In Stock"))").tag(prod.id)
+                            }
                         }
                     }
                     
@@ -245,15 +267,15 @@ struct AgentInventoryView: View {
             do {
                 async let invRes = APIClient.shared.get(
                     endpoint: "api/agent-inventory/my-stock",
-                    responseType: ApiResponse<[AgentInventoryItem]>.self
+                    responseType: APIResponse<[AgentInventoryItem]>.self
                 )
                 async let indRes = APIClient.shared.get(
                     endpoint: "api/indents/my-indents",
-                    responseType: ApiResponse<[AgentIndent]>.self
+                    responseType: APIResponse<[AgentIndent]>.self
                 )
                 async let prodRes = APIClient.shared.get(
                     endpoint: "api/products",
-                    responseType: ApiResponse<[Product]>.self
+                    responseType: APIResponse<[Product]>.self
                 )
                 
                 let (inv, ind, prods) = try await (invRes, indRes, prodRes)
@@ -298,7 +320,7 @@ struct AgentInventoryView: View {
                 IndentItemReq(
                     productId: selectedProductId,
                     name: selectedProduct?.name ?? "Spare Part",
-                    sku: selectedProduct?.sku ?? "",
+                    sku: selectedProduct?.slug ?? "",
                     requestedQuantity: indentQuantity
                 )
             ],
@@ -311,7 +333,7 @@ struct AgentInventoryView: View {
                 let res = try await APIClient.shared.post(
                     endpoint: "api/indents/create",
                     body: req,
-                    responseType: ApiResponse<AgentIndent>.self
+                    responseType: APIResponse<AgentIndent>.self
                 )
                 DispatchQueue.main.async {
                     self.isSubmittingIndent = false
@@ -338,7 +360,7 @@ struct IndentStatusBadge: View {
     let status: IndentStatus
     
     var body: some View {
-        Text(status.rawValue)
+        Text(status.displayName)
             .font(.caption2)
             .fontWeight(.bold)
             .padding(.horizontal, 8)
@@ -350,7 +372,8 @@ struct IndentStatusBadge: View {
     
     var color: Color {
         switch status {
-        case .pending: return .orange
+        case .requested, .pending: return .orange
+        case .approved: return .blue
         case .dispatched: return .green
         case .rejected: return .red
         }

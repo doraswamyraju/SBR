@@ -1020,7 +1020,7 @@ struct AgentAssessmentSheet: View {
                             Picker("Select Spare Part", selection: $selectedInventoryItemId) {
                                 Text("Choose a part").tag("")
                                 ForEach(vanItems) { item in
-                                    Text("\(item.productId?.name ?? "Part") (Stock: \(item.quantity)) - ₹\(Int(item.productId?.price ?? 0))")
+                                    Text("\(item.displayName) (Stock: \(item.quantity))\(item.unitPrice != nil ? " - ₹\(Int(item.unitPrice!))" : "")")
                                         .tag(item.id)
                                 }
                             }
@@ -1045,7 +1045,7 @@ struct AgentAssessmentSheet: View {
                                         Text(comp.name)
                                             .font(.subheadline)
                                             .fontWeight(.medium)
-                                        Text("Qty: \(comp.quantity) × ₹\(Int(comp.unitPrice ?? 0))")
+                                        Text("Qty: \(comp.quantity)\(comp.unitPrice != nil ? " × ₹\(Int(comp.unitPrice!))" : "")")
                                             .font(.caption)
                                             .foregroundColor(.gray)
                                     }
@@ -1084,7 +1084,7 @@ struct AgentAssessmentSheet: View {
                             if isSubmitting {
                                 ProgressView().tint(.white)
                             } else {
-                                Text(assessmentType == "service_only" ? "Confirm & Accept (Service Only)" : "Confirm & Allocate Spares (₹\(Int(estimatedPartsTotal)))")
+                                Text(assessmentType == "service_only" ? "Confirm & Accept (Service Only)" : (selectedComponents.isEmpty ? "Allocate Spares to Accept" : "Confirm & Allocate Spares (₹\(Int(estimatedPartsTotal)))"))
                                     .fontWeight(.bold)
                                     .foregroundColor(.white)
                             }
@@ -1092,7 +1092,7 @@ struct AgentAssessmentSheet: View {
                         }
                     }
                     .padding(.vertical, 4)
-                    .listRowBackground(SBRColors.primaryBlue)
+                    .listRowBackground(assessmentType == "spare_parts" && selectedComponents.isEmpty ? Color.gray : SBRColors.primaryBlue)
                     .disabled(isSubmitting || (assessmentType == "spare_parts" && selectedComponents.isEmpty))
                 }
             }
@@ -1140,10 +1140,10 @@ struct AgentAssessmentSheet: View {
     
     private func addPartToSelection() {
         guard let item = vanItems.first(where: { $0.id == selectedInventoryItemId }) else { return }
-        let prodName = item.productId?.name ?? "Spare Part"
-        let prodSku = item.productId?.sku
-        let prodPrice = item.productId?.price ?? 0.0
-        let prodId = item.productId?._id ?? item.id
+        let prodName = item.displayName
+        let prodSku = item.sku
+        let prodPrice = item.unitPrice ?? 0.0
+        let prodId = item.productId ?? item.id
         
         if let idx = selectedComponents.firstIndex(where: { $0.productId == prodId || $0.name == prodName }) {
             let existing = selectedComponents[idx]
@@ -1157,6 +1157,7 @@ struct AgentAssessmentSheet: View {
             )
         } else {
             selectedComponents.append(RequiredComponent(
+                posProductId: item.posProductId,
                 productId: prodId,
                 name: prodName,
                 sku: prodSku,
@@ -1261,7 +1262,7 @@ struct AgentPaymentBreakdownSheet: View {
                                     Text(comp.name)
                                         .font(.subheadline)
                                         .fontWeight(.semibold)
-                                    Text("Qty: \(comp.quantity) × ₹\(Int(comp.unitPrice ?? 0))")
+                                    Text("Qty: \(comp.quantity)\(comp.unitPrice != nil ? " × ₹\(Int(comp.unitPrice!))" : "")")
                                         .font(.caption)
                                         .foregroundColor(.gray)
                                 }
@@ -1504,13 +1505,13 @@ struct AgentPaymentBreakdownSheet: View {
                         Picker("Select Part", selection: $selectedExtraItemId) {
                             Text("Choose Part").tag("")
                             ForEach(vanItems) { item in
-                                Text("\(item.productId?.name ?? "Part") (Stock: \(item.quantity)) - ₹\(Int(item.productId?.price ?? 0))")
+                                Text("\(item.displayName) (Stock: \(item.quantity))\(item.unitPrice != nil ? " - ₹\(Int(item.unitPrice!))" : "")")
                                     .tag(item.id)
                             }
                         }
                         .onChange(of: selectedExtraItemId) { _, newId in
-                            if let item = vanItems.first(where: { $0.id == newId }) {
-                                extraUnitPrice = "\(Int(item.productId?.price ?? 0))"
+                            if let item = vanItems.first(where: { $0.id == newId }), let p = item.unitPrice {
+                                extraUnitPrice = "\(Int(p))"
                             }
                         }
                         
@@ -1553,10 +1554,10 @@ struct AgentPaymentBreakdownSheet: View {
     
     private func addExtraPart() {
         guard let item = vanItems.first(where: { $0.id == selectedExtraItemId }) else { return }
-        let prodName = item.productId?.name ?? "Spare Part"
-        let prodSku = item.productId?.sku
-        let prodPrice = Double(extraUnitPrice) ?? (item.productId?.price ?? 0.0)
-        let prodId = item.productId?._id ?? item.id
+        let prodName = item.displayName
+        let prodSku = item.sku
+        let prodPrice = Double(extraUnitPrice) ?? (item.unitPrice ?? 0.0)
+        let prodId = item.productId ?? item.id
         
         if let idx = components.firstIndex(where: { $0.productId == prodId || $0.name == prodName }) {
             let existing = components[idx]
@@ -1570,6 +1571,7 @@ struct AgentPaymentBreakdownSheet: View {
             )
         } else {
             components.append(RequiredComponent(
+                posProductId: item.posProductId,
                 productId: prodId,
                 name: prodName,
                 sku: prodSku,
@@ -1589,12 +1591,12 @@ struct AgentPaymentBreakdownSheet: View {
         Task {
             let success = await requestVM.completeJob(
                 requestId: job.id,
-                amount: netTotal,
-                method: paymentMethod,
                 inventoryTotal: inventorySubtotal,
                 serviceCharge: serviceChargeValue,
                 discount: discountValue,
                 discountRemarks: discountRemarks,
+                finalAmount: netTotal,
+                paymentMethod: paymentMethod,
                 requiredComponents: components,
                 requestReview: requestReview
             )

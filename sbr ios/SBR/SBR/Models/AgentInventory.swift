@@ -1,27 +1,68 @@
 import Foundation
 
-struct ProductRef: Codable, Identifiable {
-    var id: String { _id ?? "" }
-    let _id: String?
-    let name: String
-    let sku: String?
-    let price: Double?
-    let stockLevel: Int?
-    let minStockLevel: Int?
-}
-
 struct AgentInventoryItem: Codable, Identifiable {
-    var id: String { _id ?? "" }
+    var id: String { _id ?? UUID().uuidString }
     let _id: String?
     let agentId: String?
-    let productId: ProductRef?
+    let posProductId: Int?
+    let productId: String?
+    let productName: String
+    let sku: String?
+    let category: String?
     let quantity: Int
-    let minAlertThreshold: Int
-    let lastRestockedAt: String?
+    let minThreshold: Int?
+    let unitPrice: Double?
+    let lastUpdated: String?
     let createdAt: String?
     let updatedAt: String?
     
     var isLowStock: Bool {
-        return quantity <= minAlertThreshold
+        return quantity <= (minThreshold ?? 1)
+    }
+    
+    var displayName: String {
+        return productName
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case _id, id, agentId, posProductId, productId, productName, name, sku, category, quantity, minThreshold, minAlertThreshold, unitPrice, price, lastUpdated, createdAt, updatedAt
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self._id = (try? container.decodeIfPresent(String.self, forKey: ._id)) ?? (try? container.decodeIfPresent(String.self, forKey: .id))
+        
+        // agentId can be string or populated user object
+        if let agentStr = try? container.decodeIfPresent(String.self, forKey: .agentId) {
+            self.agentId = agentStr
+        } else {
+            self.agentId = nil
+        }
+        
+        self.posProductId = try? container.decodeIfPresent(Int.self, forKey: .posProductId)
+        
+        // productId can be string id or null
+        if let prodStr = try? container.decodeIfPresent(String.self, forKey: .productId) {
+            self.productId = prodStr
+        } else {
+            self.productId = nil
+        }
+        
+        let pName = (try? container.decodeIfPresent(String.self, forKey: .productName))
+            ?? (try? container.decodeIfPresent(String.self, forKey: .name))
+            ?? "Component / Part"
+        self.productName = pName
+        
+        self.sku = try? container.decodeIfPresent(String.self, forKey: .sku)
+        self.category = try? container.decodeIfPresent(String.self, forKey: .category)
+        self.quantity = (try? container.decodeIfPresent(Int.self, forKey: .quantity)) ?? 0
+        self.minThreshold = (try? container.decodeIfPresent(Int.self, forKey: .minThreshold))
+            ?? (try? container.decodeIfPresent(Int.self, forKey: .minAlertThreshold))
+            ?? 1
+        self.unitPrice = (try? container.decodeIfPresent(Double.self, forKey: .unitPrice))
+            ?? (try? container.decodeIfPresent(Double.self, forKey: .price))
+        self.lastUpdated = try? container.decodeIfPresent(String.self, forKey: .lastUpdated)
+        self.createdAt = try? container.decodeIfPresent(String.self, forKey: .createdAt)
+        self.updatedAt = try? container.decodeIfPresent(String.self, forKey: .updatedAt)
     }
 }
