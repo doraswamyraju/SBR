@@ -211,16 +211,35 @@ exports.updateRequestStatus = async (req, res) => {
 
     const updates = { status };
     if (status === 'Accepted') {
-      // Check required components against agent's AgentInventory
-      if (request.requiredComponents && request.requiredComponents.length > 0) {
-        const AgentInventory = require('../models/AgentInventory');
-        const missingComponents = [];
+      const AgentInventory = require('../models/AgentInventory');
+      
+      // If agent explicitly provided components during assessment
+      let componentsToCheck = [];
+      if (Array.isArray(req.body.requiredComponents)) {
+        componentsToCheck = req.body.requiredComponents;
+        updates.requiredComponents = componentsToCheck.map(c => ({
+          posProductId: c.posProductId || null,
+          productId: c.productId || null,
+          name: c.name || c.productName,
+          sku: c.sku || '',
+          quantity: Number(c.quantity) || 1,
+          unitPrice: Number(c.unitPrice || c.price) || 0
+        }));
+        // Compute inventoryTotal
+        updates.inventoryTotal = updates.requiredComponents.reduce(
+          (sum, it) => sum + (it.quantity * it.unitPrice), 0
+        );
+      } else if (request.requiredComponents && request.requiredComponents.length > 0) {
+        componentsToCheck = request.requiredComponents;
+      }
 
-        for (const comp of request.requiredComponents) {
+      if (componentsToCheck.length > 0) {
+        const missingComponents = [];
+        for (const comp of componentsToCheck) {
           const reqQty = Number(comp.quantity) || 1;
           let invQuery = { agentId: req.user._id };
           if (comp.posProductId) invQuery.posProductId = comp.posProductId;
-          else invQuery.productName = comp.name;
+          else invQuery.productName = comp.name || comp.productName;
 
           const invItem = await AgentInventory.findOne(invQuery);
           const availableQty = invItem ? invItem.quantity : 0;
@@ -228,7 +247,7 @@ exports.updateRequestStatus = async (req, res) => {
           if (availableQty < reqQty) {
             missingComponents.push({
               posProductId: comp.posProductId,
-              name: comp.name,
+              name: comp.name || comp.productName,
               sku: comp.sku || '',
               requiredQuantity: reqQty,
               availableQuantity: availableQty,
@@ -374,7 +393,7 @@ exports.updateRequestImage = async (req, res) => {
 // @access  Private (Agent or Admin)
 exports.updatePaymentDetails = async (req, res) => {
   try {
-    const { amount, method } = req.body;
+    const { amount, method, inventoryTotal, serviceCharge, discount, discountRemarks } = req.body;
     if (amount === undefined || !method) {
       return res.status(400).json({ success: false, error: 'Please provide payment amount and method' });
     }
@@ -389,14 +408,22 @@ exports.updatePaymentDetails = async (req, res) => {
       return res.status(403).json({ success: false, error: 'Not authorized to record payment for this request' });
     }
 
+    const payUpdates = {
+      paymentAmount: Number(amount) || 0,
+      finalAmount: Number(amount) || 0,
+      paymentMethod: method,
+      paymentStatus: 'Paid',
+      paymentTimestamp: Date.now()
+    };
+
+    if (inventoryTotal !== undefined) payUpdates.inventoryTotal = Number(inventoryTotal) || 0;
+    if (serviceCharge !== undefined) payUpdates.serviceCharge = Number(serviceCharge) || 0;
+    if (discount !== undefined) payUpdates.discount = Number(discount) || 0;
+    if (discountRemarks !== undefined) payUpdates.discountRemarks = discountRemarks || '';
+
     request = await ServiceRequest.findByIdAndUpdate(
       req.params.id,
-      {
-        paymentAmount: amount,
-        paymentMethod: method,
-        paymentStatus: 'Paid',
-        paymentTimestamp: Date.now()
-      },
+      payUpdates,
       { new: true }
     )
       .populate('customerId', 'name email role phone address photoUrl isRecurring nextServiceDate')

@@ -579,8 +579,17 @@ const StoreInchargeDashboard = ({ initialTab, handleNavigation }) => {
                           </td>
                           <td className="py-3.5 px-4 text-right">
                             {req.paymentAmount > 0 && (
-                              <div className="text-xs font-bold text-slate-800">
-                                ₹{req.paymentAmount} ({req.paymentMethod || 'Cash'})
+                              <div>
+                                <div className="text-xs font-bold text-slate-800">
+                                  ₹{req.paymentAmount} <span className="font-normal text-slate-500">({req.paymentMethod || 'Cash'})</span>
+                                </div>
+                                {(req.inventoryTotal > 0 || req.serviceCharge > 0 || req.discount > 0) && (
+                                  <div className="text-[10px] text-slate-500 mt-0.5 space-y-0.5">
+                                    {req.inventoryTotal > 0 && <div>Parts: ₹{req.inventoryTotal}</div>}
+                                    {req.serviceCharge > 0 && <div>Service: ₹{req.serviceCharge}</div>}
+                                    {req.discount > 0 && <div className="text-amber-600 font-medium">Discount: -₹{req.discount}</div>}
+                                  </div>
+                                )}
                               </div>
                             )}
                           </td>

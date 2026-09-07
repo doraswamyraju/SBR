@@ -70,6 +70,26 @@ const ServiceRequestSchema = new mongoose.Schema(
       type: Number,
       default: 0.0
     },
+    inventoryTotal: {
+      type: Number,
+      default: 0.0
+    },
+    serviceCharge: {
+      type: Number,
+      default: 0.0
+    },
+    discount: {
+      type: Number,
+      default: 0.0
+    },
+    discountRemarks: {
+      type: String,
+      default: ''
+    },
+    finalAmount: {
+      type: Number,
+      default: 0.0
+    },
     paymentStatus: {
       type: String,
       enum: ['Pending', 'Paid'],

@@ -558,9 +558,13 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
                         <td>
                           {req.paymentStatus === 'Paid' ? (
                             <div>
-                              <span className="badge badge-paid">Paid</span>
-                              <div style={{ fontSize: '12px', color: '#059669', fontWeight: 'bold', marginTop: '3px' }}>₹{req.paymentAmount}</div>
-                              <div style={{ fontSize: '10px', color: '#64748b' }}>{req.paymentMethod}</div>
+                              <span className="badge badge-paid">Paid: ₹{req.paymentAmount}</span>
+                              <div style={{ fontSize: '11px', color: '#475569', marginTop: '3px' }}>
+                                {req.inventoryTotal > 0 && <span style={{ display: 'block' }}>Parts: ₹{req.inventoryTotal}</span>}
+                                {req.serviceCharge > 0 && <span style={{ display: 'block' }}>Service: ₹{req.serviceCharge}</span>}
+                                {req.discount > 0 && <span style={{ display: 'block', color: '#b45309' }}>Discount: -₹{req.discount}</span>}
+                              </div>
+                              <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>{req.paymentMethod}</div>
                             </div>
                           ) : (
                             <span className="badge badge-pending">Pending</span>

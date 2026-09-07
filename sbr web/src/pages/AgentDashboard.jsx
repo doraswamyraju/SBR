@@ -19,7 +19,11 @@ import {
   Package,
   AlertTriangle,
   Plus,
-  Trash2
+  Trash2,
+  Phone,
+  Tag,
+  ShieldCheck,
+  Receipt
 } from 'lucide-react';
 import OurCustomersTab from '../components/OurCustomersTab';
 import './Dashboard.css';
@@ -51,7 +55,19 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
   const [uploadingAfter, setUploadingAfter] = useState(false);
   const [completingRequestId, setCompletingRequestId] = useState(null);
   
-  // Completion form state
+  // Assessment & Acceptance State
+  const [assessingJob, setAssessingJob] = useState(null);
+  const [assessmentMode, setAssessmentMode] = useState('NO_PARTS'); // 'NO_PARTS' | 'WITH_PARTS'
+  const [assessmentParts, setAssessmentParts] = useState([
+    { posProductId: null, productId: null, name: '', sku: '', quantity: 1, unitPrice: 0, availableStock: 0 }
+  ]);
+  const [assessmentRemarks, setAssessmentRemarks] = useState('');
+  const [submittingAssessment, setSubmittingAssessment] = useState(false);
+
+  // Completion & Payment Split form state
+  const [serviceCharge, setServiceCharge] = useState('250');
+  const [discountAmount, setDiscountAmount] = useState('0');
+  const [discountRemarks, setDiscountRemarks] = useState('');
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [completionLoading, setCompletionLoading] = useState(false);
@@ -301,6 +317,8 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
 
   useEffect(() => {
     fetchJobs();
+    fetchVanStockAndIndents();
+    fetchCatalogProducts();
   }, []);
 
   // Cleanup tracking timer on unmount
@@ -311,6 +329,138 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
       }
     };
   }, []);
+
+  // --- Assessment & Acceptance Logic ---
+  const openAssessmentModal = (job) => {
+    setAssessingJob(job);
+    setAssessmentMode('NO_PARTS');
+    setAssessmentParts([
+      { posProductId: null, productId: null, name: '', sku: '', quantity: 1, unitPrice: 0, availableStock: 0 }
+    ]);
+    setAssessmentRemarks('');
+    fetchVanStockAndIndents();
+    fetchCatalogProducts();
+  };
+
+  const addAssessmentPartRow = () => {
+    setAssessmentParts(prev => [
+      ...prev,
+      { posProductId: null, productId: null, name: '', sku: '', quantity: 1, unitPrice: 0, availableStock: 0 }
+    ]);
+  };
+
+  const removeAssessmentPartRow = (index) => {
+    setAssessmentParts(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSelectAssessmentPart = (index, productObjOrName) => {
+    setAssessmentParts(prev => {
+      const updated = [...prev];
+      if (typeof productObjOrName === 'object' && productObjOrName !== null) {
+        // Look up in agent's live vanInventory
+        const vanMatch = vanInventory.find(v => 
+          (productObjOrName.posProductId && Number(v.posProductId) === Number(productObjOrName.posProductId)) ||
+          (v.productName && v.productName.trim().toLowerCase() === productObjOrName.name?.trim().toLowerCase())
+        );
+        const availQty = vanMatch ? Number(vanMatch.quantity || 0) : 0;
+        const price = Number(productObjOrName.price || productObjOrName.unitPrice || 0);
+
+        updated[index] = {
+          ...updated[index],
+          posProductId: productObjOrName.posProductId || productObjOrName.id || null,
+          productId: productObjOrName._id || null,
+          name: productObjOrName.name || '',
+          sku: productObjOrName.sku || '',
+          unitPrice: price,
+          availableStock: availQty
+        };
+      } else {
+        updated[index] = {
+          ...updated[index],
+          name: productObjOrName,
+          posProductId: null,
+          productId: null,
+          unitPrice: 0,
+          availableStock: 0
+        };
+      }
+      return updated;
+    });
+  };
+
+  const updateAssessmentPartQty = (index, qty) => {
+    setAssessmentParts(prev => {
+      const updated = [...prev];
+      updated[index] = {
+        ...updated[index],
+        quantity: Math.max(1, parseInt(qty) || 1)
+      };
+      return updated;
+    });
+  };
+
+  const handleAcceptJobWithAssessment = async (e) => {
+    if (e) e.preventDefault();
+    if (!assessingJob) return;
+
+    let payloadComponents = [];
+    if (assessmentMode === 'WITH_PARTS') {
+      const valid = assessmentParts.filter(p => p.name && p.name.trim() && p.quantity > 0);
+      if (valid.length === 0) {
+        alert('Please select at least one spare part or choose "Service Only" if no parts are needed.');
+        return;
+      }
+      // Check if any item exceeds available van stock
+      const outOfStock = valid.filter(p => p.quantity > p.availableStock);
+      if (outOfStock.length > 0) {
+        const itemNames = outOfStock.map(o => `• ${o.name} (Need: ${o.quantity}, In Van: ${o.availableStock})`).join('\n');
+        const proceedWithIndent = window.confirm(
+          `You do not have enough stock in your Van Kit for:\n${itemNames}\n\nWould you like to raise an Indent Requisition to Store In-Charge now?`
+        );
+        if (proceedWithIndent) {
+          setAssessingJob(null);
+          openManualIndentModal();
+        }
+        return;
+      }
+      payloadComponents = valid;
+    }
+
+    setSubmittingAssessment(true);
+    try {
+      const res = await api.put(`api/requests/${assessingJob._id}/status`, {
+        status: 'Accepted',
+        requiredComponents: payloadComponents
+      });
+      if (res.success) {
+        setRequests(requests.map(req => 
+          req._id === assessingJob._id 
+            ? { ...req, status: 'Accepted', acceptedAt: new Date(), requiredComponents: res.data?.requiredComponents || payloadComponents, inventoryTotal: res.data?.inventoryTotal || 0 } 
+            : req
+        ));
+        alert(
+          assessmentMode === 'WITH_PARTS'
+            ? `Job offer accepted! ${payloadComponents.length} spare part(s) allocated for this service.`
+            : 'Job offer accepted as Service / Inspection only!'
+        );
+        setAssessingJob(null);
+        fetchJobs();
+      }
+    } catch (err) {
+      if (err.stockShortage && err.missingComponents) {
+        setShortageModalData({
+          requestId: assessingJob._id,
+          missingComponents: err.missingComponents,
+          message: err.message
+        });
+        setAssessingJob(null);
+      } else {
+        alert(err.message || 'Failed to accept job offer');
+      }
+    } finally {
+      setSubmittingAssessment(false);
+    }
+  };
 
   const handleUpdateStatus = async (requestId, status) => {
     try {
@@ -372,18 +522,58 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
     }
   };
 
+  // --- Completion & Payment Breakdown Logic ---
+  const openCompleteModal = (job) => {
+    setCompletingRequestId(job._id);
+    const partsTotal = (job.requiredComponents || []).reduce(
+      (sum, c) => sum + ((Number(c.quantity) || 1) * (Number(c.unitPrice) || 0)),
+      0
+    );
+    const defService = 250;
+    const defDiscount = 0;
+    setServiceCharge(String(defService));
+    setDiscountAmount(String(defDiscount));
+    setDiscountRemarks('');
+    setPaymentAmount(String(Math.max(0, partsTotal + defService - defDiscount)));
+    setPaymentMethod('Cash');
+    setCompletionError('');
+  };
+
+  const handlePricingChange = (newServiceCharge, newDiscount) => {
+    const job = requests.find(r => r._id === completingRequestId);
+    const partsTotal = (job?.requiredComponents || []).reduce(
+      (sum, c) => sum + ((Number(c.quantity) || 1) * (Number(c.unitPrice) || 0)),
+      0
+    );
+    const sc = Math.max(0, Number(newServiceCharge) || 0);
+    const disc = Math.max(0, Number(newDiscount) || 0);
+    const net = Math.max(0, (partsTotal + sc) - disc);
+    setPaymentAmount(String(net));
+  };
+
   const handleCompleteJobSubmit = async (e) => {
     e.preventDefault();
     setCompletionLoading(true);
     setCompletionError('');
 
     try {
-      const parsedAmount = parseFloat(paymentAmount) || 0;
+      const activeJob = requests.find(r => r._id === completingRequestId);
+      const partsTotal = (activeJob?.requiredComponents || []).reduce(
+        (sum, c) => sum + ((Number(c.quantity) || 1) * (Number(c.unitPrice) || 0)),
+        0
+      );
+      const parsedService = parseFloat(serviceCharge) || 0;
+      const parsedDiscount = parseFloat(discountAmount) || 0;
+      const parsedAmount = Math.max(0, (partsTotal + parsedService) - parsedDiscount);
 
-      // 1. Post payment details
+      // 1. Post payment details with full breakdown
       const paymentRes = await api.put(`api/requests/${completingRequestId}/payment`, {
         amount: parsedAmount,
-        method: paymentMethod
+        method: paymentMethod,
+        inventoryTotal: partsTotal,
+        serviceCharge: parsedService,
+        discount: parsedDiscount,
+        discountRemarks: discountRemarks
       });
 
       // 2. Update status to completed
@@ -401,8 +591,9 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
           setCompletingRequestId(null);
           setPaymentAmount('');
           setPaymentMethod('Cash');
-          fetchJobs();
-          alert('Job marked as Completed and payment details recorded!');
+          await fetchJobs();
+          await fetchVanStockAndIndents();
+          alert(`Job marked as Completed!\nTotal Collected: ₹${parsedAmount} (Parts: ₹${partsTotal} + Service: ₹${parsedService} - Discount: ₹${parsedDiscount})`);
         }
       }
     } catch (err) {
@@ -617,10 +808,10 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
                       <div style={{ display: 'flex', gap: '10px' }}>
                         <button 
                           className="btn-primary" 
-                          style={{ padding: '8px 18px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', boxShadow: 'none' }}
-                          onClick={() => handleUpdateStatus(job._id, 'Accepted')}
+                          style={{ padding: '8px 18px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', boxShadow: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
+                          onClick={() => openAssessmentModal(job)}
                         >
-                          Accept Offer
+                          <Wrench size={15} /> Assess & Accept
                         </button>
                       </div>
                     </div>
@@ -663,6 +854,26 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
                             <div>Phone: <strong style={{ color: '#1e293b' }}>{job.customerId?.phone}</strong></div>
                             <div>Location: <strong style={{ color: '#1e293b' }}>{job.customerAddress}</strong></div>
                           </div>
+
+                          {/* Allocated Spare Parts summary */}
+                          {job.requiredComponents && job.requiredComponents.length > 0 ? (
+                            <div style={{ marginTop: '12px', background: '#f8fafc', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                              <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '6px' }}>
+                                <Package size={13} style={{ color: '#d97706' }} /> Allocated Van Parts ({job.requiredComponents.length}):
+                              </div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                {job.requiredComponents.map((c, i) => (
+                                  <span key={i} style={{ fontSize: '11px', background: '#ffffff', border: '1px solid #cbd5e1', padding: '3px 8px', borderRadius: '6px', color: '#0f172a', fontWeight: '600' }}>
+                                    {c.name} × {c.quantity} {c.unitPrice > 0 ? `(₹${c.unitPrice * c.quantity})` : ''}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ marginTop: '10px', fontSize: '12px', color: '#64748b', fontStyle: 'italic' }}>
+                              🔧 Service / Inspection Only (No Spare Parts Allocated)
+                            </div>
+                          )}
                         </div>
 
                         {/* Controls */}
@@ -680,7 +891,7 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
                             <button 
                               className="btn-primary" 
                               style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', boxShadow: 'none' }}
-                              onClick={() => setCompletingRequestId(job._id)}
+                              onClick={() => openCompleteModal(job)}
                             >
                               Mark Completed
                             </button>
@@ -1472,63 +1683,391 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
         </div>
       )}
 
-      {/* Complete Job & Record Payment Modal */}
-      {completingRequestId && (
-        <div className="modal-backdrop" onClick={() => setCompletingRequestId(null)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>Record Payment & Close Job</h3>
+      {/* ASSESS & ACCEPT SERVICE REQUEST MODAL */}
+      {assessingJob && (
+        <div className="modal-backdrop" onClick={() => setAssessingJob(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '640px', width: '95%' }}>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Wrench size={18} style={{ color: '#10b981' }} /> Assess & Accept Service Request
+                </h3>
+                <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#64748b' }}>
+                  Assess customer requirements and allocate required spare parts from your Van Kit before starting.
+                </p>
+              </div>
               <button 
                 type="button" 
                 style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
-                onClick={() => setCompletingRequestId(null)}
+                onClick={() => setAssessingJob(null)}
               >
                 <AlertCircle size={20} />
               </button>
             </div>
 
-            {completionError && <div className="error-banner" style={{ marginBottom: '15px' }}>{completionError}</div>}
-
-            <form onSubmit={handleCompleteJobSubmit} className="dashboard-form">
-              <div className="input-group">
-                <label>Total Payment Collected (INR)</label>
-                <input
-                  type="number"
-                  required
-                  placeholder="e.g. 1500"
-                  value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(e.target.value)}
-                />
+            {/* Customer Details Box */}
+            <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '18px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <span style={{ fontWeight: 'bold', fontSize: '15px', color: '#0f172a' }}>{assessingJob.serviceType}</span>
+                <span className="badge badge-assigned">Awaiting Acceptance</span>
               </div>
+              <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#475569' }}>{assessingJob.description || 'No special instructions provided'}</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', fontSize: '12px', color: '#64748b' }}>
+                <div>Client: <strong style={{ color: '#1e293b' }}>{assessingJob.customerId?.name || 'Customer'}</strong></div>
+                <div>Phone: <strong style={{ color: '#1e293b' }}>{assessingJob.customerId?.phone || 'N/A'}</strong></div>
+                <div style={{ gridColumn: '1 / -1' }}>Address: <strong style={{ color: '#1e293b' }}>{assessingJob.customerAddress}</strong></div>
+              </div>
+            </div>
 
-              <div className="input-group">
-                <label>Payment Method</label>
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
+            {/* Assessment Option Selection */}
+            <div style={{ marginBottom: '18px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#334155', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
+                Service Inventory Requirement
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setAssessmentMode('NO_PARTS')}
+                  style={{
+                    padding: '12px',
+                    borderRadius: '10px',
+                    border: assessmentMode === 'NO_PARTS' ? '2px solid #10b981' : '1px solid #e2e8f0',
+                    background: assessmentMode === 'NO_PARTS' ? '#ecfdf5' : '#ffffff',
+                    color: assessmentMode === 'NO_PARTS' ? '#065f46' : '#475569',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.2s ease'
+                  }}
                 >
-                  <option value="Cash">Cash Payment</option>
-                  <option value="UPI / Online">UPI / Online Payment</option>
-                  <option value="Card">Debit / Credit Card</option>
-                </select>
-              </div>
+                  <div style={{ fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <CheckCircle size={15} color={assessmentMode === 'NO_PARTS' ? '#10b981' : '#94a3b8'} />
+                    Service Only (No Parts)
+                  </div>
+                  <div style={{ fontSize: '11px', marginTop: '4px', opacity: 0.85 }}>
+                    Labor, inspection, filter wash or diagnostic visit.
+                  </div>
+                </button>
 
-              <div style={{ color: '#64748b', fontSize: '12px', marginTop: '5px', padding: '10px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                * Note: Make sure you have uploaded the <strong>After Service photo</strong> on the dashboard before closing this job.
+                <button
+                  type="button"
+                  onClick={() => setAssessmentMode('WITH_PARTS')}
+                  style={{
+                    padding: '12px',
+                    borderRadius: '10px',
+                    border: assessmentMode === 'WITH_PARTS' ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+                    background: assessmentMode === 'WITH_PARTS' ? '#eff6ff' : '#ffffff',
+                    color: assessmentMode === 'WITH_PARTS' ? '#1e40af' : '#475569',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <div style={{ fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Package size={15} color={assessmentMode === 'WITH_PARTS' ? '#3b82f6' : '#94a3b8'} />
+                    Requires Spare Parts
+                  </div>
+                  <div style={{ fontSize: '11px', marginTop: '4px', opacity: 0.85 }}>
+                    Select components to allocate from your Van Kit.
+                  </div>
+                </button>
               </div>
+            </div>
 
-              <button 
-                type="submit" 
-                className="btn-primary" 
-                disabled={completionLoading}
-                style={{ marginTop: '10px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', boxShadow: 'none' }}
+            {/* If WITH_PARTS: Spare Parts Selector */}
+            {assessmentMode === 'WITH_PARTS' && (
+              <div style={{ background: '#f1f5f9', padding: '14px', borderRadius: '12px', border: '1px solid #cbd5e1', marginBottom: '18px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#1e293b', textTransform: 'uppercase' }}>
+                    Select Parts from Your Van Kit
+                  </span>
+                  <span style={{ fontSize: '11px', color: '#64748b' }}>
+                    {vanInventory.length} item type(s) currently in your van
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '220px', overflowY: 'auto', paddingRight: '4px' }}>
+                  {assessmentParts.map((item, idx) => {
+                    const isShort = item.name && item.quantity > item.availableStock;
+                    return (
+                      <div key={idx} style={{ background: '#ffffff', padding: '10px', borderRadius: '8px', border: isShort ? '1px solid #f87171' : '1px solid #e2e8f0', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '3px' }}>
+                            Spare Part {item.name ? `— In Van: ${item.availableStock}` : ''} {item.unitPrice > 0 ? `(₹${item.unitPrice})` : ''}
+                          </label>
+                          <select
+                            value={item.posProductId ? `pos_${item.posProductId}` : (item.productId ? `sms_${item.productId}` : item.name)}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              const matched = catalogProducts.find(p => `pos_${p.posProductId || p.id}` === val || `sms_${p._id}` === val || p.name === val);
+                              if (matched) {
+                                handleSelectAssessmentPart(idx, matched);
+                              } else {
+                                handleSelectAssessmentPart(idx, val);
+                              }
+                            }}
+                            required
+                            style={{ width: '100%', background: '#ffffff', color: '#0f172a', border: '1px solid #cbd5e1', padding: '7px', borderRadius: '6px', fontSize: '13px' }}
+                          >
+                            <option value="">-- Choose Spare Part --</option>
+                            {catalogProducts.map(p => {
+                              const vItem = vanInventory.find(v => 
+                                (p.posProductId && Number(v.posProductId) === Number(p.posProductId)) || 
+                                (v.productName && v.productName.trim().toLowerCase() === p.name?.trim().toLowerCase())
+                              );
+                              const vQty = vItem ? vItem.quantity : 0;
+                              return (
+                                <option key={p._id || p.id} value={p.posProductId ? `pos_${p.posProductId}` : (p._id ? `sms_${p._id}` : p.name)}>
+                                  {p.name} {p.sku ? `(${p.sku})` : ''} — Van Stock: {vQty} | ₹{p.price || p.unitPrice || 0}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+
+                        <div style={{ width: '75px' }}>
+                          <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '3px' }}>Qty</label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.quantity}
+                            onChange={(e) => updateAssessmentPartQty(idx, e.target.value)}
+                            style={{ width: '100%', background: '#ffffff', color: '#0f172a', border: '1px solid #cbd5e1', padding: '7px', borderRadius: '6px', textAlign: 'center', fontWeight: 'bold', fontSize: '13px' }}
+                          />
+                        </div>
+
+                        {assessmentParts.length > 1 && (
+                          <div style={{ paddingTop: '16px' }}>
+                            <button
+                              type="button"
+                              onClick={() => removeAssessmentPartRow(idx)}
+                              style={{ background: '#fee2e2', border: 'none', color: '#dc2626', padding: '7px', borderRadius: '6px', cursor: 'pointer' }}
+                              title="Remove item"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={addAssessmentPartRow}
+                  style={{ width: '100%', marginTop: '10px', padding: '7px', background: '#eff6ff', border: '1px dashed #93c5fd', color: '#2563eb', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+                >
+                  <Plus size={13} /> + Add Another Spare Part
+                </button>
+
+                {/* Live Estimated Parts Cost */}
+                <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}>
+                  <span style={{ color: '#475569', fontWeight: 600 }}>Total Parts Value:</span>
+                  <span style={{ color: '#0f172a', fontWeight: 'bold', fontSize: '14px' }}>
+                    ₹{assessmentParts.reduce((sum, p) => sum + ((Number(p.quantity) || 1) * (Number(p.unitPrice) || 0)), 0)}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Submit / Action Buttons */}
+            <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+              <button
+                type="button"
+                onClick={() => setAssessingJob(null)}
+                className="btn-secondary"
+                style={{ flex: 1, padding: '10px', fontSize: '13px' }}
               >
-                {completionLoading ? 'Completing Job...' : 'Confirm Job Completed'}
+                Cancel
               </button>
-            </form>
+              <button
+                type="button"
+                onClick={handleAcceptJobWithAssessment}
+                className="btn-primary"
+                disabled={submittingAssessment}
+                style={{ flex: 1.6, padding: '10px', fontSize: '13px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', boxShadow: 'none' }}
+              >
+                {submittingAssessment ? 'Accepting Job...' : assessmentMode === 'WITH_PARTS' ? 'Accept Job with Selected Parts' : 'Accept Job (Service Only)'}
+              </button>
+            </div>
+
           </div>
         </div>
       )}
+
+      {/* Complete Job & Record Payment Breakdown Modal */}
+      {completingRequestId && (() => {
+        const activeJob = requests.find(r => r._id === completingRequestId);
+        const partsList = activeJob?.requiredComponents || [];
+        const partsTotal = partsList.reduce(
+          (sum, c) => sum + ((Number(c.quantity) || 1) * (Number(c.unitPrice) || 0)),
+          0
+        );
+        const scNum = Math.max(0, Number(serviceCharge) || 0);
+        const discNum = Math.max(0, Number(discountAmount) || 0);
+        const calcTotal = Math.max(0, (partsTotal + scNum) - discNum);
+
+        return (
+          <div className="modal-backdrop" onClick={() => setCompletingRequestId(null)}>
+            <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '560px', width: '95%' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Receipt size={18} style={{ color: '#059669' }} /> Complete Job & Record Payment
+                  </h3>
+                  <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#64748b' }}>
+                    {activeJob?.serviceType} — {activeJob?.customerId?.name || 'Customer'}
+                  </p>
+                </div>
+                <button 
+                  type="button" 
+                  style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
+                  onClick={() => setCompletingRequestId(null)}
+                >
+                  <AlertCircle size={20} />
+                </button>
+              </div>
+
+              {completionError && <div className="error-banner" style={{ marginBottom: '15px' }}>{completionError}</div>}
+
+              <form onSubmit={handleCompleteJobSubmit} className="dashboard-form">
+                
+                {/* 1. Spare Parts Price Breakdown */}
+                <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '14px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#334155', textTransform: 'uppercase' }}>
+                      1. Spare Parts / Inventory Used
+                    </span>
+                    <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#0f172a' }}>
+                      ₹{partsTotal}
+                    </span>
+                  </div>
+                  {partsList.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', color: '#475569' }}>
+                      {partsList.map((p, i) => (
+                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>• {p.name} × {p.quantity}</span>
+                          <span>₹{(Number(p.unitPrice) || 0) * (Number(p.quantity) || 1)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic' }}>
+                      No spare parts used (Pure service/inspection)
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Service Charge Input */}
+                <div className="input-group" style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>2. Service / Labor Charge (INR)</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    placeholder="e.g. 250"
+                    value={serviceCharge}
+                    onChange={(e) => {
+                      setServiceCharge(e.target.value);
+                      handlePricingChange(e.target.value, discountAmount);
+                    }}
+                  />
+                </div>
+
+                {/* 3. Discount Input + Incharge Notice */}
+                <div className="input-group" style={{ marginBottom: '14px' }}>
+                  <label style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>3. Discount Applied (INR)</span>
+                    <span style={{ fontSize: '11px', color: '#b45309', fontWeight: 600 }}>* Pre-confirm with Store In-Charge</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="e.g. 50"
+                    value={discountAmount}
+                    onChange={(e) => {
+                      setDiscountAmount(e.target.value);
+                      handlePricingChange(serviceCharge, e.target.value);
+                    }}
+                  />
+                  {discNum > 0 && (
+                    <input
+                      type="text"
+                      placeholder="Discount reason / approved by Store In-Charge..."
+                      value={discountRemarks}
+                      onChange={(e) => setDiscountRemarks(e.target.value)}
+                      style={{ marginTop: '6px', fontSize: '12px' }}
+                    />
+                  )}
+                </div>
+
+                {/* 4. Total Amount Box */}
+                <div style={{
+                  background: 'linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%)',
+                  border: '1px solid #a7f3d0',
+                  borderRadius: '12px',
+                  padding: '14px',
+                  marginBottom: '16px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <div>
+                    <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      Net Payable Amount
+                    </span>
+                    <div style={{ fontSize: '11px', color: '#065f46', marginTop: '2px' }}>
+                      (Parts ₹{partsTotal} + Service ₹{scNum}) − Discount ₹{discNum}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '24px', fontWeight: '900', color: '#065f46' }}>
+                    ₹{calcTotal}
+                  </div>
+                </div>
+
+                {/* Payment Method */}
+                <div className="input-group" style={{ marginBottom: '14px' }}>
+                  <label>Payment Collection Method</label>
+                  <select
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                  >
+                    <option value="Cash">Cash Payment</option>
+                    <option value="UPI / Online">UPI / Online QR Payment</option>
+                    <option value="Card">Debit / Credit Card</option>
+                  </select>
+                </div>
+
+                <div style={{ color: '#64748b', fontSize: '11px', padding: '8px 12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0', marginBottom: '14px' }}>
+                  📸 Ensure you have uploaded the <strong>After Service photo</strong> before completing this job.
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button 
+                    type="button" 
+                    className="btn-secondary" 
+                    style={{ flex: 1, padding: '10px' }}
+                    onClick={() => setCompletingRequestId(null)}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn-primary" 
+                    disabled={completionLoading}
+                    style={{ flex: 1.5, padding: '10px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', boxShadow: 'none' }}
+                  >
+                    {completionLoading ? 'Completing Job...' : `Confirm & Collect ₹${calcTotal}`}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };
