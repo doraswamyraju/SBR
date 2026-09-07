@@ -60,5 +60,19 @@ const admin = (req, res, next) => {
   }
 };
 
-module.exports = { protect, authorize, admin };
+// POS System or JWT Authenticated Middleware
+const posOrProtect = async (req, res, next) => {
+  const syncToken = req.headers['x-pos-sync-token'];
+  if (syncToken === 'sbr_pos_sms_sync_secret_2026') {
+    req.user = {
+      _id: null,
+      role: 'STORE_INCHARGE',
+      name: 'Central POS Admin'
+    };
+    return next();
+  }
+  return protect(req, res, next);
+};
+
+module.exports = { protect, authorize, admin, posOrProtect };
 

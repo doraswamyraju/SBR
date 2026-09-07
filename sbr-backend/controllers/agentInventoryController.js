@@ -307,8 +307,8 @@ exports.dispatchIndent = async (req, res) => {
     }
 
     indent.status = 'DISPATCHED';
-    indent.storeInchargeId = req.user._id;
-    indent.inchargeRemarks = inchargeRemarks || '';
+    indent.storeInchargeId = req.user?._id || null;
+    indent.inchargeRemarks = inchargeRemarks || (req.user?._id ? 'Approved and dispatched' : 'Approved & dispatched via Central POS');
     indent.dispatchedAt = new Date();
 
     await indent.save();
@@ -338,8 +338,8 @@ exports.rejectIndent = async (req, res) => {
     }
 
     indent.status = 'REJECTED';
-    indent.storeInchargeId = req.user._id;
-    indent.inchargeRemarks = inchargeRemarks || '';
+    indent.storeInchargeId = req.user?._id || null;
+    indent.inchargeRemarks = inchargeRemarks || 'Rejected by Store In-Charge';
     await indent.save();
 
     res.status(200).json({
