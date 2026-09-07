@@ -9,11 +9,15 @@ const {
   getAllIndents,
   getMyIndents,
   dispatchIndent,
-  rejectIndent
+  rejectIndent,
+  getPosSummary
 } = require('../controllers/agentInventoryController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
 const router = express.Router();
+
+// POS Integration route (Supports x-pos-sync-token header or JWT)
+router.get('/pos-summary', getPosSummary);
 
 router.use(protect);
 

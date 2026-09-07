@@ -18,7 +18,8 @@ import {
   Users,
   Package,
   AlertTriangle,
-  Plus
+  Plus,
+  Trash2
 } from 'lucide-react';
 import OurCustomersTab from '../components/OurCustomersTab';
 import './Dashboard.css';
@@ -118,12 +119,87 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
   const [loadingMyIndents, setLoadingMyIndents] = useState(false);
   const [shortageModalData, setShortageModalData] = useState(null);
 
-  // Manual indent modal state
+  // Manual multi-item indent modal state
   const [showManualIndentModal, setShowManualIndentModal] = useState(false);
-  const [manualIndentPartName, setManualIndentPartName] = useState('');
-  const [manualIndentQty, setManualIndentQty] = useState(2);
+  const [catalogProducts, setCatalogProducts] = useState([]);
+  const [loadingCatalog, setLoadingCatalog] = useState(false);
+  const [manualIndentItems, setManualIndentItems] = useState([
+    { posProductId: null, productId: null, productName: '', sku: '', requestedQuantity: 1, currentStock: null }
+  ]);
   const [manualIndentRemarks, setManualIndentRemarks] = useState('');
   const [submittingManualIndent, setSubmittingManualIndent] = useState(false);
+
+  const fetchCatalogProducts = async () => {
+    setLoadingCatalog(true);
+    try {
+      const res = await api.get('api/products');
+      if (res.success && Array.isArray(res.data)) {
+        setCatalogProducts(res.data);
+      }
+    } catch (err) {
+      console.error('Failed to load catalog products:', err);
+    } finally {
+      setLoadingCatalog(false);
+    }
+  };
+
+  const openManualIndentModal = () => {
+    setShowManualIndentModal(true);
+    setManualIndentItems([
+      { posProductId: null, productId: null, productName: '', sku: '', requestedQuantity: 1, currentStock: null }
+    ]);
+    setManualIndentRemarks('');
+    if (catalogProducts.length === 0) {
+      fetchCatalogProducts();
+    }
+  };
+
+  const addManualIndentRow = () => {
+    setManualIndentItems(prev => [
+      ...prev,
+      { posProductId: null, productId: null, productName: '', sku: '', requestedQuantity: 1, currentStock: null }
+    ]);
+  };
+
+  const removeManualIndentRow = (index) => {
+    setManualIndentItems(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSelectProductForRow = (index, productObjOrName) => {
+    setManualIndentItems(prev => {
+      const updated = [...prev];
+      if (typeof productObjOrName === 'object' && productObjOrName !== null) {
+        updated[index] = {
+          ...updated[index],
+          posProductId: productObjOrName.posProductId || productObjOrName.id || null,
+          productId: productObjOrName._id || null,
+          productName: productObjOrName.name || '',
+          sku: productObjOrName.sku || '',
+          currentStock: productObjOrName.stockLevel ?? productObjOrName.stock_level ?? 0
+        };
+      } else {
+        updated[index] = {
+          ...updated[index],
+          productName: productObjOrName,
+          posProductId: null,
+          productId: null,
+          currentStock: null
+        };
+      }
+      return updated;
+    });
+  };
+
+  const updateManualIndentQty = (index, qty) => {
+    setManualIndentItems(prev => {
+      const updated = [...prev];
+      updated[index] = {
+        ...updated[index],
+        requestedQuantity: Math.max(1, parseInt(qty) || 1)
+      };
+      return updated;
+    });
+  };
 
   const fetchVanStockAndIndents = async () => {
     setLoadingVanInventory(true);
@@ -146,6 +222,7 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
   useEffect(() => {
     if (activeTab === 'van-stock') {
       fetchVanStockAndIndents();
+      fetchCatalogProducts();
     }
   }, [activeTab]);
 
@@ -174,18 +251,29 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
 
   const handleManualIndentSubmit = async (e) => {
     e.preventDefault();
-    if (!manualIndentPartName || manualIndentQty <= 0) return;
+    const validItems = manualIndentItems.filter(it => it.productName && it.productName.trim() && it.requestedQuantity > 0);
+    if (validItems.length === 0) {
+      alert('Please select or enter at least one spare part item.');
+      return;
+    }
     setSubmittingManualIndent(true);
     try {
       const res = await api.post('api/indents/create', {
-        items: [{ productName: manualIndentPartName, requestedQuantity: Number(manualIndentQty) }],
+        items: validItems.map(it => ({
+          posProductId: it.posProductId,
+          productId: it.productId,
+          productName: it.productName.trim(),
+          sku: it.sku || '',
+          requestedQuantity: Number(it.requestedQuantity)
+        })),
         agentRemarks: manualIndentRemarks
       });
       if (res.success) {
-        alert('Parts requisition indent submitted to Store In-Charge!');
+        alert(`Indent request for ${validItems.length} part(s) submitted to Store In-Charge!`);
         setShowManualIndentModal(false);
-        setManualIndentPartName('');
-        setManualIndentQty(2);
+        setManualIndentItems([
+          { posProductId: null, productId: null, productName: '', sku: '', requestedQuantity: 1, currentStock: null }
+        ]);
         setManualIndentRemarks('');
         await fetchVanStockAndIndents();
       }
@@ -1052,7 +1140,7 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button
                   type="button"
-                  onClick={() => setShowManualIndentModal(true)}
+                  onClick={openManualIndentModal}
                   className="btn-primary"
                   style={{ padding: '8px 14px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', boxShadow: 'none' }}
                 >
@@ -1257,12 +1345,15 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
         </div>
       )}
 
-      {/* MANUAL INDENT CREATION MODAL */}
+      {/* MANUAL MULTI-ITEM INDENT CREATION MODAL */}
       {showManualIndentModal && (
         <div className="modal-backdrop" onClick={() => setShowManualIndentModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '420px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-              <h3 style={{ margin: 0, fontSize: '16px', color: '#ffffff' }}>Request Spare Parts Indent</h3>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '580px', width: '95%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', color: '#ffffff' }}>Request Spare Parts Indent</h3>
+                <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#9ca3af' }}>Select parts from live inventory catalog & request replenishment to your Van Kit</p>
+              </div>
               <button
                 type="button"
                 style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
@@ -1273,28 +1364,90 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
             </div>
 
             <form onSubmit={handleManualIndentSubmit} className="dashboard-form">
-              <div className="input-group">
-                <label>Part / Component Name *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. 10 inch Spun Filter, RO Pump 75 GPD"
-                  value={manualIndentPartName}
-                  onChange={(e) => setManualIndentPartName(e.target.value)}
-                  style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px', outline: 'none' }}
-                />
-              </div>
+              <div style={{ marginBottom: '15px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#e5e7eb', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Required Spare Parts ({manualIndentItems.length})
+                  </label>
+                  {loadingCatalog && <span style={{ fontSize: '11px', color: '#818cf8' }}>Loading live catalog...</span>}
+                </div>
 
-              <div className="input-group">
-                <label>Requested Quantity *</label>
-                <input
-                  type="number"
-                  min="1"
-                  required
-                  value={manualIndentQty}
-                  onChange={(e) => setManualIndentQty(e.target.value)}
-                  style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px', outline: 'none' }}
-                />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '280px', overflowY: 'auto', paddingRight: '4px' }}>
+                  {manualIndentItems.map((item, idx) => (
+                    <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(255,255,255,0.04)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ display: 'block', fontSize: '11px', color: '#9ca3af', marginBottom: '4px' }}>
+                          Select Spare Part {item.currentStock !== null ? `(Store Stock: ${item.currentStock})` : ''}
+                        </label>
+                        {catalogProducts.length > 0 ? (
+                          <select
+                            value={item.posProductId ? `pos_${item.posProductId}` : (item.productId ? `sms_${item.productId}` : item.productName)}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              const matched = catalogProducts.find(p => `pos_${p.posProductId || p.id}` === val || `sms_${p._id}` === val || p.name === val);
+                              if (matched) {
+                                handleSelectProductForRow(idx, matched);
+                              } else {
+                                handleSelectProductForRow(idx, val);
+                              }
+                            }}
+                            required
+                            style={{ width: '100%', background: '#1e293b', color: 'white', border: '1px solid rgba(255,255,255,0.15)', padding: '8px', borderRadius: '6px', outline: 'none', fontSize: '13px' }}
+                          >
+                            <option value="">-- Choose Spare Part from Catalog --</option>
+                            {catalogProducts.map(p => (
+                              <option key={p._id || p.id} value={p.posProductId ? `pos_${p.posProductId}` : (p._id ? `sms_${p._id}` : p.name)}>
+                                {p.name} {p.sku ? `(${p.sku})` : ''} — Store Stock: {p.stockLevel ?? p.stock_level ?? 0}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. 10 inch Spun Filter, RO Pump"
+                            value={item.productName}
+                            onChange={(e) => handleSelectProductForRow(idx, e.target.value)}
+                            style={{ width: '100%', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '8px', borderRadius: '6px', outline: 'none', fontSize: '13px' }}
+                          />
+                        )}
+                      </div>
+
+                      <div style={{ width: '80px' }}>
+                        <label style={{ display: 'block', fontSize: '11px', color: '#9ca3af', marginBottom: '4px' }}>Qty</label>
+                        <input
+                          type="number"
+                          min="1"
+                          required
+                          value={item.requestedQuantity}
+                          onChange={(e) => updateManualIndentQty(idx, e.target.value)}
+                          style={{ width: '100%', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '8px', borderRadius: '6px', outline: 'none', textAlign: 'center', fontWeight: 'bold' }}
+                        />
+                      </div>
+
+                      {manualIndentItems.length > 1 && (
+                        <div style={{ paddingTop: '18px' }}>
+                          <button
+                            type="button"
+                            onClick={() => removeManualIndentRow(idx)}
+                            style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', padding: '8px', borderRadius: '6px', cursor: 'pointer' }}
+                            title="Remove item"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={addManualIndentRow}
+                  style={{ width: '100%', marginTop: '10px', padding: '8px', background: 'rgba(99, 102, 241, 0.1)', border: '1px dashed rgba(99, 102, 241, 0.4)', color: '#818cf8', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                >
+                  <Plus size={14} /> + Add Another Spare Part
+                </button>
               </div>
 
               <div className="input-group">
@@ -1303,19 +1456,29 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
                   rows="2"
                   value={manualIndentRemarks}
                   onChange={(e) => setManualIndentRemarks(e.target.value)}
-                  placeholder="e.g. Daily refill for regular maintenance kit"
+                  placeholder="e.g. Daily refill for upcoming service calls"
                   style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px', outline: 'none', fontSize: '12px' }}
                 />
               </div>
 
-              <button
-                type="submit"
-                className="btn-primary"
-                disabled={submittingManualIndent}
-                style={{ marginTop: '10px', background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', boxShadow: 'none' }}
-              >
-                {submittingManualIndent ? 'Submitting Indent...' : 'Submit Indent to Store'}
-              </button>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowManualIndentModal(false)}
+                  className="btn-secondary"
+                  style={{ flex: 1, padding: '10px', fontSize: '13px' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={submittingManualIndent}
+                  style={{ flex: 1.5, padding: '10px', fontSize: '13px', background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', boxShadow: 'none' }}
+                >
+                  {submittingManualIndent ? 'Submitting Indent...' : `Submit Indent (${manualIndentItems.filter(i => i.productName).length} items)`}
+                </button>
+              </div>
             </form>
           </div>
         </div>

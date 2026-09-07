@@ -352,3 +352,77 @@ exports.rejectIndent = async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 };
+
+// @desc    Get complete agent inventory summary for POS Integration
+// @route   GET /api/agent-inventory/pos-summary
+// @access  Public with sync token OR Private (ADMIN, STORE_INCHARGE)
+exports.getPosSummary = async (req, res) => {
+  try {
+    const syncToken = req.headers['x-pos-sync-token'];
+    if (syncToken !== 'sbr_pos_sms_sync_secret_2026' && (!req.user || !['ADMIN', 'admin', 'STORE_INCHARGE'].includes(req.user.role))) {
+      return res.status(401).json({ success: false, error: 'Unauthorized POS access' });
+    }
+
+    const items = await AgentInventory.find({ quantity: { $gt: 0 } }).populate('agentId', 'name email phone role');
+
+    const byAgentMap = {};
+    const byProductMap = {};
+    let totalItemsAllotted = 0;
+
+    items.forEach(it => {
+      const agent = it.agentId || { _id: 'unknown', name: 'Unassigned Agent' };
+      const aId = String(agent._id);
+
+      if (!byAgentMap[aId]) {
+        byAgentMap[aId] = {
+          agentId: aId,
+          name: agent.name || 'Unknown',
+          phone: agent.phone || '',
+          email: agent.email || '',
+          totalQuantity: 0,
+          items: []
+        };
+      }
+
+      byAgentMap[aId].totalQuantity += it.quantity;
+      byAgentMap[aId].items.push({
+        productName: it.productName,
+        sku: it.sku,
+        category: it.category,
+        quantity: it.quantity,
+        posProductId: it.posProductId,
+        lastUpdated: it.lastUpdated
+      });
+
+      const pKey = it.posProductId ? `id_${it.posProductId}` : it.productName;
+      if (!byProductMap[pKey]) {
+        byProductMap[pKey] = {
+          posProductId: it.posProductId || null,
+          productName: it.productName,
+          sku: it.sku,
+          totalAllotted: 0,
+          agents: []
+        };
+      }
+      byProductMap[pKey].totalAllotted += it.quantity;
+      byProductMap[pKey].agents.push({
+        agentName: agent.name,
+        quantity: it.quantity
+      });
+
+      totalItemsAllotted += it.quantity;
+    });
+
+    res.status(200).json({
+      success: true,
+      totalItemsAllotted,
+      totalAgentsWithStock: Object.keys(byAgentMap).length,
+      byAgent: Object.values(byAgentMap),
+      byProduct: Object.values(byProductMap),
+      rawItemsCount: items.length
+    });
+  } catch (error) {
+    console.error('getPosSummary Error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
