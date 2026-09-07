@@ -59,7 +59,7 @@ struct OurCustomersView: View {
                         .foregroundColor(.white)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
-                        .onChange(of: viewModel.searchQuery) { _ in
+                        .onChange(of: viewModel.searchQuery) { _, _ in
                             Task { await viewModel.fetchCustomers() }
                         }
                     

@@ -6,11 +6,17 @@ struct APIResponse<T: Codable>: Codable {
     let error: String?
 }
 
+typealias ApiResponse<T: Codable> = APIResponse<T>
+
 struct Product: Codable, Identifiable, Hashable {
     let id: String
     let name: String
     let slug: String?
     let category: String?
+    let sku: String?
+    let posProductId: Int?
+    let stockLevel: Int?
+    let minStockLevel: Int?
     let image: String?
     let images: [String]?
     let subtitle: String?
@@ -26,7 +32,8 @@ struct Product: Codable, Identifiable, Hashable {
     
     enum CodingKeys: String, CodingKey {
         case id = "_id"
-        case name, slug, category, image, images, subtitle, tagline, description, features
+        case name, slug, category, sku, posProductId, stockLevel, minStockLevel
+        case image, images, subtitle, tagline, description, features
         case basePrice, mrp, commissionType, commissionValue, isActive, createdAt
     }
     
@@ -56,6 +63,10 @@ struct Product: Codable, Identifiable, Hashable {
         self.name = try container.decodeIfPresent(String.self, forKey: .name) ?? ""
         self.slug = try container.decodeIfPresent(String.self, forKey: .slug)
         self.category = try container.decodeIfPresent(String.self, forKey: .category)
+        self.sku = try container.decodeIfPresent(String.self, forKey: .sku)
+        self.posProductId = try container.decodeIfPresent(Int.self, forKey: .posProductId)
+        self.stockLevel = try container.decodeIfPresent(Int.self, forKey: .stockLevel)
+        self.minStockLevel = try container.decodeIfPresent(Int.self, forKey: .minStockLevel)
         self.image = try container.decodeIfPresent(String.self, forKey: .image)
         self.images = try container.decodeIfPresent([String].self, forKey: .images)
         self.subtitle = try container.decodeIfPresent(String.self, forKey: .subtitle)

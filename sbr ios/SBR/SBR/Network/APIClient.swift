@@ -60,7 +60,7 @@ class APIClient {
     
     // GET Request
     func get<T: Decodable>(endpoint: String, responseType: T.Type) async throws -> T {
-        guard var request = prepareRequest(urlPath: endpoint, method: "GET") else {
+        guard let request = prepareRequest(urlPath: endpoint, method: "GET") else {
             throw APIError.invalidURL
         }
         
@@ -94,7 +94,7 @@ class APIClient {
     
     // DELETE Request
     func delete<T: Decodable>(endpoint: String, responseType: T.Type) async throws -> T {
-        guard var request = prepareRequest(urlPath: endpoint, method: "DELETE") else {
+        guard let request = prepareRequest(urlPath: endpoint, method: "DELETE") else {
             throw APIError.invalidURL
         }
         
@@ -126,7 +126,7 @@ class APIClient {
         
         request.httpBody = body
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, _) = try await URLSession.shared.data(for: request)
         
         struct UploadResponse: Decodable {
             let success: Bool

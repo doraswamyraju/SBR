@@ -101,7 +101,7 @@ struct AgentDashboardView: View {
                 }
             }
         }
-        .onChange(of: activeJob?.id) { newId in
+        .onChange(of: activeJob?.id) { _, newId in
             if let id = newId {
                 requestVM.locationManager.requestPermission()
                 requestVM.startLocationTracking(activeRequestId: id)
@@ -109,7 +109,7 @@ struct AgentDashboardView: View {
                 requestVM.stopLocationTracking()
             }
         }
-        .onChange(of: activeJob?.status) { newStatus in
+        .onChange(of: activeJob?.status) { _, newStatus in
             if let job = activeJob, (newStatus == .accepted || newStatus == .inProgress) {
                 requestVM.locationManager.requestPermission()
                 requestVM.startLocationTracking(activeRequestId: job.id)
@@ -759,7 +759,7 @@ struct AgentProfileScreenView: View {
                                     .foregroundColor(SBRColors.textPrimary)
                             }
                             .disabled(isUpdatingAvailability)
-                            .onChange(of: isAvailable) { newValue in
+                            .onChange(of: isAvailable) { _, newValue in
                                 updateAvailability(to: newValue)
                             }
                         }
@@ -1508,7 +1508,7 @@ struct AgentPaymentBreakdownSheet: View {
                                     .tag(item.id)
                             }
                         }
-                        .onChange(of: selectedExtraItemId) { newId in
+                        .onChange(of: selectedExtraItemId) { _, newId in
                             if let item = vanItems.first(where: { $0.id == newId }) {
                                 extraUnitPrice = "\(Int(item.productId?.price ?? 0))"
                             }
@@ -1589,12 +1589,12 @@ struct AgentPaymentBreakdownSheet: View {
         Task {
             let success = await requestVM.completeJob(
                 requestId: job.id,
+                amount: netTotal,
+                method: paymentMethod,
                 inventoryTotal: inventorySubtotal,
                 serviceCharge: serviceChargeValue,
                 discount: discountValue,
-                discountRemarks: discountRemarks.isEmpty ? nil : discountRemarks,
-                finalAmount: netTotal,
-                paymentMethod: paymentMethod,
+                discountRemarks: discountRemarks,
                 requiredComponents: components,
                 requestReview: requestReview
             )

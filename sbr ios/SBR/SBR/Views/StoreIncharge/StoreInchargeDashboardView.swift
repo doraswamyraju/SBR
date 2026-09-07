@@ -57,7 +57,7 @@ struct StoreInchargeDashboardView: View {
             } message: {
                 Text(alertMessage)
             }
-            .onAppear(perform: loadAllData)
+            .task { await loadAllData() }
         }
     }
     
@@ -74,7 +74,9 @@ struct StoreInchargeDashboardView: View {
                     .foregroundColor(.secondary)
             }
             Spacer()
-            Button(action: { authVM.logout() }) {
+            Button(action: {
+                Task { await authVM.logout() }
+            }) {
                 Image(systemName: "rectangle.portrait.and.arrow.right")
                     .foregroundColor(.red)
                     .padding(8)
@@ -160,7 +162,7 @@ struct StoreInchargeDashboardView: View {
             }
             .padding(.vertical)
         }
-        .refreshable { loadAllData() }
+        .refreshable { await loadAllData() }
     }
     
     // 2. Cash Handover Reconciliation View
@@ -230,7 +232,7 @@ struct StoreInchargeDashboardView: View {
             }
             .padding(.vertical)
         }
-        .refreshable { loadAllData() }
+        .refreshable { await loadAllData() }
     }
     
     // 3. Indents Requisition View
@@ -316,7 +318,7 @@ struct StoreInchargeDashboardView: View {
             }
             .padding(.vertical)
         }
-        .refreshable { loadAllData() }
+        .refreshable { await loadAllData() }
     }
     
     // Reconciliation Modal Sheet
@@ -372,43 +374,38 @@ struct StoreInchargeDashboardView: View {
     }
     
     // Network Operations
-    private func loadAllData() {
+    @MainActor
+    private func loadAllData() async {
         isLoading = true
-        Task {
-            do {
-                async let reqRes = APIClient.shared.get(
-                    endpoint: "api/requests",
-                    responseType: ApiResponse<[ServiceRequest]>.self
-                )
-                async let usersRes = APIClient.shared.get(
-                    endpoint: "api/users",
-                    responseType: ApiResponse<[User]>.self
-                )
-                async let handRes = APIClient.shared.get(
-                    endpoint: "api/handovers/pending",
-                    responseType: ApiResponse<[CashHandover]>.self
-                )
-                async let indRes = APIClient.shared.get(
-                    endpoint: "api/indents/pending",
-                    responseType: ApiResponse<[AgentIndent]>.self
-                )
-                
-                let (r, u, h, ind) = try await (reqRes, usersRes, handRes, indRes)
-                
-                DispatchQueue.main.async {
-                    self.requests = r.data ?? []
-                    self.agents = (u.data ?? []).filter { $0.role == .agent }
-                    self.pendingHandovers = h.data ?? []
-                    self.pendingIndents = ind.data ?? []
-                    self.isLoading = false
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    self.isLoading = false
-                    self.alertMessage = error.localizedDescription
-                    self.showAlert = true
-                }
-            }
+        do {
+            async let reqRes = APIClient.shared.get(
+                endpoint: "api/requests",
+                responseType: ApiResponse<[ServiceRequest]>.self
+            )
+            async let usersRes = APIClient.shared.get(
+                endpoint: "api/users",
+                responseType: ApiResponse<[User]>.self
+            )
+            async let handRes = APIClient.shared.get(
+                endpoint: "api/handovers/pending",
+                responseType: ApiResponse<[CashHandover]>.self
+            )
+            async let indRes = APIClient.shared.get(
+                endpoint: "api/indents/pending",
+                responseType: ApiResponse<[AgentIndent]>.self
+            )
+            
+            let (r, u, h, ind) = try await (reqRes, usersRes, handRes, indRes)
+            
+            self.requests = r.data ?? []
+            self.agents = (u.data ?? []).filter { $0.role == .agent }
+            self.pendingHandovers = h.data ?? []
+            self.pendingIndents = ind.data ?? []
+            self.isLoading = false
+        } catch {
+            self.isLoading = false
+            self.alertMessage = error.localizedDescription
+            self.showAlert = true
         }
     }
     
@@ -424,13 +421,11 @@ struct StoreInchargeDashboardView: View {
                     body: AssignReq(assignedAgentId: agentId),
                     responseType: ApiResponse<ServiceRequest>.self
                 )
-                DispatchQueue.main.async {
-                    if res.success {
-                        self.loadAllData()
-                    }
+                if res.success {
+                    await self.loadAllData()
                 }
             } catch {
-                DispatchQueue.main.async {
+                await MainActor.run {
                     self.alertMessage = error.localizedDescription
                     self.showAlert = true
                 }
@@ -454,15 +449,17 @@ struct StoreInchargeDashboardView: View {
                     body: AcknowledgeReq(acknowledgedAmount: received, inchargeNotes: reconciliationNotes),
                     responseType: ApiResponse<CashHandover>.self
                 )
-                DispatchQueue.main.async {
+                await MainActor.run {
                     self.isSubmittingReconciliation = false
                     if res.success {
                         self.selectedHandover = nil
-                        self.loadAllData()
                     }
                 }
+                if res.success {
+                    await self.loadAllData()
+                }
             } catch {
-                DispatchQueue.main.async {
+                await MainActor.run {
                     self.isSubmittingReconciliation = false
                     self.alertMessage = error.localizedDescription
                     self.showAlert = true
@@ -483,13 +480,11 @@ struct StoreInchargeDashboardView: View {
                     body: DispatchReq(inchargeRemarks: "Dispatched by Store In-Charge"),
                     responseType: ApiResponse<AgentIndent>.self
                 )
-                DispatchQueue.main.async {
-                    if res.success {
-                        self.loadAllData()
-                    }
+                if res.success {
+                    await self.loadAllData()
                 }
             } catch {
-                DispatchQueue.main.async {
+                await MainActor.run {
                     self.alertMessage = error.localizedDescription
                     self.showAlert = true
                 }
@@ -509,13 +504,11 @@ struct StoreInchargeDashboardView: View {
                     body: RejectReq(inchargeRemarks: "Out of stock at central store"),
                     responseType: ApiResponse<AgentIndent>.self
                 )
-                DispatchQueue.main.async {
-                    if res.success {
-                        self.loadAllData()
-                    }
+                if res.success {
+                    await self.loadAllData()
                 }
             } catch {
-                DispatchQueue.main.async {
+                await MainActor.run {
                     self.alertMessage = error.localizedDescription
                     self.showAlert = true
                 }

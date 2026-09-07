@@ -33,7 +33,7 @@ struct AdminCreateRequestView: View {
                             Text(c.name).tag(c.id)
                         }
                     }
-                    .onChange(of: selectedCustomerId) { id in
+                    .onChange(of: selectedCustomerId) { _, id in
                         if let client = customers.first(where: { $0.id == id }) {
                             address = client.address ?? ""
                         }
