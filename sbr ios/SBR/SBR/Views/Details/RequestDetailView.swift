@@ -7,6 +7,7 @@ struct RequestDetailView: View {
     
     @State private var currentRequest: ServiceRequest
     @State private var showingLiveTracking = false
+    @State private var showingAgentRouteTracking = false
     @State private var showingAgentSelection = false
     @State private var showingImagePicker = false
     @State private var pickerImageType = "before"
@@ -64,7 +65,7 @@ struct RequestDetailView: View {
                         .padding(.horizontal)
                     
                     // Track Agent Live Button (Customer tracking)
-                    if isTrackingActive {
+                    if isTrackingActive && authVM.user?.role == .customer {
                         Button(action: { showingLiveTracking = true }) {
                             Label("Track Agent Live", systemImage: "location.circle.fill")
                                 .font(.subheadline)
@@ -73,6 +74,27 @@ struct RequestDetailView: View {
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
                                 .background(SBRColors.primaryBlue)
+                                .cornerRadius(8)
+                        }
+                        .padding(.horizontal)
+                    }
+                    
+                    // Track Customer Live Route Button (Agent navigation)
+                    if authVM.user?.role == .agent && (currentRequest.status == .accepted || currentRequest.status == .inProgress) {
+                        Button(action: { showingAgentRouteTracking = true }) {
+                            Label("Track Customer Route & Navigate", systemImage: "arrow.triangle.turn.up.right.diamond.fill")
+                                .font(.subheadline)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(
+                                    LinearGradient(
+                                        colors: [Color.blue, Color.indigo],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
                                 .cornerRadius(8)
                         }
                         .padding(.horizontal)
@@ -391,6 +413,9 @@ struct RequestDetailView: View {
         }
         .sheet(isPresented: $showingLiveTracking) {
             CustomerLiveTrackingView(request: currentRequest)
+        }
+        .sheet(isPresented: $showingAgentRouteTracking) {
+            AgentLiveCustomerRouteView(job: currentRequest, requestVM: requestVM)
         }
         .sheet(isPresented: $showingAgentSelection) {
             DetailAgentSelectionSheet(request: currentRequest, requestVM: requestVM) { updatedReq in

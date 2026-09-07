@@ -85,6 +85,7 @@ struct AgentDashboardView: View {
         .sheet(item: $assessingJob) { job in
             AgentAssessmentSheet(job: job, requestVM: requestVM) {
                 assessingJob = nil
+                selectedSection = .activeService
             }
         }
         .sheet(item: $completingJob) { job in
@@ -226,6 +227,63 @@ struct AgentDashboardContent: View {
                         )
                     }
                     .buttonStyle(PlainButtonStyle())
+                    
+                    if let job = activeJob {
+                        Button(action: { onNavigateToSection(.activeService) }) {
+                            HStack(spacing: 10) {
+                                Circle()
+                                    .fill(Color.green)
+                                    .frame(width: 10, height: 10)
+                                    .overlay(Circle().stroke(Color.green.opacity(0.4), lineWidth: 4).scaleEffect(1.3))
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    HStack(spacing: 6) {
+                                        Text("En Route to Customer")
+                                            .font(.subheadline)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.white)
+                                        Text("LIVE GPS")
+                                            .font(.system(size: 9, weight: .heavy))
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
+                                            .background(Color.black.opacity(0.3))
+                                            .cornerRadius(4)
+                                            .foregroundColor(.green)
+                                    }
+                                    Text(job.customerAddress)
+                                        .font(.caption)
+                                        .foregroundColor(.white.opacity(0.9))
+                                        .lineLimit(1)
+                                }
+                                
+                                Spacer()
+                                
+                                HStack(spacing: 4) {
+                                    Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
+                                    Text("Navigate")
+                                }
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(Color.white.opacity(0.2))
+                                .cornerRadius(8)
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.blue, Color.indigo],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(12)
+                            .shadow(color: Color.blue.opacity(0.3), radius: 5, x: 0, y: 2)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
                     
                     HStack(spacing: 16) {
                         Button(action: { onNavigateToSection(.newRequests) }) {
@@ -457,6 +515,8 @@ struct AgentActiveServiceView: View {
     @Binding var activeJobForUpload: ServiceRequest?
     var onCompleteJob: ((ServiceRequest) -> Void)? = nil
     
+    @State private var showingLiveRouteTracking = false
+    
     private var activeJob: ServiceRequest? {
         requestVM.requests.first(where: { $0.status == .accepted || $0.status == .inProgress })
     }
@@ -482,6 +542,12 @@ struct AgentActiveServiceView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         JobTimerView(request: job)
+                        
+                        // Swiggy / Rapido Style Live Customer Route Card
+                        AgentRouteMapCardView(job: job, requestVM: requestVM) {
+                            self.showingLiveRouteTracking = true
+                        }
+                        .padding(.horizontal)
                         
                         VStack(alignment: .leading, spacing: 12) {
                             Text(job.serviceType)
@@ -602,6 +668,25 @@ struct AgentActiveServiceView: View {
                                 }
                             }
                             
+                            Button(action: {
+                                self.showingLiveRouteTracking = true
+                            }) {
+                                Label("Live GPS Customer Track (Swiggy/Rapido Mode)", systemImage: "location.north.line.fill")
+                                    .font(.subheadline)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [Color.blue, Color.indigo],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    .cornerRadius(8)
+                            }
+                            
                             Spacer().frame(height: 8)
                             
                             // Status specific Action buttons matching restructured flow
@@ -689,6 +774,9 @@ struct AgentActiveServiceView: View {
                         )
                         .padding()
                     }
+                }
+                .sheet(isPresented: $showingLiveRouteTracking) {
+                    AgentLiveCustomerRouteView(job: job, requestVM: requestVM)
                 }
             } else {
                 Spacer()
