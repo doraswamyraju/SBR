@@ -3,11 +3,12 @@ import SwiftUI
 struct StoreInchargeDashboardView: View {
     @EnvironmentObject var authVM: AuthViewModel
     
-    @State private var selectedTab = 0 // 0: Dispatch Queue, 1: Cash Reconciliation, 2: Agent Indents
+    @State private var selectedTab = 0 // 0: Dispatch Queue, 1: Live Tracking, 2: Cash Reconciliation, 3: Agent Indents
     @State private var requests: [ServiceRequest] = []
     @State private var agents: [User] = []
     @State private var pendingHandovers: [CashHandover] = []
     @State private var pendingIndents: [AgentIndent] = []
+    @State private var selectedLiveTrackingJob: ServiceRequest? = nil
     
     @State private var isLoading = false
     @State private var errorMessage: String?
@@ -20,6 +21,10 @@ struct StoreInchargeDashboardView: View {
     @State private var reconciliationNotes = ""
     @State private var isSubmittingReconciliation = false
     
+    private var activeDispatchedJobs: [ServiceRequest] {
+        requests.filter { ($0.status == .assigned || $0.status == .accepted || $0.status == .inProgress) && $0.assignedAgentId != nil }
+    }
+    
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
@@ -29,8 +34,9 @@ struct StoreInchargeDashboardView: View {
                 // Segmented Tab Picker
                 Picker("Store Mode", selection: $selectedTab) {
                     Text("Dispatch (\(unassignedRequestsCount))").tag(0)
-                    Text("Cash Handover (\(pendingHandovers.count))").tag(1)
-                    Text("Indents (\(pendingIndents.count))").tag(2)
+                    Text("Live Track (\(activeDispatchedJobs.count))").tag(1)
+                    Text("Cash Handover (\(pendingHandovers.count))").tag(2)
+                    Text("Indents (\(pendingIndents.count))").tag(3)
                 }
                 .pickerStyle(SegmentedPickerStyle())
                 .padding()
@@ -42,8 +48,9 @@ struct StoreInchargeDashboardView: View {
                 } else {
                     TabView(selection: $selectedTab) {
                         dispatchQueueView.tag(0)
-                        cashHandoverView.tag(1)
-                        indentsQueueView.tag(2)
+                        liveTrackingView.tag(1)
+                        cashHandoverView.tag(2)
+                        indentsQueueView.tag(3)
                     }
                     .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
                 }
@@ -51,6 +58,9 @@ struct StoreInchargeDashboardView: View {
             .navigationBarHidden(true)
             .sheet(item: $selectedHandover) { handover in
                 reconciliationSheet(for: handover)
+            }
+            .sheet(item: $selectedLiveTrackingJob) { job in
+                CustomerLiveTrackingView(request: job)
             }
             .alert("Store In-Charge Alert", isPresented: $showAlert) {
                 Button("OK", role: .cancel) { }
@@ -151,6 +161,103 @@ struct StoreInchargeDashboardView: View {
                                 .foregroundColor(.blue)
                                 .cornerRadius(8)
                             }
+                        }
+                        .padding()
+                        .background(Color(.systemBackground))
+                        .cornerRadius(12)
+                        .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
+                        .padding(.horizontal)
+                    }
+                }
+            }
+            .padding(.vertical)
+        }
+        .refreshable { await loadAllData() }
+    }
+    
+    // 2. Live Field Agent GPS Tracking View
+    private var liveTrackingView: some View {
+        ScrollView {
+            VStack(spacing: 12) {
+                if activeDispatchedJobs.isEmpty {
+                    VStack(spacing: 8) {
+                        Image(systemName: "location.slash")
+                            .font(.system(size: 40))
+                            .foregroundColor(.gray)
+                        Text("No field agents are currently on active service.")
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 40)
+                } else {
+                    ForEach(activeDispatchedJobs) { req in
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Text(req.serviceType)
+                                    .font(.headline)
+                                Spacer()
+                                Text(req.status.rawValue)
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(Color.green.opacity(0.15))
+                                    .foregroundColor(.green)
+                                    .cornerRadius(6)
+                            }
+                            
+                            HStack(spacing: 8) {
+                                Image(systemName: "person.fill")
+                                    .foregroundColor(.blue)
+                                Text("Agent: \(req.assignedAgentId?.name ?? "Technician")")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                
+                                Spacer()
+                                
+                                if let phone = req.assignedAgentId?.phone {
+                                    Button(action: {
+                                        if let url = URL(string: "tel:\(phone)") {
+                                            UIApplication.shared.open(url)
+                                        }
+                                    }) {
+                                        Image(systemName: "phone.fill")
+                                            .foregroundColor(.green)
+                                    }
+                                }
+                            }
+                            
+                            Text("Customer: \(req.customerId?.name ?? "Client")")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            Text("Address: \(req.customerAddress)")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                            
+                            Button(action: {
+                                self.selectedLiveTrackingJob = req
+                            }) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "location.north.line.fill")
+                                    Text("Track Agent Live GPS")
+                                        .fontWeight(.bold)
+                                }
+                                .font(.subheadline)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(
+                                    LinearGradient(
+                                        colors: [Color.blue, Color.indigo],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .cornerRadius(8)
+                            }
+                            .padding(.top, 4)
                         }
                         .padding()
                         .background(Color(.systemBackground))

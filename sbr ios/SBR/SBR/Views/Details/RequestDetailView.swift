@@ -64,17 +64,26 @@ struct RequestDetailView: View {
                     JobTimerView(request: currentRequest)
                         .padding(.horizontal)
                     
-                    // Track Agent Live Button (Customer tracking)
-                    if isTrackingActive && authVM.user?.role == .customer {
+                    // Track Agent Live Button (Customer, Admin, and Store In-Charge live tracking)
+                    if isTrackingActive && (authVM.user?.role == .customer || authVM.user?.role == .admin || authVM.user?.role == .storeIncharge) {
                         Button(action: { showingLiveTracking = true }) {
-                            Label("Track Agent Live", systemImage: "location.circle.fill")
-                                .font(.subheadline)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(SBRColors.primaryBlue)
-                                .cornerRadius(8)
+                            HStack(spacing: 8) {
+                                Image(systemName: "location.fill")
+                                Text(authVM.user?.role == .customer ? "Track Technician Live" : "Track Agent Live Location")
+                                    .fontWeight(.bold)
+                            }
+                            .font(.subheadline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.blue, Color.indigo],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(8)
                         }
                         .padding(.horizontal)
                     }

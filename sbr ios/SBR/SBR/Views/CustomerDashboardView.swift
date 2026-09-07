@@ -169,6 +169,10 @@ struct CustomerDashboardContent: View {
         }
     }
     
+    private var activeTrackableJob: ServiceRequest? {
+        requestVM.requests.first(where: { ($0.status == .assigned || $0.status == .accepted || $0.status == .inProgress) && $0.assignedAgentId != nil })
+    }
+    
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -181,6 +185,55 @@ struct CustomerDashboardContent: View {
                 
                 // Summary Grid Cards
                 VStack(spacing: 16) {
+                    // Active Technician Live Tracking Banner (if any)
+                    if let activeJob = activeTrackableJob {
+                        Button(action: { onSelectRequest(activeJob) }) {
+                            HStack(spacing: 12) {
+                                Circle()
+                                    .fill(Color.green)
+                                    .frame(width: 10, height: 10)
+                                    .overlay(Circle().stroke(Color.green.opacity(0.4), lineWidth: 4).scaleEffect(1.3))
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Technician Assigned • Live GPS Active")
+                                        .font(.subheadline)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.white)
+                                    Text("\(activeJob.assignedAgentId?.name ?? "Technician") is assigned for \(activeJob.serviceType)")
+                                        .font(.caption2)
+                                        .foregroundColor(.white.opacity(0.9))
+                                        .lineLimit(1)
+                                }
+                                
+                                Spacer()
+                                
+                                HStack(spacing: 4) {
+                                    Image(systemName: "location.fill")
+                                    Text("Track Live")
+                                }
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(Color.white.opacity(0.2))
+                                .cornerRadius(8)
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.blue, Color.indigo],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(12)
+                            .shadow(color: Color.blue.opacity(0.3), radius: 5, x: 0, y: 2)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                    
                     HStack(spacing: 16) {
                         Button(action: { onNavigateToSection(.requests) }) {
                             SummaryCard(title: "Active Requests", value: "\(activeRequestsCount)", isPrimary: true)
