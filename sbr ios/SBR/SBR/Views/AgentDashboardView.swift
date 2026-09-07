@@ -1473,40 +1473,74 @@ struct AgentPaymentBreakdownSheet: View {
                     .padding(.vertical, 4)
                 }
                 
-                // Closeout Buttons: With Google Review vs Without Review
-                Section {
-                    VStack(spacing: 12) {
-                        Button(action: { completeJobAction(requestReview: true) }) {
-                            HStack {
-                                Spacer()
-                                if isSubmitting {
-                                    ProgressView().tint(.white)
-                                } else {
-                                    Label("Collect ₹\(Int(netTotal)) & Close with Review", systemImage: "star.fill")
-                                        .font(.subheadline)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.white)
-                                }
-                                Spacer()
-                            }
-                        }
-                        .padding(.vertical, 4)
-                        .listRowBackground(SBRColors.primaryBlue)
-                        .disabled(isSubmitting)
-                        
-                        Button(action: { completeJobAction(requestReview: false) }) {
-                            HStack {
-                                Spacer()
-                                Label("Collect ₹\(Int(netTotal)) & Close (No Review)", systemImage: "checkmark.circle.fill")
+                // Option 1: Close with Google Review Request (Recommended)
+                Section(header: Text("Option 1: Request Customer Review (Recommended)").foregroundColor(.gray)) {
+                    Button(action: { completeJobAction(requestReview: true) }) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "star.fill")
+                                .font(.title3)
+                                .foregroundColor(.yellow)
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Collect ₹\(Int(netTotal)) & Request Review")
                                     .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(.secondary)
-                                Spacer()
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.white)
+                                Text("Asks customer for 5-star Google review")
+                                    .font(.caption2)
+                                    .foregroundColor(.white.opacity(0.85))
+                            }
+                            
+                            Spacer()
+                            
+                            if isSubmitting {
+                                ProgressView().tint(.white)
+                            } else {
+                                Image(systemName: "arrow.right.circle.fill")
+                                    .font(.title3)
+                                    .foregroundColor(.white)
                             }
                         }
-                        .padding(.vertical, 2)
-                        .disabled(isSubmitting)
+                        .padding(.vertical, 6)
                     }
+                    .listRowBackground(
+                        LinearGradient(
+                            colors: [Color.blue, Color.indigo],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .disabled(isSubmitting)
+                }
+                
+                // Option 2: Close Directly without Review
+                Section(header: Text("Option 2: Direct Close").foregroundColor(.gray)) {
+                    Button(action: { completeJobAction(requestReview: false) }) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.title3)
+                                .foregroundColor(.green)
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Collect ₹\(Int(netTotal)) & Close (No Review)")
+                                    .font(.subheadline)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(SBRColors.textPrimary)
+                                Text("Complete service without review prompt")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            Spacer()
+                            
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 6)
+                    }
+                    .listRowBackground(Color.white)
+                    .disabled(isSubmitting)
                 }
             }
             .navigationTitle("Payment & Completion")
