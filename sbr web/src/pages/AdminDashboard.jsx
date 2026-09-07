@@ -446,18 +446,18 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
               
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <Search size={16} style={{ position: 'absolute', left: '10px', color: '#9ca3af' }} />
+                  <Search size={16} style={{ position: 'absolute', left: '10px', color: '#64748b' }} />
                   <input
                     type="text"
                     placeholder="Search type, client, agent..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     style={{
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
                       borderRadius: '8px',
                       padding: '8px 12px 8px 32px',
-                      color: 'white',
+                      color: '#0f172a',
                       fontSize: '14px',
                       outline: 'none',
                       width: '220px'
@@ -469,22 +469,22 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
                     borderRadius: '8px',
                     padding: '8px 12px',
-                    color: 'white',
+                    color: '#0f172a',
                     fontSize: '14px',
                     outline: 'none'
                   }}
                 >
-                  <option value="All" style={{ background: '#181823' }}>All Statuses</option>
-                  <option value="Pending" style={{ background: '#181823' }}>Pending</option>
-                  <option value="Assigned" style={{ background: '#181823' }}>Assigned</option>
-                  <option value="Accepted" style={{ background: '#181823' }}>Accepted</option>
-                  <option value="In Progress" style={{ background: '#181823' }}>In Progress</option>
-                  <option value="Completed" style={{ background: '#181823' }}>Completed</option>
-                  <option value="Cancelled" style={{ background: '#181823' }}>Cancelled</option>
+                  <option value="All">All Statuses</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Assigned">Assigned</option>
+                  <option value="Accepted">Accepted</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Cancelled">Cancelled</option>
                 </select>
               </div>
             </div>
@@ -505,28 +505,28 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
                 <tbody>
                   {filteredRequests.length === 0 ? (
                     <tr>
-                      <td colSpan="7" style={{ textAlign: 'center', color: '#9ca3af', padding: '30px' }}>No requests match the query.</td>
+                      <td colSpan="7" style={{ textAlign: 'center', color: '#64748b', padding: '30px' }}>No requests match the query.</td>
                     </tr>
                   ) : (
                     filteredRequests.map(req => (
                       <tr key={req._id}>
-                        <td style={{ fontSize: '11px', color: '#9ca3af' }}>#{req._id.substring(req._id.length - 8)}</td>
+                        <td style={{ fontSize: '11px', color: '#64748b' }}>#{req._id.substring(req._id.length - 8)}</td>
                         <td>
-                          <div style={{ fontWeight: '600' }}>{req.customerId?.name || 'Unknown'}</div>
-                          <div style={{ fontSize: '11px', color: '#9ca3af' }}>{req.customerId?.phone}</div>
-                          <div style={{ fontSize: '11px', color: '#9ca3af', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={req.customerAddress}>
+                          <div style={{ fontWeight: '600', color: '#0f172a' }}>{req.customerId?.name || 'Unknown'}</div>
+                          <div style={{ fontSize: '11px', color: '#64748b' }}>{req.customerId?.phone}</div>
+                          <div style={{ fontSize: '11px', color: '#64748b', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={req.customerAddress}>
                             {req.customerAddress}
                           </div>
                         </td>
                         <td>
-                          <div style={{ fontWeight: '600', color: '#a78bfa' }}>{req.serviceType}</div>
-                          <div style={{ fontSize: '12px', color: '#d1d5db', marginTop: '2px' }}>{req.description}</div>
+                          <div style={{ fontWeight: '600', color: '#4f46e5' }}>{req.serviceType}</div>
+                          <div style={{ fontSize: '12px', color: '#475569', marginTop: '2px' }}>{req.description}</div>
                         </td>
                         <td>
                           {req.assignedAgentId ? (
                             <div>
-                              <div>{req.assignedAgentId.name}</div>
-                              <div style={{ fontSize: '11px', color: '#9ca3af' }}>{req.assignedAgentId.phone}</div>
+                              <div style={{ color: '#0f172a', fontWeight: '500' }}>{req.assignedAgentId.name}</div>
+                              <div style={{ fontSize: '11px', color: '#64748b' }}>{req.assignedAgentId.phone}</div>
                               {['Assigned', 'Accepted', 'In Progress'].includes(req.status) && (
                                 <button 
                                   className="btn-secondary" 
@@ -559,8 +559,8 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
                           {req.paymentStatus === 'Paid' ? (
                             <div>
                               <span className="badge badge-paid">Paid</span>
-                              <div style={{ fontSize: '12px', color: '#10b981', marginTop: '3px' }}>₹{req.paymentAmount}</div>
-                              <div style={{ fontSize: '10px', color: '#9ca3af' }}>{req.paymentMethod}</div>
+                              <div style={{ fontSize: '12px', color: '#059669', fontWeight: 'bold', marginTop: '3px' }}>₹{req.paymentAmount}</div>
+                              <div style={{ fontSize: '10px', color: '#64748b' }}>{req.paymentMethod}</div>
                             </div>
                           ) : (
                             <span className="badge badge-pending">Pending</span>
@@ -617,16 +617,16 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
                 <tbody>
                   {agents.length === 0 ? (
                     <tr>
-                      <td colSpan="8" style={{ textAlign: 'center', color: '#9ca3af', padding: '30px' }}>No service agent accounts registered.</td>
+                      <td colSpan="8" style={{ textAlign: 'center', color: '#64748b', padding: '30px' }}>No service agent accounts registered.</td>
                     </tr>
                   ) : (
                     agents.map(agent => (
                       <tr key={agent._id}>
-                        <td style={{ fontWeight: '600' }}>{agent.name}</td>
+                        <td style={{ fontWeight: '600', color: '#0f172a' }}>{agent.name}</td>
                         <td>{agent.email}</td>
                         <td>{agent.phone || 'N/A'}</td>
                         <td>
-                          <span style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#a78bfa', padding: '4px 8px', borderRadius: '4px', fontSize: '12px' }}>
+                          <span style={{ background: '#e0e7ff', color: '#4338ca', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '500' }}>
                             {agent.specialization || 'General Technician'}
                           </span>
                         </td>
@@ -639,11 +639,11 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
                         <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{agent.completedJobs || 0}</td>
                         <td>
                           {agent.currentLat ? (
-                            <span style={{ fontSize: '11px', color: '#3b82f6', fontFamily: 'monospace' }}>
+                            <span style={{ fontSize: '11px', color: '#2563eb', fontFamily: 'monospace' }}>
                               {agent.currentLat.toFixed(5)}, {agent.currentLng.toFixed(5)}
                             </span>
                           ) : (
-                            <span style={{ color: '#9ca3af', fontSize: '12px' }}>No coordinates</span>
+                            <span style={{ color: '#64748b', fontSize: '12px' }}>No coordinates</span>
                           )}
                         </td>
                       </tr>
@@ -674,12 +674,12 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
                 <tbody>
                   {customers.length === 0 ? (
                     <tr>
-                      <td colSpan="7" style={{ textAlign: 'center', color: '#9ca3af', padding: '30px' }}>No customer accounts registered.</td>
+                      <td colSpan="7" style={{ textAlign: 'center', color: '#64748b', padding: '30px' }}>No customer accounts registered.</td>
                     </tr>
                   ) : (
                     customers.map(cust => (
                       <tr key={cust._id}>
-                        <td style={{ fontWeight: '600' }}>{cust.name}</td>
+                        <td style={{ fontWeight: '600', color: '#0f172a' }}>{cust.name}</td>
                         <td>{cust.email}</td>
                         <td>{cust.phone || 'N/A'}</td>
                         <td>{cust.address || 'No address specified'}</td>
@@ -691,7 +691,7 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
                         <td>
                           {cust.nextServiceDate ? new Date(cust.nextServiceDate).toLocaleDateString() : 'N/A'}
                         </td>
-                        <td style={{ fontSize: '12px', color: '#9ca3af' }}>
+                        <td style={{ fontSize: '12px', color: '#64748b' }}>
                           {new Date(cust.createdAt).toLocaleDateString()}
                         </td>
                       </tr>
@@ -717,16 +717,17 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
               flexWrap: 'wrap', 
               gap: '12px', 
               marginBottom: '20px', 
-              backgroundColor: '#1e293b', 
+              backgroundColor: '#ffffff', 
               padding: '16px 20px', 
-              borderRadius: '12px',
-              border: '1px solid rgba(255,255,255,0.08)'
+              borderRadius: '16px',
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
             }}>
               <div>
-                <h3 style={{ margin: 0, color: '#ffffff', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <FileSpreadsheet size={20} color="#38bdf8" /> Admin Customer Dataset Management
+                <h3 style={{ margin: 0, color: '#0f172a', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <FileSpreadsheet size={20} color="#0284c7" /> Admin Customer Dataset Management
                 </h3>
-                <p style={{ margin: '4px 0 0 0', fontSize: '12.5px', color: '#94a3b8' }}>
+                <p style={{ margin: '4px 0 0 0', fontSize: '12.5px', color: '#64748b' }}>
                   Upload Excel/CSV customer lists (S.No., Name, Address, Model, Date of Purchase) or manage single records.
                 </p>
               </div>
@@ -744,7 +745,7 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
                   type="button"
                   className="btn-secondary"
                   onClick={() => setIsAddCustomerModalOpen(true)}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.08)', color: '#ffffff', border: '1px solid rgba(255,255,255,0.2)' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
                   <Plus size={16} /> Add Single Record
                 </button>
@@ -752,7 +753,7 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
                   type="button"
                   className="btn-danger"
                   onClick={handleClearAllCustomers}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(220, 38, 38, 0.2)', color: '#fca5a5', border: '1px solid rgba(220, 38, 38, 0.4)', padding: '8px 14px', borderRadius: '8px', fontSize: '13px', cursor: 'pointer' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', fontSize: '13px', cursor: 'pointer' }}
                 >
                   <Trash2 size={16} /> Clear All
                 </button>
@@ -773,19 +774,17 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
         )}
       </main>
 
-
-
       {/* Map Live Location Modal */}
       {trackingRequest && (
         <div className="modal-backdrop" onClick={() => setTrackingRequest(null)}>
           <div className="modal-content" style={{ maxWidth: '600px' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#ffffff' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>
                 Live Tracking: {trackingRequest.assignedAgentId?.name || 'Agent'}
               </h3>
               <button 
                 type="button" 
-                style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
+                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
                 onClick={() => setTrackingRequest(null)}
               >
                 <X size={20} />
@@ -802,9 +801,9 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
               customerAddress={trackingRequest.customerAddress}
             />
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#d1d5db', marginTop: '15px', padding: '10px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#334155', marginTop: '15px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
               <div>
-                Service: <strong>{trackingRequest.serviceType}</strong>
+                Service: <strong style={{ color: '#0f172a' }}>{trackingRequest.serviceType}</strong>
               </div>
               <div>
                 Status: <span className={`badge badge-${trackingRequest.status.toLowerCase().replace(' ', '-')}`}>{trackingRequest.status}</span>
@@ -819,10 +818,10 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
         <div className="modal-backdrop" onClick={() => setIsAgentModalOpen(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#ffffff' }}>Register Service Agent</h3>
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>Register Service Agent</h3>
               <button 
                 type="button" 
-                style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
+                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
                 onClick={() => setIsAgentModalOpen(false)}
               >
                 <X size={20} />
@@ -840,7 +839,6 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
                   value={newAgent.name}
                   onChange={(e) => setNewAgent({ ...newAgent, name: e.target.value })}
                   placeholder="Agent Name"
-                  style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
                 />
               </div>
 
@@ -852,7 +850,6 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
                   value={newAgent.email}
                   onChange={(e) => setNewAgent({ ...newAgent, email: e.target.value })}
                   placeholder="agent@sribalaji.com"
-                  style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
                 />
               </div>
 
@@ -864,7 +861,6 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
                   value={newAgent.password}
                   onChange={(e) => setNewAgent({ ...newAgent, password: e.target.value })}
                   placeholder="Minimum 6 characters"
-                  style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
                 />
               </div>
 
@@ -876,7 +872,6 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
                   value={newAgent.phone}
                   onChange={(e) => setNewAgent({ ...newAgent, phone: e.target.value })}
                   placeholder="Phone number"
-                  style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
                 />
               </div>
 
@@ -887,7 +882,6 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
                   value={newAgent.specialization}
                   onChange={(e) => setNewAgent({ ...newAgent, specialization: e.target.value })}
                   placeholder="Solar Heaters, Water Softeners, etc."
-                  style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
                 />
               </div>
 
@@ -898,7 +892,6 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
                   value={newAgent.location}
                   onChange={(e) => setNewAgent({ ...newAgent, location: e.target.value })}
                   placeholder="e.g. Bangalore North"
-                  style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
                 />
               </div>
 
@@ -920,12 +913,12 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
         <div className="modal-backdrop" onClick={() => setIsCustomerListUploadModalOpen(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '540px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <UploadCloud size={20} color="#38bdf8" /> Upload Customer List File
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <UploadCloud size={20} color="#0284c7" /> Upload Customer List File
               </h3>
               <button 
                 type="button" 
-                style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
+                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
                 onClick={() => setIsCustomerListUploadModalOpen(false)}
               >
                 <X size={20} />
@@ -936,7 +929,7 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
 
             <form onSubmit={handleCustomerUploadSubmit} className="dashboard-form">
               <div className="input-group">
-                <label style={{ color: '#cbd5e1', fontSize: '14px', marginBottom: '8px', display: 'block' }}>
+                <label style={{ color: '#334155', fontSize: '14px', marginBottom: '8px', display: 'block' }}>
                   Select File (.xlsx, .xls, .csv)
                 </label>
                 <input
@@ -946,23 +939,23 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
                   onChange={(e) => setCustomerListFile(e.target.files[0])}
                   style={{
                     width: '100%',
-                    background: 'rgba(0,0,0,0.3)',
-                    color: 'white',
-                    border: '1px dashed #38bdf8',
+                    background: '#f8fafc',
+                    color: '#0f172a',
+                    border: '1px dashed #0284c7',
                     padding: '16px',
                     borderRadius: '8px',
                     cursor: 'pointer'
                   }}
                 />
-                <span style={{ fontSize: '12px', color: '#94a3b8', marginTop: '6px', display: 'block' }}>
+                <span style={{ fontSize: '12px', color: '#64748b', marginTop: '6px', display: 'block' }}>
                   Supported headers: <strong>S.No</strong>, <strong>Name</strong>, <strong>Address</strong>, <strong>Product</strong>, <strong>Model</strong> (optional), <strong>Date of Purchase</strong> (optional).
                 </span>
               </div>
 
               <div className="input-group" style={{ marginTop: '16px' }}>
-                <label style={{ color: '#cbd5e1', fontSize: '14px', marginBottom: '8px', display: 'block' }}>Upload Mode</label>
+                <label style={{ color: '#334155', fontSize: '14px', marginBottom: '8px', display: 'block' }}>Upload Mode</label>
                 <div style={{ display: 'flex', gap: '20px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#e2e8f0', cursor: 'pointer', fontSize: '13.5px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#334155', cursor: 'pointer', fontSize: '13.5px' }}>
                     <input
                       type="radio"
                       name="uploadMode"
@@ -972,7 +965,7 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
                     />
                     Replace existing customer list
                   </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#e2e8f0', cursor: 'pointer', fontSize: '13.5px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#334155', cursor: 'pointer', fontSize: '13.5px' }}>
                     <input
                       type="radio"
                       name="uploadMode"
@@ -985,11 +978,10 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
                 <button
                   type="button"
                   className="btn-secondary"
-                  style={{ background: 'transparent', color: '#94a3b8', border: '1px solid #475569' }}
                   onClick={() => setIsCustomerListUploadModalOpen(false)}
                 >
                   Cancel
@@ -1013,12 +1005,12 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
         <div className="modal-backdrop" onClick={() => setIsAddCustomerModalOpen(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Plus size={20} color="#38bdf8" /> Add Customer Record
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Plus size={20} color="#0284c7" /> Add Customer Record
               </h3>
               <button 
                 type="button" 
-                style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
+                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
                 onClick={() => setIsAddCustomerModalOpen(false)}
               >
                 <X size={20} />
@@ -1030,78 +1022,71 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
             <form onSubmit={handleAddCustomerSubmit} className="dashboard-form">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
                 <div className="input-group">
-                  <label style={{ color: '#cbd5e1', fontSize: '13px' }}>S.No.</label>
+                  <label style={{ color: '#334155', fontSize: '13px' }}>S.No.</label>
                   <input
                     type="text"
                     placeholder="e.g. 1"
                     value={newCustomerRecord.sNo}
                     onChange={(e) => setNewCustomerRecord({ ...newCustomerRecord, sNo: e.target.value })}
-                    style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
                   />
                 </div>
                 <div className="input-group">
-                  <label style={{ color: '#cbd5e1', fontSize: '13px' }}>Customer Name *</label>
+                  <label style={{ color: '#334155', fontSize: '13px' }}>Customer Name *</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Ramesh Kumar"
                     value={newCustomerRecord.name}
                     onChange={(e) => setNewCustomerRecord({ ...newCustomerRecord, name: e.target.value })}
-                    style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
                   />
                 </div>
               </div>
 
               <div className="input-group" style={{ marginTop: '12px' }}>
-                <label style={{ color: '#cbd5e1', fontSize: '13px' }}>Address</label>
+                <label style={{ color: '#334155', fontSize: '13px' }}>Address</label>
                 <input
                   type="text"
                   placeholder="e.g. Indiranagar, Bangalore"
                   value={newCustomerRecord.address}
                   onChange={(e) => setNewCustomerRecord({ ...newCustomerRecord, address: e.target.value })}
-                  style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
                 />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
                 <div className="input-group">
-                  <label style={{ color: '#cbd5e1', fontSize: '13px' }}>Product Category</label>
+                  <label style={{ color: '#334155', fontSize: '13px' }}>Product Category</label>
                   <input
                     type="text"
                     placeholder="e.g. Solar Water Heater"
                     value={newCustomerRecord.product}
                     onChange={(e) => setNewCustomerRecord({ ...newCustomerRecord, product: e.target.value })}
-                    style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
                   />
                 </div>
                 <div className="input-group">
-                  <label style={{ color: '#cbd5e1', fontSize: '13px' }}>Model (Optional)</label>
+                  <label style={{ color: '#334155', fontSize: '13px' }}>Model (Optional)</label>
                   <input
                     type="text"
                     placeholder="e.g. 200L ETC"
                     value={newCustomerRecord.model}
                     onChange={(e) => setNewCustomerRecord({ ...newCustomerRecord, model: e.target.value })}
-                    style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
                   />
                 </div>
               </div>
 
               <div className="input-group" style={{ marginTop: '12px' }}>
-                <label style={{ color: '#cbd5e1', fontSize: '13px' }}>Date of Purchase (Optional)</label>
+                <label style={{ color: '#334155', fontSize: '13px' }}>Date of Purchase (Optional)</label>
                 <input
                   type="text"
                   placeholder="e.g. 2024-05-15 or N/A"
                   value={newCustomerRecord.purchaseDate}
                   onChange={(e) => setNewCustomerRecord({ ...newCustomerRecord, purchaseDate: e.target.value })}
-                  style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
                 />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
                 <button
                   type="button"
                   className="btn-secondary"
-                  style={{ background: 'transparent', color: '#94a3b8', border: '1px solid #475569' }}
                   onClick={() => setIsAddCustomerModalOpen(false)}
                 >
                   Cancel
@@ -1241,11 +1226,11 @@ const AdminBlogsSection = ({ blogs, onRefresh }) => {
   };
 
   return (
-    <div className="dashboard-card" style={{ marginTop: '20px' }}>
+    <div className="section-card" style={{ marginTop: '20px' }}>
       <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div>
-          <h2>Manage Blog Posts</h2>
-          <p className="card-subtitle">Create, update, and manage dynamically published articles on the SBR website.</p>
+          <h2 className="section-title" style={{ margin: 0 }}>Manage Blog Posts</h2>
+          <p style={{ color: '#64748b', fontSize: '13.5px', margin: '4px 0 0 0' }}>Create, update, and manage dynamically published articles on the SBR website.</p>
         </div>
         <button 
           className="btn-primary" 
@@ -1260,7 +1245,7 @@ const AdminBlogsSection = ({ blogs, onRefresh }) => {
       </div>
 
       <div className="table-wrapper">
-        <table className="requests-table">
+        <table className="custom-table">
           <thead>
             <tr>
               <th>Title</th>
@@ -1274,16 +1259,16 @@ const AdminBlogsSection = ({ blogs, onRefresh }) => {
           <tbody>
             {blogs.length === 0 ? (
               <tr>
-                <td colSpan="6" style={{ textAlign: 'center', color: '#9ca3af', padding: '30px' }}>
+                <td colSpan="6" style={{ textAlign: 'center', color: '#64748b', padding: '30px' }}>
                   No blog posts found. Create your first post!
                 </td>
               </tr>
             ) : (
               blogs.map((b) => (
                 <tr key={b._id}>
-                  <td style={{ fontWeight: 'bold', color: '#3b82f6' }}>{b.title}</td>
-                  <td style={{ color: '#60a5fa', fontFamily: 'monospace' }}>/{b.slug}</td>
-                  <td><span className="badge badge-assigned" style={{ background: '#1e3a8a', color: '#93c5fd' }}>{b.category}</span></td>
+                  <td style={{ fontWeight: 'bold', color: '#2563eb' }}>{b.title}</td>
+                  <td style={{ color: '#4f46e5', fontFamily: 'monospace' }}>/{b.slug}</td>
+                  <td><span className="badge badge-assigned">{b.category}</span></td>
                   <td>{b.author}</td>
                   <td>{new Date(b.publishedAt).toLocaleDateString()}</td>
                   <td>
@@ -1296,8 +1281,8 @@ const AdminBlogsSection = ({ blogs, onRefresh }) => {
                         Edit
                       </button>
                       <button 
-                        className="btn-secondary" 
-                        style={{ padding: '4px 10px', fontSize: '12px', borderColor: '#ef4444', color: '#ef4444' }}
+                        className="btn-secondary btn-danger" 
+                        style={{ padding: '4px 10px', fontSize: '12px' }}
                         onClick={() => handleDelete(b._id)}
                       >
                         Delete
@@ -1313,10 +1298,10 @@ const AdminBlogsSection = ({ blogs, onRefresh }) => {
 
       {/* Create/Edit Blog Modal Overlay */}
       {modalOpen && (
-        <div className="modal-overlay" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, padding: '20px' }}>
-          <div className="modal-content" style={{ background: '#1e293b', color: 'white', padding: '30px', borderRadius: '12px', width: '100%', maxWidth: '750px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '15px' }}>
-              <h3 style={{ fontSize: '20px', fontWeight: 'bold' }}>
+        <div className="modal-backdrop" onClick={() => { setModalOpen(false); setEditingBlog(null); }}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '750px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '15px' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: '#0f172a', margin: 0 }}>
                 {editingBlog ? 'Edit Blog Post' : 'Create New Blog Post'}
               </h3>
               <button 
@@ -1324,52 +1309,50 @@ const AdminBlogsSection = ({ blogs, onRefresh }) => {
                   setModalOpen(false);
                   setEditingBlog(null);
                 }} 
-                style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
+                style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}
               >
                 <X size={24} />
               </button>
             </div>
 
             {error && (
-              <div style={{ background: '#fecaca', color: '#991b1b', padding: '10px', borderRadius: '6px', marginBottom: '15px', fontSize: '14px' }}>
+              <div className="error-banner" style={{ marginBottom: '15px' }}>
                 {error}
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="dashboard-form" style={{ maxWidth: '100%' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                 <div className="input-group">
-                  <label style={{ color: '#cbd5e1', fontSize: '14px', marginBottom: '5px', display: 'block' }}>Article Title</label>
+                  <label>Article Title</label>
                   <input
                     type="text"
                     required
                     value={formData.title}
                     onChange={handleTitleChange}
                     placeholder="e.g. 5 Signs to Switch to Solar Water Heater"
-                    style={{ width: '100%', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
                   />
                 </div>
 
                 <div className="input-group">
-                  <label style={{ color: '#cbd5e1', fontSize: '14px', marginBottom: '5px', display: 'block' }}>URL Slug (Customizable)</label>
+                  <label>URL Slug (Customizable)</label>
                   <input
                     type="text"
                     required
                     value={formData.slug}
                     onChange={handleSlugChange}
                     placeholder="e.g. 5-signs-switch-to-solar-water-heater"
-                    style={{ width: '100%', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px', fontFamily: 'monospace' }}
+                    style={{ fontFamily: 'monospace' }}
                   />
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                 <div className="input-group">
-                  <label style={{ color: '#cbd5e1', fontSize: '14px', marginBottom: '5px', display: 'block' }}>Category</label>
+                  <label>Category</label>
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    style={{ width: '100%', background: '#1e293b', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
                   >
                     <option value="Solar Power">Solar Power</option>
                     <option value="Water Purification">Water Purification</option>
@@ -1379,44 +1362,41 @@ const AdminBlogsSection = ({ blogs, onRefresh }) => {
                 </div>
 
                 <div className="input-group">
-                  <label style={{ color: '#cbd5e1', fontSize: '14px', marginBottom: '5px', display: 'block' }}>Author Name</label>
+                  <label>Author Name</label>
                   <input
                     type="text"
                     value={formData.author}
                     onChange={(e) => setFormData({ ...formData, author: e.target.value })}
                     placeholder="e.g. SBR Team"
-                    style={{ width: '100%', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
                   />
                 </div>
               </div>
 
               <div className="input-group">
-                <label style={{ color: '#cbd5e1', fontSize: '14px', marginBottom: '5px', display: 'block' }}>Featured Image URL</label>
+                <label>Featured Image URL</label>
                 <input
                   type="text"
                   value={formData.image}
                   onChange={(e) => setFormData({ ...formData, image: e.target.value })}
                   placeholder="https://images.unsplash.com/..."
-                  style={{ width: '100%', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
                 />
               </div>
 
               <div className="input-group">
-                <label style={{ color: '#cbd5e1', fontSize: '14px', marginBottom: '5px', display: 'block' }}>Card Summary (Short Description)</label>
+                <label>Card Summary (Short Description)</label>
                 <textarea
                   required
                   rows="2"
                   value={formData.summary}
                   onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
                   placeholder="A short snippet that will show up on the homepage blog card."
-                  style={{ width: '100%', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
                 />
               </div>
 
               <div className="input-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
-                  <label style={{ color: '#cbd5e1', fontSize: '14px', display: 'block' }}>Article Body (Supports HTML markup)</label>
-                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>Use &lt;p&gt;, &lt;h3&gt;, &lt;ul&gt;, &lt;li&gt; tags</span>
+                  <label>Article Body (Supports HTML markup)</label>
+                  <span style={{ fontSize: '11px', color: '#64748b' }}>Use &lt;p&gt;, &lt;h3&gt;, &lt;ul&gt;, &lt;li&gt; tags</span>
                 </div>
                 <textarea
                   required
@@ -1424,15 +1404,14 @@ const AdminBlogsSection = ({ blogs, onRefresh }) => {
                   value={formData.content}
                   onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                   placeholder="<p>Write your detailed article body here...</p>"
-                  style={{ width: '100%', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px', fontFamily: 'monospace', fontSize: '13px' }}
+                  style={{ fontFamily: 'monospace', fontSize: '13px' }}
                 />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '20px', marginTop: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #e2e8f0', paddingTop: '20px', marginTop: '10px' }}>
                 <button
                   type="button"
                   className="btn-secondary"
-                  style={{ background: 'transparent', color: '#94a3b8', border: '1px solid #475569' }}
                   onClick={() => {
                     setModalOpen(false);
                     setEditingBlog(null);

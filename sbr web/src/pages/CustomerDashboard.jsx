@@ -300,10 +300,9 @@ const CustomerDashboard = ({ initialTab, handleNavigation }) => {
                 <select
                   value={serviceType}
                   onChange={(e) => setServiceType(e.target.value)}
-                  style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px', outline: 'none' }}
                 >
                   {serviceCategories.map((cat, idx) => (
-                    <option key={idx} value={cat} style={{ background: '#181823' }}>{cat}</option>
+                    <option key={idx} value={cat}>{cat}</option>
                   ))}
                 </select>
               </div>
@@ -316,7 +315,6 @@ const CustomerDashboard = ({ initialTab, handleNavigation }) => {
                   placeholder="Tell us what needs repair or regular maintenance..."
                   rows="4"
                   required
-                  style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px', outline: 'none', resize: 'vertical' }}
                 />
               </div>
 
@@ -328,7 +326,6 @@ const CustomerDashboard = ({ initialTab, handleNavigation }) => {
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="Address where service needs to be done"
                   required
-                  style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px', outline: 'none' }}
                 />
               </div>
 
@@ -355,9 +352,9 @@ const CustomerDashboard = ({ initialTab, handleNavigation }) => {
                     padding: '6px 14px',
                     fontSize: '12px',
                     borderRadius: '20px',
-                    background: requestsFilter === status ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-                    color: requestsFilter === status ? '#a78bfa' : '#9ca3af',
-                    border: requestsFilter === status ? '1px solid #6366f1' : '1px solid rgba(255,255,255,0.05)',
+                    background: requestsFilter === status ? '#eff6ff' : '#f1f5f9',
+                    color: requestsFilter === status ? '#2563eb' : '#64748b',
+                    border: requestsFilter === status ? '1px solid #93c5fd' : '1px solid #e2e8f0',
                     cursor: 'pointer',
                     fontWeight: '600',
                     transition: 'all 0.2s ease'
@@ -391,23 +388,23 @@ const CustomerDashboard = ({ initialTab, handleNavigation }) => {
                     
                     return filteredRequests.length === 0 ? (
                       <tr>
-                        <td colSpan="7" style={{ textAlign: 'center', color: '#9ca3af', padding: '30px' }}>No requests matching this status found.</td>
+                        <td colSpan="7" style={{ textAlign: 'center', color: '#64748b', padding: '30px' }}>No requests matching this status found.</td>
                       </tr>
                     ) : (
                       filteredRequests.map(req => (
                         <tr key={req._id}>
-                          <td style={{ fontSize: '11px', color: '#9ca3af' }}>#{req._id.substring(req._id.length - 8)}</td>
-                          <td style={{ fontWeight: '600', color: '#a78bfa' }}>{req.serviceType}</td>
+                          <td style={{ fontSize: '11px', color: '#64748b' }}>#{req._id.substring(req._id.length - 8)}</td>
+                          <td style={{ fontWeight: '600', color: '#4f46e5' }}>{req.serviceType}</td>
                           <td>{req.description}</td>
                           <td>{new Date(req.createdAt).toLocaleDateString()}</td>
                           <td>
                             {req.assignedAgentId ? (
                               <div>
                                 <div>{req.assignedAgentId.name}</div>
-                                <div style={{ fontSize: '11px', color: '#9ca3af' }}>{req.assignedAgentId.phone}</div>
+                                <div style={{ fontSize: '11px', color: '#64748b' }}>{req.assignedAgentId.phone}</div>
                               </div>
                             ) : (
-                              <span style={{ color: '#9ca3af', fontSize: '12px' }}>Awaiting allocation</span>
+                              <span style={{ color: '#64748b', fontSize: '12px' }}>Awaiting allocation</span>
                             )}
                           </td>
                           <td>
@@ -417,11 +414,11 @@ const CustomerDashboard = ({ initialTab, handleNavigation }) => {
                           </td>
                           <td>
                             {req.status === 'Completed' || req.paymentStatus === 'Paid' ? (
-                              <span style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px' }}>
+                              <span style={{ color: '#059669', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px' }}>
                                 <CheckCircle size={14} /> Resolved {req.completedAt ? new Date(req.completedAt).toLocaleDateString() : ''}
                               </span>
                             ) : (
-                              <span style={{ color: '#9ca3af', fontSize: '12px' }}>In progress</span>
+                              <span style={{ color: '#64748b', fontSize: '12px' }}>In progress</span>
                             )}
                           </td>
                         </tr>
@@ -452,18 +449,18 @@ const CustomerDashboard = ({ initialTab, handleNavigation }) => {
                 <tbody>
                   {payments.length === 0 ? (
                     <tr>
-                      <td colSpan="6" style={{ textAlign: 'center', color: '#9ca3af', padding: '30px' }}>No payment transactions recorded.</td>
+                      <td colSpan="6" style={{ textAlign: 'center', color: '#64748b', padding: '30px' }}>No payment transactions recorded yet.</td>
                     </tr>
                   ) : (
-                    payments.map(pay => (
-                      <tr key={pay._id}>
-                        <td style={{ fontSize: '11px', color: '#9ca3af' }}>#{pay._id}</td>
-                        <td style={{ fontWeight: '600' }}>{pay.serviceType}</td>
-                        <td>{pay.paymentTimestamp ? new Date(pay.paymentTimestamp).toLocaleDateString() : new Date(pay.updatedAt).toLocaleDateString()}</td>
-                        <td style={{ fontWeight: 'bold', color: '#10b981' }}>₹{pay.paymentAmount}</td>
-                        <td>{pay.paymentMethod}</td>
+                    payments.map(req => (
+                      <tr key={req._id}>
+                        <td style={{ fontSize: '11px', color: '#64748b' }}>#{req._id.substring(req._id.length - 8)}</td>
+                        <td style={{ fontWeight: '600', color: '#4f46e5' }}>{req.serviceType}</td>
+                        <td>{req.completedAt ? new Date(req.completedAt).toLocaleDateString() : 'N/A'}</td>
+                        <td style={{ fontWeight: '700', color: '#059669' }}>₹{(req.paymentAmount || 0).toLocaleString()}</td>
+                        <td>{req.paymentMethod || 'Online'}</td>
                         <td>
-                          <span className="badge badge-paid">Paid / Confirmed</span>
+                          <span className="badge badge-paid">PAID</span>
                         </td>
                       </tr>
                     ))
@@ -476,8 +473,8 @@ const CustomerDashboard = ({ initialTab, handleNavigation }) => {
 
         {activeTab === 'profile' && (
           <div className="section-card">
-            <h2 className="section-title">Account Profile Settings</h2>
-            {profileSuccess && <div className="success-banner" style={{ marginBottom: '15px', color: '#10b981', padding: '10px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: '8px' }}>{profileSuccess}</div>}
+            <h2 className="section-title">Manage Customer Profile</h2>
+            {profileSuccess && <div className="success-banner" style={{ marginBottom: '15px' }}>{profileSuccess}</div>}
             {profileError && <div className="error-banner" style={{ marginBottom: '15px' }}>{profileError}</div>}
 
             <form onSubmit={handleProfileUpdate} className="dashboard-form">
@@ -488,7 +485,6 @@ const CustomerDashboard = ({ initialTab, handleNavigation }) => {
                   value={profileName}
                   onChange={(e) => setProfileName(e.target.value)}
                   required
-                  style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
                 />
               </div>
 
@@ -498,7 +494,6 @@ const CustomerDashboard = ({ initialTab, handleNavigation }) => {
                   type="tel"
                   value={profilePhone}
                   onChange={(e) => setProfilePhone(e.target.value)}
-                  style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
                 />
               </div>
 
@@ -508,7 +503,6 @@ const CustomerDashboard = ({ initialTab, handleNavigation }) => {
                   type="text"
                   value={profileAddress}
                   onChange={(e) => setProfileAddress(e.target.value)}
-                  style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}
                 />
               </div>
 
@@ -528,9 +522,9 @@ const CustomerDashboard = ({ initialTab, handleNavigation }) => {
               </button>
             </form>
 
-            <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+            <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid #e2e8f0' }}>
               <h3 style={{ color: '#ef4444', fontSize: '16px', fontWeight: 'bold', marginBottom: '8px' }}>Danger Zone</h3>
-              <p style={{ color: '#9ca3af', fontSize: '13px', marginBottom: '15px' }}>
+              <p style={{ color: '#64748b', fontSize: '13px', marginBottom: '15px' }}>
                 Permanently delete your account and all associated personal data. This action is irreversible.
               </p>
               <button
@@ -551,10 +545,8 @@ const CustomerDashboard = ({ initialTab, handleNavigation }) => {
                     }
                   }
                 }}
+                className="btn-danger"
                 style={{
-                  background: 'rgba(239, 68, 68, 0.15)',
-                  color: '#ef4444',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
                   padding: '8px 16px',
                   borderRadius: '8px',
                   cursor: 'pointer',

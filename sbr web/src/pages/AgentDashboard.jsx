@@ -497,12 +497,12 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
         <div className="sidebar-brand">SBR AGENT</div>
         
         {/* GPS Broadcast Control widget in sidebar */}
-        <div style={{ background: 'rgba(255, 255, 255, 0.03)', borderRadius: '12px', padding: '15px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '20px' }}>
+        <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '15px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <Compass className={isTrackingActive ? 'animate-spin' : ''} size={16} style={{ color: isTrackingActive ? '#10b981' : '#9ca3af' }} />
-            <span style={{ fontSize: '13px', fontWeight: 'bold' }}>Mock GPS Broadcast</span>
+            <Compass className={isTrackingActive ? 'animate-spin' : ''} size={16} style={{ color: isTrackingActive ? '#059669' : '#64748b' }} />
+            <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#0f172a' }}>Mock GPS Broadcast</span>
           </div>
-          <p style={{ fontSize: '11px', color: '#9ca3af', margin: '0 0 10px 0' }}>
+          <p style={{ fontSize: '11px', color: '#64748b', margin: '0 0 10px 0' }}>
             {isTrackingActive 
               ? `Broadcasting: ${trackingCoordinates.lat.toFixed(4)}, ${trackingCoordinates.lng.toFixed(4)}` 
               : 'Broadcast coordinates to allow live tracking from Admin Panel.'
@@ -556,7 +556,7 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
             <User size={18} /> My Profile
           </button>
         </div>
-        <div style={{ padding: '10px 15px', fontSize: '11px', color: '#9ca3af', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '20px' }}>
+        <div style={{ padding: '10px 15px', fontSize: '11px', color: '#64748b', borderTop: '1px solid #e2e8f0', marginTop: '20px' }}>
           Completed Jobs: <strong>{user?.completedJobs || 0}</strong>
         </div>
         <button className="menu-item logout-btn" onClick={handleLogout}>
@@ -584,31 +584,32 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
             <div className="section-card" style={{ marginBottom: '30px' }}>
               <h2 className="section-title">New Job Offers Awaiting Acceptance</h2>
               {loading ? (
-                <div style={{ color: '#9ca3af' }}>Loading jobs...</div>
+                <div style={{ color: '#64748b' }}>Loading jobs...</div>
               ) : assignedJobs.length === 0 ? (
-                <div style={{ color: '#9ca3af', fontSize: '14px' }}>No new service assignments. Check back later.</div>
+                <div style={{ color: '#64748b', fontSize: '14px' }}>No new service assignments. Check back later.</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                   {assignedJobs.map(job => (
                     <div 
                       key={job._id}
                       style={{ 
-                        background: 'rgba(255, 255, 255, 0.02)', 
-                        border: '1px solid rgba(255, 255, 255, 0.06)', 
+                        background: '#ffffff', 
+                        border: '1px solid #e2e8f0', 
                         borderRadius: '12px', 
                         padding: '20px',
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         flexWrap: 'wrap',
-                        gap: '15px'
+                        gap: '15px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
                       }}
                     >
                       <div>
                         <span className="badge badge-assigned" style={{ marginBottom: '8px' }}>Assigned</span>
-                        <h3 style={{ margin: '0 0 6px 0', fontSize: '16px', color: '#ffffff' }}>{job.serviceType}</h3>
-                        <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#d1d5db' }}>{job.description}</p>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#9ca3af' }}>
+                        <h3 style={{ margin: '0 0 6px 0', fontSize: '16px', color: '#0f172a' }}>{job.serviceType}</h3>
+                        <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#475569' }}>{job.description}</p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#64748b' }}>
                           <MapPin size={14} /> Address: {job.customerAddress}
                         </div>
                       </div>
@@ -632,20 +633,21 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
             <div className="section-card">
               <h2 className="section-title">Jobs in Progress</h2>
               {activeJobs.length === 0 ? (
-                <div style={{ color: '#9ca3af', fontSize: '14px' }}>No active service tasks. Accept an assignment above to start.</div>
+                <div style={{ color: '#64748b', fontSize: '14px' }}>No active service tasks. Accept an assignment above to start.</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   {activeJobs.map(job => (
                     <div 
                       key={job._id}
                       style={{ 
-                        background: 'rgba(99, 102, 241, 0.03)', 
-                        border: '1px solid rgba(99, 102, 241, 0.1)', 
+                        background: '#ffffff', 
+                        border: '1px solid #e2e8f0', 
                         borderRadius: '16px', 
                         padding: '24px',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '15px'
+                        gap: '15px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
@@ -653,13 +655,13 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
                           <span className={`badge badge-${job.status.toLowerCase().replace(' ', '-')}`}>
                             {job.status}
                           </span>
-                          <h3 style={{ margin: '8px 0 6px 0', fontSize: '18px', color: '#ffffff' }}>{job.serviceType}</h3>
-                          <p style={{ margin: '0 0 6px 0', color: '#d1d5db', fontSize: '14px' }}>{job.description}</p>
+                          <h3 style={{ margin: '8px 0 6px 0', fontSize: '18px', color: '#0f172a' }}>{job.serviceType}</h3>
+                          <p style={{ margin: '0 0 6px 0', color: '#475569', fontSize: '14px' }}>{job.description}</p>
                           
-                          <div style={{ fontSize: '13px', color: '#9ca3af', marginTop: '10px' }}>
-                            <div>Client Name: <strong>{job.customerId?.name}</strong></div>
-                            <div>Phone: <strong>{job.customerId?.phone}</strong></div>
-                            <div>Location: <strong>{job.customerAddress}</strong></div>
+                          <div style={{ fontSize: '13px', color: '#64748b', marginTop: '10px' }}>
+                            <div>Client Name: <strong style={{ color: '#1e293b' }}>{job.customerId?.name}</strong></div>
+                            <div>Phone: <strong style={{ color: '#1e293b' }}>{job.customerId?.phone}</strong></div>
+                            <div>Location: <strong style={{ color: '#1e293b' }}>{job.customerAddress}</strong></div>
                           </div>
                         </div>
 
@@ -687,19 +689,19 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
                       </div>
 
                       {/* Image Upload Row */}
-                      <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '15px', marginTop: '10px' }}>
-                        <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#9ca3af', textTransform: 'uppercase' }}>Service Quality Documentation</h4>
+                      <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '15px', marginTop: '10px' }}>
+                        <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#64748b', textTransform: 'uppercase' }}>Service Quality Documentation</h4>
                         
                         <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
                           {/* Before Photo Upload */}
                           <div style={{ flex: 1, minWidth: '200px' }}>
-                            <span style={{ fontSize: '12px', display: 'block', marginBottom: '8px', color: '#d1d5db' }}>Before Image:</span>
+                            <span style={{ fontSize: '12px', display: 'block', marginBottom: '8px', color: '#475569' }}>Before Image:</span>
                             {job.beforeImageUrl ? (
                               <img src={job.beforeImageUrl} alt="Before Service" className="photo-preview" />
                             ) : (
-                              <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.15)', padding: '20px', borderRadius: '8px', cursor: 'pointer' }}>
-                                <Upload size={20} style={{ color: '#9ca3af', marginBottom: '6px' }} />
-                                <span style={{ fontSize: '12px', color: '#9ca3af' }}>
+                              <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', border: '1px dashed #cbd5e1', padding: '20px', borderRadius: '8px', cursor: 'pointer' }}>
+                                <Upload size={20} style={{ color: '#64748b', marginBottom: '6px' }} />
+                                <span style={{ fontSize: '12px', color: '#64748b' }}>
                                   {uploadingBefore ? 'Uploading...' : 'Choose Before Photo'}
                                 </span>
                                 <input 
@@ -715,13 +717,13 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
 
                           {/* After Photo Upload */}
                           <div style={{ flex: 1, minWidth: '200px' }}>
-                            <span style={{ fontSize: '12px', display: 'block', marginBottom: '8px', color: '#d1d5db' }}>After Image:</span>
+                            <span style={{ fontSize: '12px', display: 'block', marginBottom: '8px', color: '#475569' }}>After Image:</span>
                             {job.afterImageUrl ? (
                               <img src={job.afterImageUrl} alt="After Service" className="photo-preview" />
                             ) : (
-                              <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.15)', padding: '20px', borderRadius: '8px', cursor: 'pointer' }}>
-                                <Upload size={20} style={{ color: '#9ca3af', marginBottom: '6px' }} />
-                                <span style={{ fontSize: '12px', color: '#9ca3af' }}>
+                              <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', border: '1px dashed #cbd5e1', padding: '20px', borderRadius: '8px', cursor: 'pointer' }}>
+                                <Upload size={20} style={{ color: '#64748b', marginBottom: '6px' }} />
+                                <span style={{ fontSize: '12px', color: '#64748b' }}>
                                   {uploadingAfter ? 'Uploading...' : 'Choose After Photo'}
                                 </span>
                                 <input 
@@ -767,14 +769,14 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
                   ) : (
                     completedJobs.map(job => (
                       <tr key={job._id}>
-                        <td style={{ fontSize: '11px', color: '#9ca3af' }}>#{job._id.substring(job._id.length - 8)}</td>
+                        <td style={{ fontSize: '11px', color: '#64748b' }}>#{job._id.substring(job._id.length - 8)}</td>
                         <td>
-                          <div style={{ fontWeight: '600' }}>{job.customerId?.name || 'Customer'}</div>
-                          <div style={{ fontSize: '11px', color: '#9ca3af' }}>{job.customerId?.phone}</div>
+                          <div style={{ fontWeight: '600', color: '#1e293b' }}>{job.customerId?.name || 'Customer'}</div>
+                          <div style={{ fontSize: '11px', color: '#64748b' }}>{job.customerId?.phone}</div>
                         </td>
-                        <td style={{ fontWeight: '600', color: '#a78bfa' }}>{job.serviceType}</td>
+                        <td style={{ fontWeight: '600', color: '#4f46e5' }}>{job.serviceType}</td>
                         <td>{job.completedAt ? new Date(job.completedAt).toLocaleDateString() : new Date(job.updatedAt).toLocaleDateString()}</td>
-                        <td style={{ fontWeight: 'bold', color: '#10b981' }}>₹{job.paymentAmount || 0}</td>
+                        <td style={{ fontWeight: 'bold', color: '#059669' }}>₹{job.paymentAmount || 0}</td>
                         <td>
                           <span className="badge badge-completed">Completed</span>
                         </td>
@@ -791,40 +793,40 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
           <div className="section-card">
             <h2 className="section-title">My Profile & Availability</h2>
             
-            <div className="profile-details-card" style={{ background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '20px' }}>
+            <div className="profile-details-card" style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
-                <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(99,102,241,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a78bfa', fontSize: '24px', fontWeight: 'bold' }}>
+                <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4338ca', fontSize: '24px', fontWeight: 'bold' }}>
                   {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'white' }}>{user?.name}</h3>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#9ca3af' }}>{user?.email}</p>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#0f172a' }}>{user?.name}</h3>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>{user?.email}</p>
                 </div>
               </div>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', fontSize: '14px' }}>
                 <div>
-                  <span style={{ color: '#9ca3af', display: 'block', fontSize: '12px', marginBottom: '4px' }}>Phone Number</span>
-                  <strong>{user?.phone || 'Not Provided'}</strong>
+                  <span style={{ color: '#64748b', display: 'block', fontSize: '12px', marginBottom: '4px' }}>Phone Number</span>
+                  <strong style={{ color: '#0f172a' }}>{user?.phone || 'Not Provided'}</strong>
                 </div>
                 <div>
-                  <span style={{ color: '#9ca3af', display: 'block', fontSize: '12px', marginBottom: '4px' }}>Specialization</span>
-                  <strong>{user?.specialization || 'General Technician'}</strong>
+                  <span style={{ color: '#64748b', display: 'block', fontSize: '12px', marginBottom: '4px' }}>Specialization</span>
+                  <strong style={{ color: '#0f172a' }}>{user?.specialization || 'General Technician'}</strong>
                 </div>
                 <div>
-                  <span style={{ color: '#9ca3af', display: 'block', fontSize: '12px', marginBottom: '4px' }}>Location Scope</span>
-                  <strong>{user?.location || 'Tirupati Region'}</strong>
+                  <span style={{ color: '#64748b', display: 'block', fontSize: '12px', marginBottom: '4px' }}>Location Scope</span>
+                  <strong style={{ color: '#0f172a' }}>{user?.location || 'Tirupati Region'}</strong>
                 </div>
                 <div>
-                  <span style={{ color: '#9ca3af', display: 'block', fontSize: '12px', marginBottom: '4px' }}>Total Completed Jobs</span>
-                  <strong>{user?.completedJobs || 0} jobs</strong>
+                  <span style={{ color: '#64748b', display: 'block', fontSize: '12px', marginBottom: '4px' }}>Total Completed Jobs</span>
+                  <strong style={{ color: '#0f172a' }}>{user?.completedJobs || 0} jobs</strong>
                 </div>
               </div>
             </div>
 
-            <div className="availability-card" style={{ background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', fontWeight: '600', color: 'white' }}>Work Availability Status</h3>
-              <p style={{ margin: '0 0 15px 0', fontSize: '13px', color: '#9ca3af' }}>
+            <div className="availability-card" style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+              <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', fontWeight: '600', color: '#0f172a' }}>Work Availability Status</h3>
+              <p style={{ margin: '0 0 15px 0', fontSize: '13px', color: '#64748b' }}>
                 Toggle your availability status. When Offline, the administrator will not assign you new service requests.
               </p>
               
@@ -849,9 +851,9 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
                     padding: '8px 20px',
                     fontSize: '13px',
                     borderRadius: '8px',
-                    background: user?.status === 'Online' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                    color: user?.status === 'Online' ? '#10b981' : '#f87171',
-                    border: user?.status === 'Online' ? '1px solid #10b981' : '1px solid #ef4444',
+                    background: user?.status === 'Online' ? '#d1fae5' : '#fee2e2',
+                    color: user?.status === 'Online' ? '#047857' : '#b91c1c',
+                    border: user?.status === 'Online' ? '1px solid #a7f3d0' : '1px solid #fecaca',
                     cursor: 'pointer',
                     fontWeight: 'bold',
                     transition: 'all 0.2s ease'
@@ -859,15 +861,15 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
                 >
                   Status: {user?.status || 'Offline'}
                 </button>
-                <span style={{ fontSize: '13px', color: '#9ca3af' }}>
+                <span style={{ fontSize: '13px', color: '#64748b' }}>
                   {user?.status === 'Online' ? '🟢 You are ready to accept new service requests.' : '🔴 You will not receive any new requests.'}
                 </span>
               </div>
             </div>
 
-            <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+            <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid #e2e8f0' }}>
               <h3 style={{ color: '#ef4444', fontSize: '16px', fontWeight: 'bold', marginBottom: '8px' }}>Danger Zone</h3>
-              <p style={{ color: '#9ca3af', fontSize: '13px', marginBottom: '15px' }}>
+              <p style={{ color: '#64748b', fontSize: '13px', marginBottom: '15px' }}>
                 Permanently delete your account and all associated personal data. This action is irreversible.
               </p>
               <button
@@ -888,10 +890,8 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
                     }
                   }
                 }}
+                className="btn-danger"
                 style={{
-                  background: 'rgba(239, 68, 68, 0.15)',
-                  color: '#ef4444',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
                   padding: '8px 16px',
                   borderRadius: '8px',
                   cursor: 'pointer',
@@ -914,10 +914,10 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
           <div className="tab-content" style={{ animation: 'fadeIn 0.3s ease' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div>
-                <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 5px 0', color: '#ffffff' }}>
+                <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 5px 0', color: '#0f172a' }}>
                   End-of-Day (EOD) Cash Handover
                 </h2>
-                <p style={{ color: '#9ca3af', fontSize: '13px', margin: 0 }}>
+                <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>
                   Reconcile and submit cash collected from today's completed service jobs to Store In-Charge.
                 </p>
               </div>
@@ -932,13 +932,13 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
             </div>
 
             {loadingSummary ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>Calculating daily cash summary...</div>
+              <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>Calculating daily cash summary...</div>
             ) : (
               <div>
                 {/* Daily Summary Card */}
                 <div style={{
-                  background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.1) 100%)',
-                  border: '1px solid rgba(129, 140, 248, 0.25)',
+                  background: 'linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%)',
+                  border: '1px solid #c7d2fe',
                   borderRadius: '16px',
                   padding: '20px',
                   marginBottom: '25px',
@@ -949,13 +949,13 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
                   gap: '15px'
                 }}>
                   <div>
-                    <span style={{ fontSize: '12px', color: '#a5b4fc', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <span style={{ fontSize: '12px', color: '#4338ca', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       Today's Cash Collection ({dailyCashSummary?.date || 'Today'})
                     </span>
-                    <h3 style={{ fontSize: '32px', fontWeight: '900', color: '#ffffff', margin: '5px 0' }}>
+                    <h3 style={{ fontSize: '32px', fontWeight: '900', color: '#0f172a', margin: '5px 0' }}>
                       ₹{dailyCashSummary?.totalCash || 0}
                     </h3>
-                    <p style={{ fontSize: '12px', color: '#cbd5e1', margin: 0 }}>
+                    <p style={{ fontSize: '12px', color: '#475569', margin: 0 }}>
                       {dailyCashSummary?.requestCount || 0} Cash payment job(s) completed today
                     </p>
                   </div>
@@ -970,36 +970,27 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
                           fontSize: '12px',
                           fontWeight: 'bold',
                           background: dailyCashSummary.handoverStatus === 'ACKNOWLEDGED'
-                            ? 'rgba(16, 185, 129, 0.2)'
+                            ? '#d1fae5'
                             : dailyCashSummary.handoverStatus === 'DISCREPANCY'
-                            ? 'rgba(239, 68, 68, 0.2)'
-                            : 'rgba(168, 85, 247, 0.2)',
+                            ? '#fee2e2'
+                            : '#ede9fe',
                           color: dailyCashSummary.handoverStatus === 'ACKNOWLEDGED'
-                            ? '#34d399'
+                            ? '#047857'
                             : dailyCashSummary.handoverStatus === 'DISCREPANCY'
-                            ? '#f87171'
-                            : '#c084fc',
+                            ? '#b91c1c'
+                            : '#6d28d9',
                           border: '1px solid currentColor'
                         }}>
                           {dailyCashSummary.handoverStatus === 'ACKNOWLEDGED' ? '✓ Reconciled & Acknowledged' : dailyCashSummary.handoverStatus === 'DISCREPANCY' ? '⚠ Discrepancy Flagged' : '⏳ Submitted (Pending In-Charge)'}
                         </span>
                         {dailyCashSummary.existingHandover?.acknowledgedAmount !== null && dailyCashSummary.existingHandover?.acknowledgedAmount !== undefined && (
-                          <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '6px' }}>
+                          <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>
                             Acknowledged: <strong>₹{dailyCashSummary.existingHandover.acknowledgedAmount}</strong>
                           </div>
                         )}
                       </div>
                     ) : (
-                      <span style={{
-                        display: 'inline-block',
-                        padding: '6px 14px',
-                        borderRadius: '20px',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        background: 'rgba(245, 158, 11, 0.2)',
-                        color: '#fbbf24',
-                        border: '1px solid rgba(245, 158, 11, 0.4)'
-                      }}>
+                      <span className="badge badge-pending">
                         Pending Submission
                       </span>
                     )}
@@ -1007,54 +998,51 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
                 </div>
 
                 {handoverSuccessMsg && (
-                  <div style={{ background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#34d399', padding: '12px 16px', borderRadius: '10px', fontSize: '13px', marginBottom: '20px' }}>
+                  <div className="success-banner" style={{ marginBottom: '20px' }}>
                     {handoverSuccessMsg}
                   </div>
                 )}
 
                 {handoverErrorMsg && (
-                  <div style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#f87171', padding: '12px 16px', borderRadius: '10px', fontSize: '13px', marginBottom: '20px' }}>
+                  <div className="error-banner" style={{ marginBottom: '20px' }}>
                     {handoverErrorMsg}
                   </div>
                 )}
 
                 {/* Submission Form (Only if not already acknowledged) */}
                 {(!dailyCashSummary?.alreadySubmitted || dailyCashSummary?.handoverStatus === 'SUBMITTED') && (
-                  <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '16px', padding: '20px', marginBottom: '25px' }}>
-                    <h4 style={{ fontSize: '16px', fontWeight: 'bold', color: '#ffffff', margin: '0 0 15px 0' }}>
+                  <div className="section-card" style={{ marginBottom: '25px' }}>
+                    <h4 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', margin: '0 0 15px 0' }}>
                       {dailyCashSummary?.alreadySubmitted ? 'Update Handover Notes' : 'Submit Handover to Store In-Charge'}
                     </h4>
 
                     {dailyCashSummary?.completedRequests && dailyCashSummary.completedRequests.length > 0 ? (
                       <div style={{ marginBottom: '15px' }}>
-                        <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '8px' }}>Jobs included in this batch:</p>
+                        <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>Jobs included in this batch:</p>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '10px' }}>
                           {dailyCashSummary.completedRequests.map((r) => (
-                            <div key={r._id} style={{ background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', fontSize: '12px' }}>
-                              <div style={{ fontWeight: 'bold', color: '#ffffff' }}>{r.serviceType}</div>
-                              <div style={{ color: '#94a3b8', fontSize: '11px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.customerAddress}</div>
-                              <div style={{ color: '#34d399', fontWeight: 'bold', marginTop: '4px' }}>₹{r.paymentAmount}</div>
+                            <div key={r._id} style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }}>
+                              <div style={{ fontWeight: 'bold', color: '#0f172a' }}>{r.serviceType}</div>
+                              <div style={{ color: '#64748b', fontSize: '11px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.customerAddress}</div>
+                              <div style={{ color: '#059669', fontWeight: 'bold', marginTop: '4px' }}>₹{r.paymentAmount}</div>
                             </div>
                           ))}
                         </div>
                       </div>
                     ) : (
-                      <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '15px' }}>
+                      <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '15px' }}>
                         No completed cash jobs logged today. You can still submit ₹0 or manual collection.
                       </p>
                     )}
 
                     <form onSubmit={handleSubmitHandover}>
-                      <div style={{ marginBottom: '15px' }}>
-                        <label style={{ display: 'block', fontSize: '12px', color: '#cbd5e1', marginBottom: '6px' }}>
-                          Notes / Handover Remarks (Optional)
-                        </label>
+                      <div className="input-group" style={{ marginBottom: '15px' }}>
+                        <label>Notes / Handover Remarks (Optional)</label>
                         <textarea
                           rows="2"
                           value={handoverNotes}
                           onChange={(e) => setHandoverNotes(e.target.value)}
                           placeholder="e.g. Submitted at central desk, ₹500 x 2 notes..."
-                          style={{ width: '100%', padding: '10px', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', outline: 'none', fontSize: '13px' }}
                         />
                       </div>
 
@@ -1062,7 +1050,6 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
                         type="submit"
                         disabled={submittingHandover}
                         className="btn-primary"
-                        style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', boxShadow: 'none' }}
                       >
                         {submittingHandover ? 'Submitting...' : dailyCashSummary?.alreadySubmitted ? 'Update Submission' : 'Submit EOD Cash Collection'}
                       </button>
@@ -1072,24 +1059,24 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
 
                 {/* Past Submissions History */}
                 <div>
-                  <h4 style={{ fontSize: '16px', fontWeight: 'bold', color: '#ffffff', margin: '0 0 15px 0' }}>
+                  <h4 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', margin: '0 0 15px 0' }}>
                     My Past Handover Submissions
                   </h4>
 
                   {myHandovers.length === 0 ? (
-                    <p style={{ color: '#9ca3af', fontSize: '13px' }}>No previous submissions recorded.</p>
+                    <p style={{ color: '#64748b', fontSize: '13px' }}>No previous submissions recorded.</p>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       {myHandovers.map((h) => (
-                        <div key={h._id} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', padding: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                        <div key={h._id} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
                           <div>
-                            <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#ffffff' }}>{h.date}</span>
-                            <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
-                              Declared: <strong>₹{h.totalCollectedCash}</strong>
+                            <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#0f172a' }}>{h.date}</span>
+                            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                              Declared: <strong style={{ color: '#0f172a' }}>₹{h.totalCollectedCash}</strong>
                               {h.acknowledgedAmount !== null && ` | Received: ₹${h.acknowledgedAmount}`}
                             </div>
                             {h.inchargeNotes && (
-                              <div style={{ fontSize: '11px', color: '#a5b4fc', marginTop: '4px', fontStyle: 'italic' }}>
+                              <div style={{ fontSize: '11px', color: '#4f46e5', marginTop: '4px', fontStyle: 'italic' }}>
                                 In-Charge: "{h.inchargeNotes}"
                               </div>
                             )}
@@ -1102,15 +1089,15 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
                               fontSize: '11px',
                               fontWeight: 'bold',
                               background: h.status === 'ACKNOWLEDGED'
-                                ? 'rgba(16, 185, 129, 0.2)'
+                                ? '#d1fae5'
                                 : h.status === 'DISCREPANCY'
-                                ? 'rgba(239, 68, 68, 0.2)'
-                                : 'rgba(168, 85, 247, 0.2)',
+                                ? '#fee2e2'
+                                : '#ede9fe',
                               color: h.status === 'ACKNOWLEDGED'
-                                ? '#34d399'
+                                ? '#047857'
                                 : h.status === 'DISCREPANCY'
-                                ? '#f87171'
-                                : '#c084fc'
+                                ? '#b91c1c'
+                                : '#6d28d9'
                             }}>
                               {h.status}
                             </span>
@@ -1130,10 +1117,10 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
           <div className="tab-content" style={{ animation: 'fadeIn 0.3s ease' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
               <div>
-                <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 5px 0', color: '#ffffff' }}>
+                <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 5px 0', color: '#0f172a' }}>
                   Van Stock & Spare Parts
                 </h2>
-                <p style={{ color: '#9ca3af', fontSize: '13px', margin: 0 }}>
+                <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>
                   Manage items carried in your vehicle kit and request stock refills from Store In-Charge.
                 </p>
               </div>
@@ -1142,7 +1129,7 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
                   type="button"
                   onClick={openManualIndentModal}
                   className="btn-primary"
-                  style={{ padding: '8px 14px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', boxShadow: 'none' }}
+                  style={{ padding: '8px 14px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
                 >
                   <Plus size={14} /> Request Parts Indent
                 </button>
@@ -1158,19 +1145,19 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
             </div>
 
             {loadingVanInventory ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>Loading your van stock...</div>
+              <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>Loading your van stock...</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
                 {/* Current Van Stock Grid */}
                 <div>
-                  <h3 style={{ fontSize: '15px', fontWeight: 'bold', color: '#cbd5e1', marginBottom: '12px' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: 'bold', color: '#334155', marginBottom: '12px' }}>
                     Current Kit Inventory ({vanInventory.length} Items)
                   </h3>
 
                   {vanInventory.length === 0 ? (
-                    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '12px', padding: '30px', textAlign: 'center', color: '#9ca3af', fontSize: '13px' }}>
-                      <Package size={28} style={{ color: '#6366f1', margin: '0 auto 10px auto' }} />
-                      <p style={{ margin: '0 0 5px 0', fontWeight: 'bold', color: '#ffffff' }}>Your van inventory is currently empty</p>
+                    <div style={{ background: '#ffffff', border: '1px dashed #cbd5e1', borderRadius: '12px', padding: '30px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                      <Package size={28} style={{ color: '#4f46e5', margin: '0 auto 10px auto' }} />
+                      <p style={{ margin: '0 0 5px 0', fontWeight: 'bold', color: '#0f172a' }}>Your van inventory is currently empty</p>
                       <p style={{ margin: 0 }}>Use "Request Parts Indent" or ask Store In-Charge to allocate stock.</p>
                     </div>
                   ) : (
@@ -1181,28 +1168,29 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
                           <div
                             key={item._id}
                             style={{
-                              background: 'rgba(255,255,255,0.03)',
-                              border: isLow ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid rgba(255,255,255,0.06)',
+                              background: '#ffffff',
+                              border: isLow ? '1px solid #fde68a' : '1px solid #e2e8f0',
                               borderRadius: '12px',
-                              padding: '15px',
+                              padding: '16px',
                               display: 'flex',
                               flexDirection: 'column',
-                              justifyContent: 'space-between'
+                              justifyContent: 'space-between',
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
                             }}
                           >
                             <div>
-                              <span style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'uppercase' }}>{item.category || 'Spare Part'}</span>
-                              <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: '#ffffff', margin: '4px 0 8px 0' }}>{item.productName}</h4>
+                              <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>{item.category || 'Spare Part'}</span>
+                              <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: '#0f172a', margin: '4px 0 6px 0' }}>{item.productName}</h4>
                               {item.sku && <p style={{ fontSize: '11px', color: '#64748b', margin: 0 }}>SKU: {item.sku}</p>}
                             </div>
 
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '15px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '15px', paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
                               <div>
-                                <span style={{ fontSize: '11px', color: '#9ca3af' }}>Stock:</span>
-                                <span style={{ fontSize: '20px', fontWeight: 'bold', color: isLow ? '#fbbf24' : '#34d399', marginLeft: '6px' }}>{item.quantity}</span>
+                                <span style={{ fontSize: '11px', color: '#64748b' }}>Stock:</span>
+                                <span style={{ fontSize: '20px', fontWeight: 'bold', color: isLow ? '#d97706' : '#059669', marginLeft: '6px' }}>{item.quantity}</span>
                               </div>
                               {isLow && (
-                                <span style={{ fontSize: '10px', fontWeight: 'bold', background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', padding: '2px 6px', borderRadius: '4px' }}>
+                                <span style={{ fontSize: '10px', fontWeight: 'bold', background: '#fef3c7', color: '#b45309', padding: '2px 6px', borderRadius: '4px' }}>
                                   Low Stock
                                 </span>
                               )}
@@ -1216,45 +1204,46 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
 
                 {/* My Indent Requisitions History */}
                 <div>
-                  <h3 style={{ fontSize: '15px', fontWeight: 'bold', color: '#cbd5e1', marginBottom: '12px' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: 'bold', color: '#334155', marginBottom: '12px' }}>
                     My Indent Requisitions
                   </h3>
 
                   {myIndents.length === 0 ? (
-                    <p style={{ color: '#9ca3af', fontSize: '13px' }}>No indent requests submitted yet.</p>
+                    <p style={{ color: '#64748b', fontSize: '13px' }}>No indent requests submitted yet.</p>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       {myIndents.map((ind) => (
                         <div
                           key={ind._id}
                           style={{
-                            background: 'rgba(255,255,255,0.02)',
-                            border: '1px solid rgba(255,255,255,0.05)',
+                            background: '#ffffff',
+                            border: '1px solid #e2e8f0',
                             borderRadius: '12px',
                             padding: '15px',
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
                             flexWrap: 'wrap',
-                            gap: '10px'
+                            gap: '10px',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
                           }}
                         >
                           <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#ffffff' }}>
+                              <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#0f172a' }}>
                                 {new Date(ind.requestedAt).toLocaleDateString()}
                               </span>
                               {ind.serviceRequestId && (
-                                <span style={{ fontSize: '11px', color: '#818cf8', background: 'rgba(99, 102, 241, 0.15)', padding: '2px 8px', borderRadius: '10px' }}>
+                                <span style={{ fontSize: '11px', color: '#4338ca', background: '#e0e7ff', padding: '2px 8px', borderRadius: '10px' }}>
                                   Job: {ind.serviceRequestId.serviceType}
                                 </span>
                               )}
                             </div>
-                            <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '6px' }}>
+                            <div style={{ fontSize: '12px', color: '#475569', marginTop: '6px' }}>
                               Parts: {ind.items?.map(it => `${it.productName} (x${it.requestedQuantity})`).join(', ')}
                             </div>
                             {ind.inchargeRemarks && (
-                              <div style={{ fontSize: '11px', color: '#34d399', marginTop: '4px', fontStyle: 'italic' }}>
+                              <div style={{ fontSize: '11px', color: '#059669', marginTop: '4px', fontStyle: 'italic' }}>
                                 Store: "{ind.inchargeRemarks}"
                               </div>
                             )}
@@ -1267,15 +1256,15 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
                               fontSize: '11px',
                               fontWeight: 'bold',
                               background: ind.status === 'DISPATCHED'
-                                ? 'rgba(16, 185, 129, 0.2)'
+                                ? '#d1fae5'
                                 : ind.status === 'REJECTED'
-                                ? 'rgba(239, 68, 68, 0.2)'
-                                : 'rgba(245, 158, 11, 0.2)',
+                                ? '#fee2e2'
+                                : '#fef3c7',
                               color: ind.status === 'DISPATCHED'
-                                ? '#34d399'
+                                ? '#047857'
                                 : ind.status === 'REJECTED'
-                                ? '#f87171'
-                                : '#fbbf24'
+                                ? '#b91c1c'
+                                : '#b45309'
                             }}>
                               {ind.status}
                             </span>
@@ -1296,22 +1285,22 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
         <div className="modal-backdrop" onClick={() => setShortageModalData(null)}>
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '480px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
-              <div style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', padding: '10px', borderRadius: '12px' }}>
+              <div style={{ background: '#fef3c7', color: '#d97706', padding: '10px', borderRadius: '12px' }}>
                 <AlertTriangle size={24} />
               </div>
               <div>
-                <h3 style={{ margin: 0, fontSize: '16px', color: '#ffffff' }}>Insufficient Van Kit Inventory</h3>
-                <p style={{ margin: 0, fontSize: '12px', color: '#9ca3af' }}>You lack spare parts to accept this service request.</p>
+                <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>Insufficient Van Kit Inventory</h3>
+                <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>You lack spare parts to accept this service request.</p>
               </div>
             </div>
 
-            <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: '12px', padding: '15px', marginBottom: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#e2e8f0', marginBottom: '10px' }}>Required vs Available Stock:</p>
+            <div style={{ background: '#fef2f2', borderRadius: '12px', padding: '15px', marginBottom: '20px', border: '1px solid #fecaca' }}>
+              <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#991b1b', marginBottom: '10px' }}>Required vs Available Stock:</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {shortageModalData.missingComponents.map((comp, idx) => (
                   <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}>
-                    <span style={{ color: '#ffffff', fontWeight: '500' }}>{comp.name}</span>
-                    <span style={{ color: '#f87171', fontWeight: 'bold' }}>
+                    <span style={{ color: '#0f172a', fontWeight: '500' }}>{comp.name}</span>
+                    <span style={{ color: '#dc2626', fontWeight: 'bold' }}>
                       Need {comp.requiredQuantity} (Have: {comp.availableQuantity})
                     </span>
                   </div>
@@ -1319,7 +1308,7 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
               </div>
             </div>
 
-            <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '20px' }}>
+            <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '20px' }}>
               Clicking below will automatically submit an indent to the Store In-Charge. Once approved and dispatched, you will be able to accept this job.
             </p>
 
@@ -1335,7 +1324,7 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
               <button
                 type="button"
                 className="btn-primary"
-                style={{ flex: 1.5, padding: '10px', fontSize: '13px', background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', boxShadow: 'none' }}
+                style={{ flex: 1.5, padding: '10px', fontSize: '13px' }}
                 onClick={handleRaiseIndentFromShortage}
               >
                 Raise Indent to Store
@@ -1349,14 +1338,14 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
       {showManualIndentModal && (
         <div className="modal-backdrop" onClick={() => setShowManualIndentModal(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '580px', width: '95%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '18px', color: '#ffffff' }}>Request Spare Parts Indent</h3>
-                <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#9ca3af' }}>Select parts from live inventory catalog & request replenishment to your Van Kit</p>
+                <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>Request Spare Parts Indent</h3>
+                <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#64748b' }}>Select parts from live inventory catalog & request replenishment to your Van Kit</p>
               </div>
               <button
                 type="button"
-                style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
+                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
                 onClick={() => setShowManualIndentModal(false)}
               >
                 <AlertCircle size={18} />
@@ -1366,17 +1355,17 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
             <form onSubmit={handleManualIndentSubmit} className="dashboard-form">
               <div style={{ marginBottom: '15px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#e5e7eb', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Required Spare Parts ({manualIndentItems.length})
                   </label>
-                  {loadingCatalog && <span style={{ fontSize: '11px', color: '#818cf8' }}>Loading live catalog...</span>}
+                  {loadingCatalog && <span style={{ fontSize: '11px', color: '#4f46e5' }}>Loading live catalog...</span>}
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '280px', overflowY: 'auto', paddingRight: '4px' }}>
                   {manualIndentItems.map((item, idx) => (
-                    <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(255,255,255,0.04)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center', background: '#f8fafc', padding: '10px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                       <div style={{ flex: 1 }}>
-                        <label style={{ display: 'block', fontSize: '11px', color: '#9ca3af', marginBottom: '4px' }}>
+                        <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>
                           Select Spare Part {item.currentStock !== null ? `(Store Stock: ${item.currentStock})` : ''}
                         </label>
                         {catalogProducts.length > 0 ? (
@@ -1392,7 +1381,7 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
                               }
                             }}
                             required
-                            style={{ width: '100%', background: '#1e293b', color: 'white', border: '1px solid rgba(255,255,255,0.15)', padding: '8px', borderRadius: '6px', outline: 'none', fontSize: '13px' }}
+                            style={{ width: '100%', background: '#ffffff', color: '#0f172a', border: '1px solid #cbd5e1', padding: '8px', borderRadius: '6px', outline: 'none', fontSize: '13px' }}
                           >
                             <option value="">-- Choose Spare Part from Catalog --</option>
                             {catalogProducts.map(p => (
@@ -1408,20 +1397,20 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
                             placeholder="e.g. 10 inch Spun Filter, RO Pump"
                             value={item.productName}
                             onChange={(e) => handleSelectProductForRow(idx, e.target.value)}
-                            style={{ width: '100%', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '8px', borderRadius: '6px', outline: 'none', fontSize: '13px' }}
+                            style={{ width: '100%', background: '#ffffff', color: '#0f172a', border: '1px solid #cbd5e1', padding: '8px', borderRadius: '6px', outline: 'none', fontSize: '13px' }}
                           />
                         )}
                       </div>
 
                       <div style={{ width: '80px' }}>
-                        <label style={{ display: 'block', fontSize: '11px', color: '#9ca3af', marginBottom: '4px' }}>Qty</label>
+                        <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>Qty</label>
                         <input
                           type="number"
                           min="1"
                           required
                           value={item.requestedQuantity}
                           onChange={(e) => updateManualIndentQty(idx, e.target.value)}
-                          style={{ width: '100%', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '8px', borderRadius: '6px', outline: 'none', textAlign: 'center', fontWeight: 'bold' }}
+                          style={{ width: '100%', background: '#ffffff', color: '#0f172a', border: '1px solid #cbd5e1', padding: '8px', borderRadius: '6px', outline: 'none', textAlign: 'center', fontWeight: 'bold' }}
                         />
                       </div>
 
@@ -1430,7 +1419,7 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
                           <button
                             type="button"
                             onClick={() => removeManualIndentRow(idx)}
-                            style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', padding: '8px', borderRadius: '6px', cursor: 'pointer' }}
+                            style={{ background: '#fee2e2', border: '1px solid #fecaca', color: '#dc2626', padding: '8px', borderRadius: '6px', cursor: 'pointer' }}
                             title="Remove item"
                           >
                             <Trash2 size={14} />
@@ -1444,7 +1433,7 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
                 <button
                   type="button"
                   onClick={addManualIndentRow}
-                  style={{ width: '100%', marginTop: '10px', padding: '8px', background: 'rgba(99, 102, 241, 0.1)', border: '1px dashed rgba(99, 102, 241, 0.4)', color: '#818cf8', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                  style={{ width: '100%', marginTop: '10px', padding: '8px', background: '#eff6ff', border: '1px dashed #93c5fd', color: '#2563eb', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                 >
                   <Plus size={14} /> + Add Another Spare Part
                 </button>
@@ -1457,7 +1446,6 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
                   value={manualIndentRemarks}
                   onChange={(e) => setManualIndentRemarks(e.target.value)}
                   placeholder="e.g. Daily refill for upcoming service calls"
-                  style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px', outline: 'none', fontSize: '12px' }}
                 />
               </div>
 
@@ -1474,7 +1462,7 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
                   type="submit"
                   className="btn-primary"
                   disabled={submittingManualIndent}
-                  style={{ flex: 1.5, padding: '10px', fontSize: '13px', background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', boxShadow: 'none' }}
+                  style={{ flex: 1.5, padding: '10px', fontSize: '13px' }}
                 >
                   {submittingManualIndent ? 'Submitting Indent...' : `Submit Indent (${manualIndentItems.filter(i => i.productName).length} items)`}
                 </button>
@@ -1489,10 +1477,10 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
         <div className="modal-backdrop" onClick={() => setCompletingRequestId(null)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#ffffff' }}>Record Payment & Close Job</h3>
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>Record Payment & Close Job</h3>
               <button 
                 type="button" 
-                style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
+                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
                 onClick={() => setCompletingRequestId(null)}
               >
                 <AlertCircle size={20} />
@@ -1510,7 +1498,6 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
                   placeholder="e.g. 1500"
                   value={paymentAmount}
                   onChange={(e) => setPaymentAmount(e.target.value)}
-                  style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px', outline: 'none' }}
                 />
               </div>
 
@@ -1519,15 +1506,14 @@ const AgentDashboard = ({ initialTab, handleNavigation }) => {
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
-                  style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px', outline: 'none' }}
                 >
-                  <option value="Cash" style={{ background: '#181823' }}>Cash Payment</option>
-                  <option value="UPI / Online" style={{ background: '#181823' }}>UPI / Online Payment</option>
-                  <option value="Card" style={{ background: '#181823' }}>Debit / Credit Card</option>
+                  <option value="Cash">Cash Payment</option>
+                  <option value="UPI / Online">UPI / Online Payment</option>
+                  <option value="Card">Debit / Credit Card</option>
                 </select>
               </div>
 
-              <div style={{ color: '#9ca3af', fontSize: '12px', marginTop: '5px', padding: '10px', background: 'rgba(255,255,255,0.01)', borderRadius: '6px' }}>
+              <div style={{ color: '#64748b', fontSize: '12px', marginTop: '5px', padding: '10px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                 * Note: Make sure you have uploaded the <strong>After Service photo</strong> on the dashboard before closing this job.
               </div>
 

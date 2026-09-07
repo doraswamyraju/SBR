@@ -66,14 +66,14 @@ const OurCustomersTab = ({ isAdmin = false }) => {
   };
 
   return (
-    <div style={{ backgroundColor: '#0f172a', padding: '24px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)' }}>
+    <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
       {/* Title & Refresh */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
         <div>
-          <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: 0, color: '#f8fafc', fontSize: '20px', fontWeight: '700' }}>
-            <UserCheck size={24} color="#38bdf8" /> Our Customers
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: 0, color: '#0f172a', fontSize: '20px', fontWeight: '700' }}>
+            <UserCheck size={24} color="#0284c7" /> Our Customers
           </h2>
-          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#94a3b8' }}>
+          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>
             Verified customer installations list across regions, products & models.
           </p>
         </div>
@@ -88,11 +88,11 @@ const OurCustomersTab = ({ isAdmin = false }) => {
             padding: '8px 16px', 
             borderRadius: '8px', 
             fontSize: '13px',
-            backgroundColor: 'rgba(255, 255, 255, 0.08)',
-            color: '#f8fafc',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
+            backgroundColor: '#ffffff',
+            color: '#334155',
+            border: '1px solid #cbd5e1',
             cursor: 'pointer',
-            fontWeight: '500'
+            fontWeight: '600'
           }}
         >
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh List
@@ -106,14 +106,14 @@ const OurCustomersTab = ({ isAdmin = false }) => {
         flexWrap: 'wrap', 
         alignItems: 'center', 
         marginBottom: '20px', 
-        backgroundColor: '#1e293b', 
+        backgroundColor: '#f8fafc', 
         padding: '16px', 
         borderRadius: '12px',
-        border: '1px solid rgba(255, 255, 255, 0.1)'
+        border: '1px solid #e2e8f0'
       }}>
         {/* Search Field */}
         <div style={{ flex: '1 1 280px', position: 'relative', minWidth: '240px' }}>
-          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
           <input
             type="text"
             placeholder="Search by S.No, Name, Address, Product, Model, Date..."
@@ -123,44 +123,44 @@ const OurCustomersTab = ({ isAdmin = false }) => {
               width: '100%',
               padding: '10px 36px 10px 38px',
               borderRadius: '8px',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
+              border: '1px solid #cbd5e1',
               fontSize: '13.5px',
               outline: 'none',
-              backgroundColor: '#0f172a',
-              color: '#ffffff'
+              backgroundColor: '#ffffff',
+              color: '#0f172a'
             }}
           />
           {searchQuery && (
             <X 
               size={16} 
               onClick={() => setSearchQuery('')} 
-              style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#94a3b8' }} 
+              style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#64748b' }} 
             />
           )}
         </div>
 
         {/* Product Filter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Filter size={16} color="#38bdf8" />
-          <span style={{ fontSize: '13px', fontWeight: '500', color: '#cbd5e1' }}>Product Filter:</span>
+          <Filter size={16} color="#0284c7" />
+          <span style={{ fontSize: '13px', fontWeight: '500', color: '#334155' }}>Product Filter:</span>
           <select
             value={selectedProduct}
             onChange={(e) => setSelectedProduct(e.target.value)}
             style={{
               padding: '10px 14px',
               borderRadius: '8px',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
+              border: '1px solid #cbd5e1',
               fontSize: '13.5px',
-              backgroundColor: '#0f172a',
-              color: '#ffffff',
+              backgroundColor: '#ffffff',
+              color: '#0f172a',
               cursor: 'pointer',
               outline: 'none',
               minWidth: '180px'
             }}
           >
-            <option value="All" style={{ background: '#0f172a', color: '#ffffff' }}>All Products</option>
+            <option value="All">All Products</option>
             {availableProducts.map((p, idx) => (
-              <option key={idx} value={p} style={{ background: '#0f172a', color: '#ffffff' }}>{p}</option>
+              <option key={idx} value={p}>{p}</option>
             ))}
           </select>
         </div>
@@ -171,9 +171,9 @@ const OurCustomersTab = ({ isAdmin = false }) => {
             style={{
               padding: '9px 14px',
               borderRadius: '8px',
-              border: 'none',
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              color: '#e2e8f0',
+              border: '1px solid #cbd5e1',
+              backgroundColor: '#ffffff',
+              color: '#334155',
               fontSize: '13px',
               cursor: 'pointer',
               fontWeight: '500'
@@ -186,23 +186,23 @@ const OurCustomersTab = ({ isAdmin = false }) => {
 
       {/* Results Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-        <span style={{ fontSize: '13px', color: '#cbd5e1', fontWeight: '500' }}>
-          Showing <strong style={{ color: '#38bdf8' }}>{customers.length}</strong> customer record{customers.length !== 1 ? 's' : ''}
+        <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '500' }}>
+          Showing <strong style={{ color: '#0284c7' }}>{customers.length}</strong> customer record{customers.length !== 1 ? 's' : ''}
         </span>
       </div>
 
       {/* Error Message */}
       {error && (
-        <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: 'rgba(220, 38, 38, 0.2)', border: '1px solid rgba(220, 38, 38, 0.4)', color: '#fca5a5', fontSize: '13px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="error-banner" style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <AlertCircle size={16} /> {error}
         </div>
       )}
 
       {/* Table Container */}
-      <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', backgroundColor: '#1e293b' }}>
+      <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#ffffff' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ backgroundColor: '#0f172a', borderBottom: '1px solid rgba(255,255,255,0.1)', textTransform: 'uppercase', fontSize: '11.5px', letterSpacing: '0.6px', color: '#94a3b8' }}>
+            <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0', textTransform: 'uppercase', fontSize: '11.5px', letterSpacing: '0.6px', color: '#475569' }}>
               <th style={{ padding: '14px 16px', textAlign: 'left', width: '70px' }}>S.No.</th>
               <th style={{ padding: '14px 16px', textAlign: 'left' }}>Customer Name</th>
               <th style={{ padding: '14px 16px', textAlign: 'left' }}>Address</th>
@@ -215,28 +215,28 @@ const OurCustomersTab = ({ isAdmin = false }) => {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={isAdmin ? 7 : 6} style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
-                  <RefreshCw className="animate-spin" size={24} style={{ margin: '0 auto 8px auto', display: 'block', color: '#38bdf8' }} />
+                <td colSpan={isAdmin ? 7 : 6} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                  <RefreshCw className="animate-spin" size={24} style={{ margin: '0 auto 8px auto', display: 'block', color: '#0284c7' }} />
                   Loading customer records...
                 </td>
               </tr>
             ) : customers.length === 0 ? (
               <tr>
-                <td colSpan={isAdmin ? 7 : 6} style={{ padding: '48px', textAlign: 'center', color: '#94a3b8' }}>
-                  <UserCheck size={36} style={{ color: '#475569', marginBottom: '8px' }} />
-                  <div style={{ fontWeight: '600', color: '#f8fafc', fontSize: '15px' }}>No customer records found</div>
-                  <div style={{ fontSize: '13px', marginTop: '4px', color: '#94a3b8' }}>Try adjusting your search criteria or product filter.</div>
+                <td colSpan={isAdmin ? 7 : 6} style={{ padding: '48px', textAlign: 'center', color: '#64748b' }}>
+                  <UserCheck size={36} style={{ color: '#94a3b8', marginBottom: '8px' }} />
+                  <div style={{ fontWeight: '600', color: '#0f172a', fontSize: '15px' }}>No customer records found</div>
+                  <div style={{ fontSize: '13px', marginTop: '4px', color: '#64748b' }}>Try adjusting your search criteria or product filter.</div>
                 </td>
               </tr>
             ) : (
               customers.map((item, index) => (
-                <tr key={item._id || index} style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', transition: 'background-color 0.15s' }}>
+                <tr key={item._id || index} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background-color 0.15s' }}>
                   {/* S.No */}
                   <td style={{ padding: '14px 16px', fontWeight: '600' }}>
                     <span style={{ 
                       display: 'inline-block', 
-                      backgroundColor: 'rgba(255,255,255,0.08)', 
-                      color: '#38bdf8', 
+                      backgroundColor: '#eff6ff', 
+                      color: '#0284c7', 
                       padding: '3px 10px', 
                       borderRadius: '6px', 
                       fontSize: '12px',
@@ -247,14 +247,14 @@ const OurCustomersTab = ({ isAdmin = false }) => {
                   </td>
 
                   {/* Customer Name */}
-                  <td style={{ padding: '14px 16px', fontWeight: '700', color: '#ffffff', fontSize: '14px' }}>
+                  <td style={{ padding: '14px 16px', fontWeight: '700', color: '#0f172a', fontSize: '14px' }}>
                     {item.name}
                   </td>
 
                   {/* Address */}
-                  <td style={{ padding: '14px 16px', color: '#cbd5e1', fontSize: '13.5px' }}>
+                  <td style={{ padding: '14px 16px', color: '#334155', fontSize: '13.5px' }}>
                     <span style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
-                      <MapPin size={15} color="#94a3b8" style={{ flexShrink: 0, marginTop: '2px' }} />
+                      <MapPin size={15} color="#64748b" style={{ flexShrink: 0, marginTop: '2px' }} />
                       <span>{item.address || 'N/A'}</span>
                     </span>
                   </td>
@@ -265,8 +265,8 @@ const OurCustomersTab = ({ isAdmin = false }) => {
                       display: 'inline-flex', 
                       alignItems: 'center', 
                       gap: '5px', 
-                      backgroundColor: '#0284c7', 
-                      color: '#ffffff', 
+                      backgroundColor: '#e0f2fe', 
+                      color: '#0369a1', 
                       padding: '4px 12px', 
                       borderRadius: '16px', 
                       fontSize: '12.5px', 
@@ -283,8 +283,8 @@ const OurCustomersTab = ({ isAdmin = false }) => {
                         display: 'inline-flex', 
                         alignItems: 'center', 
                         gap: '5px', 
-                        backgroundColor: '#7c3aed', 
-                        color: '#ffffff', 
+                        backgroundColor: '#ede9fe', 
+                        color: '#6d28d9', 
                         padding: '4px 12px', 
                         borderRadius: '16px', 
                         fontSize: '12.5px', 
@@ -297,10 +297,10 @@ const OurCustomersTab = ({ isAdmin = false }) => {
                         display: 'inline-block', 
                         padding: '2px 8px', 
                         borderRadius: '4px', 
-                        backgroundColor: 'rgba(255,255,255,0.05)', 
-                        color: '#64748b', 
+                        backgroundColor: '#f1f5f9', 
+                        color: '#94a3b8', 
                         fontSize: '12px',
-                        border: '1px dashed rgba(255,255,255,0.1)'
+                        border: '1px dashed #cbd5e1'
                       }}>
                         N/A
                       </span>
@@ -308,9 +308,9 @@ const OurCustomersTab = ({ isAdmin = false }) => {
                   </td>
 
                   {/* Purchase Date */}
-                  <td style={{ padding: '14px 16px', color: '#cbd5e1', fontSize: '13px' }}>
+                  <td style={{ padding: '14px 16px', color: '#334155', fontSize: '13px' }}>
                     {item.purchaseDate && item.purchaseDate.trim() !== '' ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#4ade80', fontWeight: '600' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#047857', fontWeight: '600' }}>
                         <Calendar size={14} /> {item.purchaseDate}
                       </span>
                     ) : (
@@ -318,10 +318,10 @@ const OurCustomersTab = ({ isAdmin = false }) => {
                         display: 'inline-block', 
                         padding: '2px 8px', 
                         borderRadius: '4px', 
-                        backgroundColor: 'rgba(255,255,255,0.05)', 
-                        color: '#64748b', 
+                        backgroundColor: '#f1f5f9', 
+                        color: '#94a3b8', 
                         fontSize: '12px',
-                        border: '1px dashed rgba(255,255,255,0.1)'
+                        border: '1px dashed #cbd5e1'
                       }}>
                         N/A
                       </span>
@@ -334,10 +334,8 @@ const OurCustomersTab = ({ isAdmin = false }) => {
                       <button
                         onClick={() => handleDeleteRecord(item._id)}
                         title="Delete Record"
+                        className="btn-danger"
                         style={{
-                          backgroundColor: 'rgba(220, 38, 38, 0.2)',
-                          color: '#fca5a5',
-                          border: '1px solid rgba(220, 38, 38, 0.4)',
                           padding: '7px 9px',
                           borderRadius: '6px',
                           cursor: 'pointer'
