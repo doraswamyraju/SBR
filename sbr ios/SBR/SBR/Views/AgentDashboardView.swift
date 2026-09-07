@@ -1591,12 +1591,12 @@ struct AgentPaymentBreakdownSheet: View {
         Task {
             let success = await requestVM.completeJob(
                 requestId: job.id,
+                amount: netTotal,
+                method: paymentMethod,
                 inventoryTotal: inventorySubtotal,
                 serviceCharge: serviceChargeValue,
                 discount: discountValue,
                 discountRemarks: discountRemarks,
-                finalAmount: netTotal,
-                paymentMethod: paymentMethod,
                 requiredComponents: components,
                 requestReview: requestReview
             )
