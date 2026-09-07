@@ -516,6 +516,7 @@ struct AgentActiveServiceView: View {
     var onCompleteJob: ((ServiceRequest) -> Void)? = nil
     
     @State private var showingLiveRouteTracking = false
+    @State private var startInNavMode = false
     
     private var activeJob: ServiceRequest? {
         requestVM.requests.first(where: { $0.status == .accepted || $0.status == .inProgress })
@@ -543,8 +544,9 @@ struct AgentActiveServiceView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         JobTimerView(request: job)
                         
-                        // Swiggy / Rapido Style Live Customer Route Card
-                        AgentRouteMapCardView(job: job, requestVM: requestVM) {
+                        // Live Customer Route & Navigation Card
+                        AgentRouteMapCardView(job: job, requestVM: requestVM) { startInNav in
+                            self.startInNavMode = startInNav
                             self.showingLiveRouteTracking = true
                         }
                         .padding(.horizontal)
@@ -669,9 +671,10 @@ struct AgentActiveServiceView: View {
                             }
                             
                             Button(action: {
+                                self.startInNavMode = true
                                 self.showingLiveRouteTracking = true
                             }) {
-                                Label("Live GPS Customer Track (Swiggy/Rapido Mode)", systemImage: "location.north.line.fill")
+                                Label("Start In-App Live Navigation", systemImage: "arrow.triangle.turn.up.right.diamond.fill")
                                     .font(.subheadline)
                                     .fontWeight(.bold)
                                     .foregroundColor(.white)
@@ -776,7 +779,7 @@ struct AgentActiveServiceView: View {
                     }
                 }
                 .sheet(isPresented: $showingLiveRouteTracking) {
-                    AgentLiveCustomerRouteView(job: job, requestVM: requestVM)
+                    AgentLiveCustomerRouteView(job: job, requestVM: requestVM, startInNavigationMode: startInNavMode)
                 }
             } else {
                 Spacer()
