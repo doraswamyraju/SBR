@@ -36,6 +36,14 @@ struct HandoverAgent: Codable, Identifiable {
             self.phone = nil
         }
     }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(_id, forKey: ._id)
+        try container.encode(name, forKey: .name)
+        try container.encodeIfPresent(email, forKey: .email)
+        try container.encodeIfPresent(phone, forKey: .phone)
+    }
 }
 
 private struct PartialRequestId: Codable {
@@ -106,6 +114,26 @@ struct CashHandover: Codable, Identifiable {
         self.createdAt = try? container.decode(String.self, forKey: .createdAt)
         self.updatedAt = try? container.decode(String.self, forKey: .updatedAt)
     }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(_id, forKey: ._id)
+        try container.encodeIfPresent(agentId, forKey: .agentId)
+        try container.encode(date, forKey: .date)
+        try container.encode(totalCollectedCash, forKey: .totalCollectedCash)
+        try container.encodeIfPresent(completedRequests, forKey: .completedRequests)
+        try container.encode(status, forKey: .status)
+        try container.encodeIfPresent(acknowledgedBy, forKey: .acknowledgedBy)
+        try container.encodeIfPresent(storeInchargeId, forKey: .storeInchargeId)
+        try container.encodeIfPresent(acknowledgedAmount, forKey: .acknowledgedAmount)
+        try container.encodeIfPresent(discrepancyAmount, forKey: .discrepancyAmount)
+        try container.encodeIfPresent(inchargeNotes, forKey: .inchargeNotes)
+        try container.encodeIfPresent(agentNotes, forKey: .agentNotes)
+        try container.encodeIfPresent(submittedAt, forKey: .submittedAt)
+        try container.encodeIfPresent(acknowledgedAt, forKey: .acknowledgedAt)
+        try container.encodeIfPresent(createdAt, forKey: .createdAt)
+        try container.encodeIfPresent(updatedAt, forKey: .updatedAt)
+    }
 }
 
 struct AgentDailySummary: Codable {
@@ -155,5 +183,16 @@ struct AgentDailySummary: Codable {
         
         self.latestHandover = (try? container.decode(CashHandover.self, forKey: .latestHandover))
             ?? (try? container.decode(CashHandover.self, forKey: .existingHandover))
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(agentId, forKey: .agentId)
+        try container.encode(date, forKey: .date)
+        try container.encode(totalCollectedCash, forKey: .totalCollectedCash)
+        try container.encode(completedJobsCount, forKey: .completedJobsCount)
+        try container.encode(completedRequestIds, forKey: .completedRequestIds)
+        try container.encode(hasSubmittedHandover, forKey: .hasSubmittedHandover)
+        try container.encodeIfPresent(latestHandover, forKey: .latestHandover)
     }
 }
