@@ -80,6 +80,11 @@ class FakeUserRepository : UserRepository {
                 name = name,
                 email = email
             )
+            UserRole.STORE_INCHARGE -> com.sbr.sms.data.models.StoreIncharge(
+                id = UUID.randomUUID().toString(),
+                name = name,
+                email = email
+            )
         }
         createUser(newUser)
         return newUser

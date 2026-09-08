@@ -5,13 +5,15 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material.icons.filled.Done
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.Person
+import androidx.navigation.NavHostController
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -47,6 +49,7 @@ private fun createImageUri(context: Context): Uri {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun AgentActiveRequestsScreen(
+    navController: NavHostController? = null,
     viewModel: AgentRequestsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -165,6 +168,9 @@ fun AgentActiveRequestsScreen(
                             onUpdateStatus = { newStatus ->
                                 viewModel.updateRequestStatus(details.request.id, newStatus)
                             },
+                            onStartNavigation = {
+                                navController?.navigate(com.sbr.sms.navigation.AppRoutes.AgentLiveCustomerRoute.createRoute(details.request.id))
+                            },
                             onUploadBefore = { launchCamera("before") },
                             onUploadAfter = { launchCamera("after") },
                             onCollectPayment = { showPaymentDialog = true }
@@ -191,9 +197,9 @@ fun AgentActiveRequestsScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActiveRequestCard(
-    // CHANGED: Parameter is now the full details object.
     details: RequestWithCustomerDetails,
     onUpdateStatus: (String) -> Unit,
+    onStartNavigation: () -> Unit,
     onUploadBefore: () -> Unit,
     onUploadAfter: () -> Unit,
     onCollectPayment: () -> Unit
@@ -209,7 +215,6 @@ fun ActiveRequestCard(
             )
             Divider()
 
-            // NEW: Display Customer Name
             ListItem(
                 headlineContent = { Text(details.customerName, fontWeight = FontWeight.SemiBold) },
                 leadingContent = { Icon(Icons.Default.Person, contentDescription = "Customer") },
@@ -233,14 +238,26 @@ fun ActiveRequestCard(
                     headlineContent = { Text("₹${"%,.0f".format(request.paymentAmount)} via ${request.paymentMethod}", fontWeight = FontWeight.Bold) },
                     leadingContent = { Icon(Icons.Default.Done, contentDescription = "Payment") },
                     supportingContent = { Text("Payment Collected") }
-
                 )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // NEW: "Call Customer" button added here for easy access.
+            // Navigation Button
             Button(
+                onClick = onStartNavigation,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Icon(Icons.Default.Navigation, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
+                Text("In-App Route Navigation")
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Call Customer button
+            OutlinedButton(
                 onClick = {
                     details.customerPhone?.let { phone ->
                         val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))

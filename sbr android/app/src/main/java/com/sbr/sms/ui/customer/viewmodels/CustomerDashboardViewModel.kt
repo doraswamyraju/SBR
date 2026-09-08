@@ -108,7 +108,13 @@ class CustomerDashboardViewModel @Inject constructor(
         }
     }
 
-    fun submitNewRequest(serviceType: String, description: String, address: String) {
+    fun submitNewRequest(
+        serviceType: String,
+        description: String,
+        address: String,
+        latitude: Double? = null,
+        longitude: Double? = null
+    ) {
         viewModelScope.launch {
             val currentUser = auth.currentUser
             if (currentUser == null) {
@@ -122,6 +128,8 @@ class CustomerDashboardViewModel @Inject constructor(
                     serviceType = serviceType,
                     description = description,
                     customerAddress = address,
+                    latitude = latitude,
+                    longitude = longitude,
                     createdBy = "CUSTOMER"
                 )
                 serviceRequestRepository.addRequest(newRequest)

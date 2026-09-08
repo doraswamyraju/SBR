@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sbr.sms.data.models.AgentLocation
+import com.sbr.sms.data.models.ServiceRequest
 import com.sbr.sms.data.repositories.ServiceRequestRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -14,9 +15,11 @@ import javax.inject.Inject
 
 sealed interface LiveTrackingUiState {
     object Loading : LiveTrackingUiState
-    data class Success(val location: AgentLocation) : LiveTrackingUiState
-    object Error : LiveTrackingUiState
-    object Idle : LiveTrackingUiState
+    data class Success(
+        val request: ServiceRequest,
+        val location: AgentLocation?
+    ) : LiveTrackingUiState
+    data class Error(val message: String) : LiveTrackingUiState
 }
 
 @HiltViewModel
@@ -30,20 +33,18 @@ class CustomerLiveTrackingViewModel @Inject constructor(
     val uiState: StateFlow<LiveTrackingUiState> =
         serviceRequestRepository.getRequestStreamById(requestId)
             .map { request ->
-                // FIXED: Check if 'locationPath' is not empty and get the last location.
-                if (request?.locationPath?.isNotEmpty() == true) {
-                    val validPath = request.locationPath
+                if (request != null) {
+                    val validLocation = request.locationPath
                         .filter { it.latitude != 0.0 && it.longitude != 0.0 }
                         .sortedBy { it.timestamp }
-                    if (validPath.isNotEmpty()) {
-                        LiveTrackingUiState.Success(validPath.last())
-                    } else {
-                        LiveTrackingUiState.Idle
-                    }
-                } else if (request != null) {
-                    LiveTrackingUiState.Idle
+                        .lastOrNull()
+
+                    LiveTrackingUiState.Success(
+                        request = request,
+                        location = validLocation
+                    )
                 } else {
-                    LiveTrackingUiState.Error
+                    LiveTrackingUiState.Error("Service request not found")
                 }
             }
             .stateIn(

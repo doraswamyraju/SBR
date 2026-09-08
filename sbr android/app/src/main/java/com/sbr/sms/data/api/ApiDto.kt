@@ -54,9 +54,20 @@ data class UserDto(
     val currentLat: Double? = null,
     val currentLng: Double? = null,
     val fcmTokens: List<String> = emptyList()
-)
+) {
+    val _id: String get() = id
+}
 
 // Service Request details
+data class RequiredComponentDto(
+    val posProductId: Int? = null,
+    val productId: String? = null,
+    val name: String = "",
+    val sku: String? = null,
+    val quantity: Int = 1,
+    val unitPrice: Double? = null
+)
+
 data class ServiceRequestDto(
     @SerializedName("id", alternate = ["_id"]) val id: String,
     val customerId: Any?, // Can be UserDto or String depending on populate
@@ -64,18 +75,28 @@ data class ServiceRequestDto(
     val serviceType: String,
     val description: String? = null,
     val customerAddress: String,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
     val status: String,
     val createdBy: String,
     val createdAt: String? = null,
+    val updatedAt: String? = null,
     val acceptedAt: String? = null,
     val completedAt: String? = null,
     val beforeImageUrl: String? = null,
     val afterImageUrl: String? = null,
     val paymentAmount: Double? = null,
-    val paymentStatus: String,
+    val inventoryTotal: Double? = null,
+    val serviceCharge: Double? = null,
+    val discount: Double? = null,
+    val discountRemarks: String? = null,
+    val finalAmount: Double? = null,
+    val paymentStatus: String = "Pending",
     val paymentMethod: String? = null,
     val paymentTimestamp: String? = null,
-    val locationPath: List<AgentLocationDto> = emptyList()
+    val locationPath: List<AgentLocationDto> = emptyList(),
+    val requiredComponents: List<RequiredComponentDto>? = emptyList(),
+    val requestReview: Boolean? = null
 )
 
 data class AgentLocationDto(
@@ -116,6 +137,7 @@ data class ProductDto(
     @SerializedName("id", alternate = ["_id"]) val id: String = "",
     val name: String = "",
     val slug: String? = null,
+    val sku: String? = null,
     val category: String? = null,
     val image: String? = null,
     val images: List<String>? = emptyList(),
@@ -125,11 +147,15 @@ data class ProductDto(
     val features: List<String>? = emptyList(),
     val basePrice: Double? = null,
     val mrp: Double? = null,
+    val stockLevel: Int? = 0,
+    val minStockLevel: Int? = 0,
     val commissionType: String? = "fixed",
     val commissionValue: Double? = null,
     val isActive: Boolean? = true,
     val createdAt: String? = null
-)
+) {
+    val _id: String get() = id
+}
 
 data class ProductRequest(
     val name: String,

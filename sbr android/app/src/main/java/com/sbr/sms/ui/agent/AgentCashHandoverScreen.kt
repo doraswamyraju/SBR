@@ -60,9 +60,16 @@ class AgentCashHandoverViewModel @Inject constructor(
         viewModelScope.launch {
             isSubmitting.value = true
             try {
+                val requestIds = summary.completedRequestIds.map { item ->
+                    if (item is Map<*, *>) {
+                        (item["id"] ?: item["_id"] ?: "").toString()
+                    } else {
+                        item.toString()
+                    }
+                }.filter { it.isNotBlank() }
                 val req = HandoverSubmitRequest(
                     totalCollectedCash = summary.totalCollectedCash,
-                    completedRequests = summary.completedRequestIds,
+                    completedRequests = requestIds,
                     agentNotes = notes
                 )
                 val res = apiService.submitCashHandover(req)

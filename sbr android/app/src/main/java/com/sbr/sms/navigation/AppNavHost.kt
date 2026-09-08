@@ -62,6 +62,9 @@ sealed class AppRoutes(val route: String) {
         fun createRoute(requestId: String) = "adminSingleAgentTracking/$requestId"
     }
     object AdminMultiAgentMap : AppRoutes("adminMultiAgentMap")
+    object AgentLiveCustomerRoute : AppRoutes("agentLiveCustomerRoute/{requestId}") {
+        fun createRoute(requestId: String) = "agentLiveCustomerRoute/$requestId"
+    }
 }
 
 @Composable
@@ -133,6 +136,10 @@ fun AppNavHost(viewModel: AuthViewModel = hiltViewModel()) {
             arguments = listOf(navArgument("requestId") { type = NavType.StringType })
         ) { LiveTrackingScreen(navController = navController) }
         composable(AppRoutes.AdminMultiAgentMap.route) { AdminMultiAgentMapScreen(navController = navController) }
+        composable(
+            route = AppRoutes.AgentLiveCustomerRoute.route,
+            arguments = listOf(navArgument("requestId") { type = NavType.StringType })
+        ) { com.sbr.sms.ui.agent.AgentLiveCustomerRouteScreen(navController = navController) }
     }
 }
 

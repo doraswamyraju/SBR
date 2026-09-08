@@ -20,9 +20,11 @@ import com.sbr.sms.ui.common.RequestLocationPermission
 import kotlinx.coroutines.launch
 
 import androidx.compose.foundation.Image
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import com.sbr.sms.R
 
 import com.sbr.sms.ui.common.OurCustomersScreen
@@ -130,7 +132,7 @@ fun AgentPanelScreen(
                             onNavigateToSection = { section -> selectedSection = section }
                         )
                         AgentSection.NewRequests -> AgentRequestsScreen(navController = navController, viewModel = viewModel)
-                        AgentSection.ActiveService -> AgentActiveRequestsScreen(viewModel = viewModel)
+                        AgentSection.ActiveService -> AgentActiveRequestsScreen(navController = navController, viewModel = viewModel)
                         AgentSection.VanInventory -> AgentInventoryScreen()
                         AgentSection.CashHandover -> AgentCashHandoverScreen()
                         AgentSection.OurCustomers -> OurCustomersScreen(isAdmin = false)

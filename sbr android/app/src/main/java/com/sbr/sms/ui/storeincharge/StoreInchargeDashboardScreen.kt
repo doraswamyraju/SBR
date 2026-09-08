@@ -23,10 +23,10 @@ import com.sbr.sms.data.api.ApiService
 import com.sbr.sms.data.api.DispatchIndentRequest
 import com.sbr.sms.data.api.HandoverAcknowledgeRequest
 import com.sbr.sms.data.api.RejectIndentRequest
+import com.sbr.sms.data.api.UserDto
 import com.sbr.sms.data.models.AgentIndent
 import com.sbr.sms.data.models.CashHandover
 import com.sbr.sms.data.models.ServiceRequest
-import com.sbr.sms.data.models.UserDto
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,7 +36,7 @@ import javax.inject.Inject
 @HiltViewModel
 class StoreInchargeViewModel @Inject constructor(
     private val apiService: ApiService,
-    private val authViewModel: com.sbr.sms.ui.auth.AuthViewModel
+    private val credentialManager: com.sbr.sms.data.CredentialManager
 ) : ViewModel() {
     val requests = MutableStateFlow<List<ServiceRequest>>(emptyList())
     val agents = MutableStateFlow<List<UserDto>>(emptyList())
@@ -57,12 +57,17 @@ class StoreInchargeViewModel @Inject constructor(
                 if (reqRes.isSuccessful && reqRes.body()?.success == true) {
                     val dtos = reqRes.body()?.data ?: emptyList()
                     requests.value = dtos.map { dto ->
+                        val agentId = when (val agent = dto.assignedAgentId) {
+                            is String -> agent
+                            is Map<*, *> -> (agent["id"] ?: agent["_id"]) as? String
+                            else -> null
+                        }
                         ServiceRequest(
                             id = dto.id,
                             serviceType = dto.serviceType,
                             customerAddress = dto.customerAddress,
                             status = dto.status,
-                            assignedAgentId = dto.assignedAgentId?.id
+                            assignedAgentId = agentId
                         )
                     }
                 }
@@ -92,7 +97,7 @@ class StoreInchargeViewModel @Inject constructor(
     fun assignAgent(requestId: String, agentId: String) {
         viewModelScope.launch {
             try {
-                val res = apiService.assignRequest(requestId, mapOf("assignedAgentId" to agentId))
+                val res = apiService.assignRequest(requestId, mapOf("agentId" to agentId))
                 if (res.isSuccessful) {
                     loadData()
                 }
@@ -142,7 +147,9 @@ class StoreInchargeViewModel @Inject constructor(
     }
 
     fun logout() {
-        authViewModel.logout()
+        viewModelScope.launch {
+            credentialManager.clearAuthSession()
+        }
     }
 }
 

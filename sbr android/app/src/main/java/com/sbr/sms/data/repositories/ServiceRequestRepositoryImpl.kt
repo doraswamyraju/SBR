@@ -68,22 +68,43 @@ class ServiceRequestRepositoryImpl @Inject constructor(
         return ""
     }
 
+    private fun getObjectField(field: Any?, key: String): String? {
+        if (field is Map<*, *>) {
+            val v = field[key]
+            if (v is String) return v
+        }
+        return null
+    }
+
     private fun ServiceRequestDto.toDomain(): ServiceRequest {
         return ServiceRequest(
             id = this.id,
             customerId = getObjectId(this.customerId),
+            customerName = getObjectField(this.customerId, "name"),
+            customerPhone = getObjectField(this.customerId, "phone"),
+            customerEmail = getObjectField(this.customerId, "email"),
             assignedAgentId = getObjectId(this.assignedAgentId).takeIf { it.isNotBlank() },
+            assignedAgentName = getObjectField(this.assignedAgentId, "name"),
+            assignedAgentPhone = getObjectField(this.assignedAgentId, "phone"),
             serviceType = this.serviceType,
             description = this.description ?: "",
             customerAddress = this.customerAddress,
+            latitude = this.latitude,
+            longitude = this.longitude,
             status = this.status,
             createdBy = this.createdBy,
             createdAt = this.createdAt?.let { parseDate(it) },
+            updatedAt = this.updatedAt?.let { parseDate(it) },
             acceptedAt = this.acceptedAt?.let { parseDate(it) },
             completedAt = this.completedAt?.let { parseDate(it) },
             beforeImageUrl = this.beforeImageUrl,
             afterImageUrl = this.afterImageUrl,
             paymentAmount = this.paymentAmount,
+            inventoryTotal = this.inventoryTotal,
+            serviceCharge = this.serviceCharge,
+            discount = this.discount,
+            discountRemarks = this.discountRemarks,
+            finalAmount = this.finalAmount,
             paymentStatus = this.paymentStatus,
             paymentMethod = this.paymentMethod,
             paymentTimestamp = this.paymentTimestamp?.let { parseDate(it) },
@@ -93,7 +114,18 @@ class ServiceRequestRepositoryImpl @Inject constructor(
                     longitude = it.longitude,
                     timestamp = it.timestamp?.let { ts -> parseDate(ts) }
                 )
-            }
+            },
+            requiredComponents = this.requiredComponents?.map {
+                com.sbr.sms.data.models.RequiredComponent(
+                    posProductId = it.posProductId,
+                    productId = it.productId,
+                    name = it.name,
+                    sku = it.sku,
+                    quantity = it.quantity,
+                    unitPrice = it.unitPrice
+                )
+            } ?: emptyList(),
+            requestReview = this.requestReview
         )
     }
 
@@ -110,12 +142,16 @@ class ServiceRequestRepositoryImpl @Inject constructor(
 
     override suspend fun addRequest(request: ServiceRequest): String {
         try {
-            val payload = mapOf(
+            val payload = mutableMapOf<String, Any?>(
                 "customerId" to request.customerId,
                 "serviceType" to request.serviceType,
                 "description" to request.description,
                 "customerAddress" to request.customerAddress
             )
+            if (request.latitude != null) payload["latitude"] = request.latitude
+            if (request.longitude != null) payload["longitude"] = request.longitude
+            if (request.requiredComponents.isNotEmpty()) payload["requiredComponents"] = request.requiredComponents
+
             val response = apiService.createRequest(payload)
             if (response.isSuccessful) {
                 val newId = response.body()?.data?.id ?: ""
@@ -132,7 +168,7 @@ class ServiceRequestRepositoryImpl @Inject constructor(
 
     override suspend fun updateRequest(request: ServiceRequest) {
         try {
-            val payload = mapOf(
+            val payload = mutableMapOf<String, Any?>(
                 "serviceType" to request.serviceType,
                 "description" to request.description,
                 "customerAddress" to request.customerAddress,
@@ -143,6 +179,16 @@ class ServiceRequestRepositoryImpl @Inject constructor(
                 "paymentStatus" to request.paymentStatus,
                 "paymentMethod" to request.paymentMethod
             )
+            if (request.latitude != null) payload["latitude"] = request.latitude
+            if (request.longitude != null) payload["longitude"] = request.longitude
+            if (request.inventoryTotal != null) payload["inventoryTotal"] = request.inventoryTotal
+            if (request.serviceCharge != null) payload["serviceCharge"] = request.serviceCharge
+            if (request.discount != null) payload["discount"] = request.discount
+            if (request.discountRemarks != null) payload["discountRemarks"] = request.discountRemarks
+            if (request.finalAmount != null) payload["finalAmount"] = request.finalAmount
+            if (request.requestReview != null) payload["requestReview"] = request.requestReview
+            if (request.requiredComponents.isNotEmpty()) payload["requiredComponents"] = request.requiredComponents
+
             val response = apiService.updateRequest(request.id, payload)
             if (!response.isSuccessful) {
                 throw Exception("Failed to update request: ${response.errorBody()?.string()}")

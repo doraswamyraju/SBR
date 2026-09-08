@@ -57,8 +57,8 @@ fun CustomerDashboardScreen(
     if (showDialog) {
         NewRequestDialog(
             onDismiss = { onShowDialogChange(false) },
-            onSubmit = { serviceType, description, address ->
-                viewModel.submitNewRequest(serviceType, description, address)
+            onSubmit = { serviceType, description, address, lat, lng ->
+                viewModel.submitNewRequest(serviceType, description, address, lat, lng)
                 onShowDialogChange(false)
             }
         )

@@ -38,7 +38,7 @@ interface ApiService {
 
     // Service Request endpoints
     @POST("api/requests")
-    suspend fun createRequest(@Body request: Map<String, String>): Response<ApiResponse<ServiceRequestDto>>
+    suspend fun createRequest(@Body request: Map<String, Any?>): Response<ApiResponse<ServiceRequestDto>>
 
     @GET("api/requests")
     suspend fun getRequests(

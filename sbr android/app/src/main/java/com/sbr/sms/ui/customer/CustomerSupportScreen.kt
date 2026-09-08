@@ -93,11 +93,18 @@ private fun ContactOptionsSection() {
             )
             ContactOptionCard(
                 icon = Icons.Default.Chat,
-                title = "Live Chat",
-                subtitle = "Chat with our support agents",
-                buttonText = "Start Chat",
+                title = "WhatsApp Chat",
+                subtitle = "Instant support over WhatsApp",
+                buttonText = "Chat Now",
                 onClick = {
-                    Toast.makeText(context, "Live Chat feature coming soon!", Toast.LENGTH_SHORT).show()
+                    try {
+                        val whatsappIntent = Intent(Intent.ACTION_VIEW).apply {
+                            data = Uri.parse("https://api.whatsapp.com/send?phone=+919900000000&text=Hello%20SBR%20Support,%20I%20need%20assistance.")
+                        }
+                        context.startActivity(whatsappIntent)
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "WhatsApp is not installed.", Toast.LENGTH_SHORT).show()
+                    }
                 },
                 modifier = Modifier.weight(1f)
             )

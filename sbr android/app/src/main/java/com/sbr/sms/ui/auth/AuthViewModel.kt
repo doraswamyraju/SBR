@@ -57,6 +57,7 @@ class AuthViewModel @Inject constructor(
                 UserRole.ADMIN -> Admin(id = userId, name = name)
                 UserRole.AGENT -> Agent(id = userId, name = name, phone = phone)
                 UserRole.CUSTOMER -> Customer(id = userId, name = name, phone = phone)
+                UserRole.STORE_INCHARGE -> com.sbr.sms.data.models.StoreIncharge(id = userId, name = name, phone = phone)
             }
             AuthState.Authenticated(tempUser)
         }
