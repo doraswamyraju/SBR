@@ -39,10 +39,12 @@
 /* Begin PBXFrameworksBuildPhase section */
 		137CBEC82FEC4812007B9C6D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
 			files = (
 				137CBF1E2FEC4CEF007B9C6D /* FirebaseMessaging in Frameworks */,
 				137CBF1C2FEC4CE7007B9C6D /* FirebaseCore in Frameworks */,
 			);
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
@@ -83,6 +85,8 @@
 				137CBEC92FEC4812007B9C6D /* Resources */,
 			);
 			buildRules = (
+			);
+			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
 				137CBECD2FEC4812007B9C6D /* SBR */,
@@ -136,21 +140,25 @@
 /* Begin PBXResourcesBuildPhase section */
 		137CBEC92FEC4812007B9C6D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
 			files = (
 			);
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		137CBEC72FEC4812007B9C6D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
 			files = (
 			);
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		137CBED42FEC4814007B9C6D /* Debug configuration for PBXProject "SBR" */ = {
+		137CBED42FEC4814007B9C6D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -214,7 +222,7 @@
 			};
 			name = Debug;
 		};
-		137CBED52FEC4814007B9C6D /* Release configuration for PBXProject "SBR" */ = {
+		137CBED52FEC4814007B9C6D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -271,7 +279,7 @@
 			};
 			name = Release;
 		};
-		137CBED72FEC4814007B9C6D /* Debug configuration for PBXNativeTarget "SBR" */ = {
+		137CBED72FEC4814007B9C6D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -313,7 +321,7 @@
 			};
 			name = Debug;
 		};
-		137CBED82FEC4814007B9C6D /* Release configuration for PBXNativeTarget "SBR" */ = {
+		137CBED82FEC4814007B9C6D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -361,17 +369,19 @@
 		137CBEC62FEC4812007B9C6D /* Build configuration list for PBXProject "SBR" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				137CBED42FEC4814007B9C6D /* Debug configuration for PBXProject "SBR" */,
-				137CBED52FEC4814007B9C6D /* Release configuration for PBXProject "SBR" */,
+				137CBED42FEC4814007B9C6D /* Debug */,
+				137CBED52FEC4814007B9C6D /* Release */,
 			);
+			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		137CBED62FEC4814007B9C6D /* Build configuration list for PBXNativeTarget "SBR" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				137CBED72FEC4814007B9C6D /* Debug configuration for PBXNativeTarget "SBR" */,
-				137CBED82FEC4814007B9C6D /* Release configuration for PBXNativeTarget "SBR" */,
+				137CBED72FEC4814007B9C6D /* Debug */,
+				137CBED82FEC4814007B9C6D /* Release */,
 			);
+			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
@@ -401,5 +411,4 @@
 /* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 137CBEC32FEC4812007B9C6D /* Project object */;
-	validationLevel = 1;
 }
