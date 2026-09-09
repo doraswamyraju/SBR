@@ -198,9 +198,9 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text("App & Server Information", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Text("App Version: 1.1 (Build 3)", fontSize = 12.sp, color = Color.Gray)
+                Text("App Version: 1.2 (Build 5)", fontSize = 12.sp, color = Color.Gray)
                 Text("Backend Host: https://sbr.sriddha.com", fontSize = 12.sp, color = Color.Gray)
-                Text("Target SDK: Android 35 (Vanilla Material 3 + Jetpack Compose)", fontSize = 12.sp, color = Color.Gray)
+                Text("Target SDK: Android 36 (Vanilla Material 3 + Jetpack Compose)", fontSize = 12.sp, color = Color.Gray)
             }
         }
 
