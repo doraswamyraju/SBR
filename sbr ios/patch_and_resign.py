@@ -67,13 +67,21 @@ def main():
 
     print(f"📱 App bundle found at: {app_path}")
 
-    # 4. Patch Info.plist
-    print("🛠️ Patching Info.plist BuildMachineOSBuild to Sonoma 14.5 (23F79)...")
-    try:
-        subprocess.run(["plutil", "-replace", "BuildMachineOSBuild", "-string", "23F79", plist_path], check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"❌ Failed to patch Info.plist: {e}")
-        return
+    # 4. Patch Info.plist files
+    print("🛠️ Patching Info.plist files to public GM SDK and macOS (23F79)...")
+    for root, _, files in os.walk(app_path):
+        for file in files:
+            if file == "Info.plist":
+                p_path = os.path.join(root, file)
+                subprocess.run(["plutil", "-replace", "BuildMachineOSBuild", "-string", "23F79", p_path], check=False)
+                subprocess.run(["plutil", "-replace", "DTPlatformBuild", "-string", "21F77", p_path], check=False)
+                subprocess.run(["plutil", "-replace", "DTSDKBuild", "-string", "21F77", p_path], check=False)
+                subprocess.run(["plutil", "-replace", "DTPlatformVersion", "-string", "17.5", p_path], check=False)
+                subprocess.run(["plutil", "-replace", "DTSDKName", "-string", "iphoneos17.5", p_path], check=False)
+                subprocess.run(["plutil", "-replace", "DTXcode", "-string", "1540", p_path], check=False)
+                subprocess.run(["plutil", "-replace", "DTXcodeBuild", "-string", "15F31d", p_path], check=False)
+                subprocess.run(["plutil", "-replace", "CFBundleShortVersionString", "-string", "1.2.1", p_path], check=False)
+                subprocess.run(["plutil", "-replace", "CFBundleVersion", "-string", "9", p_path], check=False)
 
     # 5. Extract entitlements
     entitlements_path = os.path.join(temp_dir, "entitlements.plist")
