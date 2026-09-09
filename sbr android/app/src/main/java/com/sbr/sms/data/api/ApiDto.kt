@@ -35,6 +35,14 @@ data class AuthResponse(
 )
 
 // User profiles
+data class UserAddressDto(
+    @SerializedName("id", alternate = ["_id"]) val id: String? = null,
+    val title: String = "Home",
+    val addressLine: String = "",
+    val latitude: Double? = null,
+    val longitude: Double? = null
+)
+
 data class UserDto(
     @SerializedName("id", alternate = ["_id"]) val id: String,
     val name: String,
@@ -43,6 +51,9 @@ data class UserDto(
     val isAvailable: Boolean = true,
     val phone: String? = null,
     val address: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val addresses: List<UserAddressDto> = emptyList(),
     val photoUrl: String? = null,
     val isRecurring: Boolean = false,
     val nextServiceDate: String? = null, // Date strings from JSON

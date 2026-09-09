@@ -4,6 +4,8 @@ import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 import java.util.Date
 
+import java.util.UUID
+
 enum class UserRole {
     ADMIN, AGENT, CUSTOMER, STORE_INCHARGE
 }
@@ -36,8 +38,18 @@ data class Agent(
     val rating: Float = 0.0f,
     val completedJobs: Int = 0,
     val currentLat: Double? = null,
-    val currentLng: Double? = null
+    val currentLng: Double? = null,
+    val photoUrl: String? = null
 ) : User(id, name, email, UserRole.AGENT)
+
+@Parcelize
+data class UserAddress(
+    val id: String = UUID.randomUUID().toString(),
+    val title: String = "Home",
+    val addressLine: String = "",
+    val latitude: Double? = null,
+    val longitude: Double? = null
+) : Parcelable
 
 @Parcelize
 data class Customer(
@@ -46,6 +58,9 @@ data class Customer(
     override val email: String? = null,
     val phone: String? = null,
     val address: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val addresses: List<UserAddress> = emptyList(),
     val photoUrl: String? = null,
     val isRecurring: Boolean = false,
     val nextServiceDate: Date? = null

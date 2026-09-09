@@ -2,6 +2,7 @@ package com.sbr.sms.ui.customer.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sbr.sms.data.CredentialManager
 import com.sbr.sms.data.models.Customer
 import com.sbr.sms.data.models.CustomerDashboardStats
 import com.sbr.sms.data.models.ServiceRequest
@@ -19,7 +20,11 @@ import javax.inject.Inject
 
 sealed interface CustomerDashboardUiState {
     object Loading : CustomerDashboardUiState
-    data class Success(val stats: CustomerDashboardStats, val nextServiceDate: Date?) : CustomerDashboardUiState
+    data class Success(
+        val stats: CustomerDashboardStats,
+        val nextServiceDate: Date?,
+        val activeTrackableJob: ServiceRequest? = null
+    ) : CustomerDashboardUiState
     data class Error(val message: String) : CustomerDashboardUiState
 }
 
@@ -28,6 +33,7 @@ sealed interface CustomerDashboardUiState {
 class CustomerDashboardViewModel @Inject constructor(
     private val serviceRequestRepository: ServiceRequestRepository,
     private val userRepository: UserRepository,
+    private val credentialManager: CredentialManager,
     private val auth: FirebaseAuth
 ) : ViewModel() {
 
@@ -35,6 +41,8 @@ class CustomerDashboardViewModel @Inject constructor(
     private val _userName = MutableStateFlow("Customer")
     private val _error = MutableStateFlow<String?>(null)
     private val _nextServiceDate = MutableStateFlow<Date?>(null)
+    private val _customerProfile = MutableStateFlow<Customer?>(null)
+    val customerProfile: StateFlow<Customer?> = _customerProfile.asStateFlow()
 
     val uiState: StateFlow<CustomerDashboardUiState> = combine(
         _requests, _userName, _error, _nextServiceDate
@@ -42,13 +50,20 @@ class CustomerDashboardViewModel @Inject constructor(
         if (error != null) {
             CustomerDashboardUiState.Error(error)
         } else {
+            val activeTrackable = requests.firstOrNull {
+                (it.status == "Assigned" || it.status == "Accepted" || it.status == "In Progress") &&
+                        !it.assignedAgentId.isNullOrBlank()
+            }
             val stats = CustomerDashboardStats(
                 customerName = name,
-                activeRequests = requests.count { it.status != "Completed" && it.status != "Paid" },
-                pendingPayments = requests.filter { it.status == "Completed" }.sumOf { it.paymentAmount ?: 0.0 },
+                activeRequests = requests.count { it.status == "Assigned" || it.status == "Accepted" || it.status == "In Progress" || it.status == "Pending" },
+                pendingPayments = requests.filter {
+                    (it.status == "Completed" || it.status == "Paid") &&
+                    !it.paymentStatus.equals("Paid", ignoreCase = true)
+                }.sumOf { it.finalAmount ?: it.paymentAmount ?: 0.0 },
                 recentActivities = requests.filter { it.createdAt != null }.sortedByDescending { it.createdAt }.take(5)
             )
-            CustomerDashboardUiState.Success(stats, nextDate)
+            CustomerDashboardUiState.Success(stats, nextDate, activeTrackable)
         }
     }.stateIn(
         scope = viewModelScope,
@@ -65,20 +80,39 @@ class CustomerDashboardViewModel @Inject constructor(
 
     private fun observeAuthenticationState() {
         viewModelScope.launch {
-            val authStateFlow = callbackFlow {
-                val listener = FirebaseAuth.AuthStateListener { firebaseAuth -> trySend(firebaseAuth.currentUser) }
-                auth.addAuthStateListener(listener)
-                awaitClose { auth.removeAuthStateListener(listener) }
-            }
-
-            authStateFlow.collect { user ->
-                if (user != null) {
-                    _error.value = null
-                    fetchUserData(user.uid)
-                    observeRequests(user.uid)
-                } else {
-                    _error.value = "You are not logged in."
+            val savedUserId = credentialManager.savedUserId.first()
+            val userId = if (savedUserId.isNotBlank()) savedUserId else auth.currentUser?.uid
+            if (!userId.isNullOrBlank()) {
+                _error.value = null
+                fetchUserData(userId)
+                observeRequests(userId)
+            } else {
+                val authStateFlow = callbackFlow {
+                    val listener = FirebaseAuth.AuthStateListener { firebaseAuth -> trySend(firebaseAuth.currentUser) }
+                    auth.addAuthStateListener(listener)
+                    awaitClose { auth.removeAuthStateListener(listener) }
                 }
+
+                authStateFlow.collect { user ->
+                    if (user != null) {
+                        _error.value = null
+                        fetchUserData(user.uid)
+                        observeRequests(user.uid)
+                    } else {
+                        _error.value = "You are not logged in."
+                    }
+                }
+            }
+        }
+    }
+
+    fun refreshCustomerData() {
+        viewModelScope.launch {
+            val savedUserId = credentialManager.savedUserId.first()
+            val userId = if (savedUserId.isNotBlank()) savedUserId else auth.currentUser?.uid
+            if (!userId.isNullOrBlank()) {
+                fetchUserData(userId)
+                observeRequests(userId)
             }
         }
     }
@@ -86,9 +120,13 @@ class CustomerDashboardViewModel @Inject constructor(
     private fun fetchUserData(uid: String) {
         viewModelScope.launch {
             val user = userRepository.getUser(uid)
-            if (user != null) {
+            if (user is Customer) {
+                _customerProfile.value = user
                 _userName.value = user.name
-                _nextServiceDate.value = (user as? Customer)?.nextServiceDate
+                _nextServiceDate.value = user.nextServiceDate
+            } else if (user != null) {
+                _userName.value = user.name
+                _nextServiceDate.value = null
             } else {
                 _userName.value = "Valued Customer"
                 _nextServiceDate.value = null
@@ -116,15 +154,16 @@ class CustomerDashboardViewModel @Inject constructor(
         longitude: Double? = null
     ) {
         viewModelScope.launch {
-            val currentUser = auth.currentUser
-            if (currentUser == null) {
+            val savedUserId = credentialManager.savedUserId.first()
+            val uid = if (savedUserId.isNotBlank()) savedUserId else auth.currentUser?.uid
+            if (uid.isNullOrBlank()) {
                 _submissionStatus.value = UiState.Error("User is not logged in.")
                 return@launch
             }
             _submissionStatus.value = UiState.Loading
             try {
                 val newRequest = ServiceRequest(
-                    customerId = currentUser.uid,
+                    customerId = uid,
                     serviceType = serviceType,
                     description = description,
                     customerAddress = address,

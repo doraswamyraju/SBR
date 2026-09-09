@@ -76,6 +76,17 @@ class UserRepositoryImpl @Inject constructor(
                 email = this.email,
                 phone = this.phone,
                 address = this.address,
+                latitude = this.latitude,
+                longitude = this.longitude,
+                addresses = this.addresses.map {
+                    UserAddress(
+                        id = it.id ?: UUID.randomUUID().toString(),
+                        title = it.title,
+                        addressLine = it.addressLine,
+                        latitude = it.latitude,
+                        longitude = it.longitude
+                    )
+                },
                 photoUrl = this.photoUrl,
                 isRecurring = this.isRecurring,
                 nextServiceDate = this.nextServiceDate?.let { parseDate(it) }
@@ -94,6 +105,17 @@ class UserRepositoryImpl @Inject constructor(
             is Customer -> {
                 user.phone?.let { fields["phone"] = it }
                 user.address?.let { fields["address"] = it }
+                user.latitude?.let { fields["latitude"] = it }
+                user.longitude?.let { fields["longitude"] = it }
+                fields["addresses"] = user.addresses.map { addr ->
+                    val addrMap = mutableMapOf<String, Any>(
+                        "title" to addr.title,
+                        "addressLine" to addr.addressLine
+                    )
+                    addr.latitude?.let { addrMap["latitude"] = it }
+                    addr.longitude?.let { addrMap["longitude"] = it }
+                    addrMap
+                }
                 user.photoUrl?.let { fields["photoUrl"] = it }
                 fields["isRecurring"] = user.isRecurring
                 user.nextServiceDate?.let { 
@@ -313,6 +335,22 @@ class UserRepositoryImpl @Inject constructor(
             Log.e(tag, "Error during logout", e)
         } finally {
             credentialManager.clearAuthSession()
+        }
+    }
+
+    override suspend fun deleteProfile(): Boolean {
+        return try {
+            val response = apiService.deleteProfile()
+            if (response.isSuccessful) {
+                credentialManager.clearAuthSession()
+                true
+            } else {
+                Log.e(tag, "Failed to delete profile: ${response.errorBody()?.string()}")
+                false
+            }
+        } catch (e: Exception) {
+            Log.e(tag, "Error deleting profile", e)
+            false
         }
     }
 }

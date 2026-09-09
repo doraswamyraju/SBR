@@ -30,22 +30,48 @@ import javax.inject.Inject
 class AdminSettingsViewModel @Inject constructor(
     private val apiService: ApiService
 ) : ViewModel() {
-    val reviewUrl = MutableStateFlow("https://g.page/r/sbr-services/review")
+    val reviewUrl = MutableStateFlow("")
     val supportPhone = MutableStateFlow("+91 99000 00000")
     val supportEmail = MutableStateFlow("support@sbr.sriddha.com")
     val isLoading = MutableStateFlow(false)
     val saveMessage = MutableStateFlow<String?>(null)
 
+    init {
+        loadSettings()
+    }
+
+    fun loadSettings() {
+        viewModelScope.launch {
+            isLoading.value = true
+            try {
+                val res = apiService.getSettings()
+                if (res.isSuccessful && res.body()?.data != null) {
+                    val settings = res.body()!!.data!!
+                    settings["reviewUrl"]?.let { reviewUrl.value = it }
+                }
+            } catch (e: Exception) {
+                // Keep default
+            } finally {
+                isLoading.value = false
+            }
+        }
+    }
+
     fun saveSettings(url: String, phone: String, email: String, onComplete: (Boolean, String) -> Unit) {
         viewModelScope.launch {
             isLoading.value = true
             try {
-                // Save settings via API or preferences
-                reviewUrl.value = url
-                supportPhone.value = phone
-                supportEmail.value = email
-                saveMessage.value = "Settings saved successfully!"
-                onComplete(true, "Settings saved successfully!")
+                val body = mapOf("key" to "reviewUrl", "value" to url)
+                val res = apiService.updateSettings(body)
+                if (res.isSuccessful) {
+                    reviewUrl.value = url
+                    supportPhone.value = phone
+                    supportEmail.value = email
+                    saveMessage.value = "Settings saved successfully!"
+                    onComplete(true, "Settings saved successfully!")
+                } else {
+                    onComplete(false, "Failed to save settings.")
+                }
             } catch (e: Exception) {
                 saveMessage.value = e.localizedMessage
                 onComplete(false, e.localizedMessage ?: "Failed to save settings")

@@ -4,12 +4,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -28,10 +28,10 @@ import com.sbr.sms.ui.common.ProductsCatalogScreen
 
 enum class CustomerSection(val title: String) {
     Dashboard("Dashboard"),
-    Products("Products & Services"),
     Requests("My Requests"),
-    OurCustomers("Our Customers"),
+    Products("Products & Services"),
     Referral("Refer & Earn"),
+    OurCustomers("Our Customers"),
     Payments("Payments"),
     Support("Contact Support"),
     Profile("My Profile")
@@ -48,16 +48,31 @@ fun CustomerPanelScreen(
     val scope = rememberCoroutineScope()
     var showNewRequestDialog by remember { mutableStateOf(false) }
 
+    fun getSectionIcon(section: CustomerSection): androidx.compose.ui.graphics.vector.ImageVector {
+        return when (section) {
+            CustomerSection.Dashboard -> Icons.Default.Dashboard
+            CustomerSection.Requests -> Icons.Default.Build
+            CustomerSection.Products -> Icons.Default.LocalOffer
+            CustomerSection.Referral -> Icons.Default.CardGiftcard
+            CustomerSection.OurCustomers -> Icons.Default.People
+            CustomerSection.Payments -> Icons.Default.Payment
+            CustomerSection.Support -> Icons.Default.ContactSupport
+            CustomerSection.Profile -> Icons.Default.AccountCircle
+        }
+    }
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
                 Column(Modifier.fillMaxHeight().padding(top = 24.dp)) {
-                    Text("Customer Panel", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(16.dp))
+                    Text("Customer Panel", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(16.dp))
                     HorizontalDivider()
+                    Spacer(Modifier.height(8.dp))
                     CustomerSection.values().forEach { section ->
                         NavigationDrawerItem(
-                            label = { Text(section.title) },
+                            icon = { Icon(getSectionIcon(section), contentDescription = section.title) },
+                            label = { Text(section.title, fontWeight = FontWeight.Medium) },
                             selected = section == selectedSection,
                             onClick = {
                                 selectedSection = section
@@ -68,8 +83,8 @@ fun CustomerPanelScreen(
                     }
                     Spacer(Modifier.weight(1f))
                     NavigationDrawerItem(
-                        label = { Text("Logout") },
-                        icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Logout") },
+                        label = { Text("Logout", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error) },
+                        icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Logout", tint = MaterialTheme.colorScheme.error) },
                         selected = false,
                         onClick = {
                             authViewModel.logout()

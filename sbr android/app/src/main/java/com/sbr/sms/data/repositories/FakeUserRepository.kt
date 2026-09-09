@@ -93,4 +93,8 @@ class FakeUserRepository : UserRepository {
     override suspend fun logout() {
         // No-op for mock repository session
     }
+
+    override suspend fun deleteProfile(): Boolean {
+        return true
+    }
 }

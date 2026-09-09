@@ -52,13 +52,18 @@ class AgentLiveRouteViewModel @Inject constructor(
     private val repository: ServiceRequestRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
-    val requestId: String = checkNotNull(savedStateHandle["requestId"])
+    val requestId: String = savedStateHandle.get<String>("requestId") ?: ""
 
     val requestStream: StateFlow<ServiceRequest?> =
-        repository.getRequestStreamById(requestId)
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+        if (requestId.isNotBlank()) {
+            repository.getRequestStreamById(requestId)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+        } else {
+            kotlinx.coroutines.flow.MutableStateFlow(null)
+        }
 
     fun markArrived(onSuccess: () -> Unit) {
+        if (requestId.isBlank()) return
         viewModelScope.launch {
             try {
                 repository.updateRequestStatus(requestId, "In Progress", requestReview = false)
@@ -81,6 +86,7 @@ fun AgentLiveCustomerRouteScreen(
     val coroutineScope = rememberCoroutineScope()
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
 
+    var isMapLoaded by remember { mutableStateOf(false) }
     var agentLatLng by remember { mutableStateOf<LatLng?>(null) }
     var distanceKm by remember { mutableStateOf<Double?>(null) }
     var etaMinutes by remember { mutableStateOf<Int?>(null) }
@@ -110,26 +116,58 @@ fun AgentLiveCustomerRouteScreen(
         etaMinutes = ((distKm / 25.0) * 60.0).toInt().coerceAtLeast(1)
     }
 
-    LaunchedEffect(request) {
+    // Fetch initial device location safely with permission check
+    LaunchedEffect(Unit) {
         try {
-            fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
-                if (loc != null) {
-                    val pos = LatLng(loc.latitude, loc.longitude)
-                    agentLatLng = pos
-                    agentMarkerState.position = pos
-                    calculateRouteMetrics(pos, customerLatLng)
+            val hasFine = androidx.core.content.ContextCompat.checkSelfPermission(
+                context, android.Manifest.permission.ACCESS_FINE_LOCATION
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            val hasCoarse = androidx.core.content.ContextCompat.checkSelfPermission(
+                context, android.Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
 
-                    val bounds = LatLngBounds.builder()
-                        .include(pos)
-                        .include(customerLatLng)
-                        .build()
-                    coroutineScope.launch {
-                        cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(bounds, 120), 800)
+            if (hasFine || hasCoarse) {
+                fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
+                    if (loc != null) {
+                        val pos = LatLng(loc.latitude, loc.longitude)
+                        agentLatLng = pos
+                        agentMarkerState.position = pos
+                        calculateRouteMetrics(pos, customerLatLng)
                     }
+                }.addOnFailureListener {
+                    // Ignore failure
                 }
             }
         } catch (e: Exception) {
             // Permission or location fetch issue
+        }
+    }
+
+    // Animate camera only AFTER map is loaded
+    LaunchedEffect(isMapLoaded, agentLatLng, customerLatLng) {
+        if (isMapLoaded) {
+            coroutineScope.launch {
+                try {
+                    val pos = agentLatLng
+                    if (pos != null &&
+                        (kotlin.math.abs(pos.latitude - customerLatLng.latitude) > 0.0005 ||
+                         kotlin.math.abs(pos.longitude - customerLatLng.longitude) > 0.0005)
+                    ) {
+                        val bounds = LatLngBounds.builder()
+                            .include(pos)
+                            .include(customerLatLng)
+                            .build()
+                        cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(bounds, 120), 800)
+                    } else {
+                        val target = pos ?: customerLatLng
+                        cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(target, 15f), 800)
+                    }
+                } catch (e: Exception) {
+                    try {
+                        cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(customerLatLng, 15f), 500)
+                    } catch (_: Exception) {}
+                }
+            }
         }
     }
 
@@ -138,11 +176,19 @@ fun AgentLiveCustomerRouteScreen(
             val uri = Uri.parse("google.navigation:q=${customerLatLng.latitude},${customerLatLng.longitude}&mode=d")
             val mapIntent = Intent(Intent.ACTION_VIEW, uri).apply {
                 setPackage("com.google.android.apps.maps")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
             context.startActivity(mapIntent)
         } catch (e: Exception) {
-            val fallbackUri = Uri.parse("https://www.google.com/maps/dir/?api=1&destination=${customerLatLng.latitude},${customerLatLng.longitude}")
-            context.startActivity(Intent(Intent.ACTION_VIEW, fallbackUri))
+            try {
+                val fallbackUri = Uri.parse("https://www.google.com/maps/dir/?api=1&destination=${customerLatLng.latitude},${customerLatLng.longitude}")
+                val browserIntent = Intent(Intent.ACTION_VIEW, fallbackUri).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                context.startActivity(browserIntent)
+            } catch (e2: Exception) {
+                Toast.makeText(context, "Could not open Google Maps", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -150,7 +196,9 @@ fun AgentLiveCustomerRouteScreen(
         val phone = request?.customerPhone
         if (!phone.isNullOrBlank()) {
             try {
-                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
+                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone")).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
                 context.startActivity(intent)
             } catch (e: Exception) {
                 Toast.makeText(context, "Could not open dialer", Toast.LENGTH_SHORT).show()
@@ -183,42 +231,44 @@ fun AgentLiveCustomerRouteScreen(
                 .padding(padding)
                 .fillMaxSize()
         ) {
+            // Google Map is always composed to prevent 0-size crashes
+            GoogleMap(
+                modifier = Modifier.fillMaxSize(),
+                cameraPositionState = cameraPositionState,
+                onMapLoaded = { isMapLoaded = true },
+                uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false),
+                properties = MapProperties(isTrafficEnabled = true, isMyLocationEnabled = false)
+            ) {
+                // Customer Pin
+                Marker(
+                    state = customerMarkerState,
+                    title = request?.customerName ?: "Customer",
+                    snippet = request?.customerAddress ?: "Service Location",
+                    icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
+                )
+
+                // Agent Pin & Polyline
+                agentLatLng?.let { pos ->
+                    Marker(
+                        state = agentMarkerState,
+                        title = "Your Location",
+                        snippet = "En Route to Customer",
+                        icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)
+                    )
+
+                    // Route Polyline
+                    Polyline(
+                        points = listOf(pos, customerLatLng),
+                        color = Color(0xFF1976D2),
+                        width = 12f
+                    )
+                }
+            }
+
             if (request == null) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else {
                 val req = request!!
-                // Google Map
-                GoogleMap(
-                    modifier = Modifier.fillMaxSize(),
-                    cameraPositionState = cameraPositionState,
-                    uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false),
-                    properties = MapProperties(isTrafficEnabled = true, isMyLocationEnabled = false)
-                ) {
-                    // Customer Pin
-                    Marker(
-                        state = customerMarkerState,
-                        title = req.customerName ?: "Customer",
-                        snippet = req.customerAddress,
-                        icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
-                    )
-
-                    // Agent Pin
-                    agentLatLng?.let { pos ->
-                        Marker(
-                            state = agentMarkerState,
-                            title = "Your Location",
-                            snippet = "En Route to Customer",
-                            icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)
-                        )
-
-                        // Route Polyline
-                        Polyline(
-                            points = listOf(pos, customerLatLng),
-                            color = Color(0xFF1976D2),
-                            width = 12f
-                        )
-                    }
-                }
 
                 // Top Turn-by-Turn Instruction Banner
                 Column(
@@ -252,7 +302,7 @@ fun AgentLiveCustomerRouteScreen(
 
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Head towards ${req.customerAddress.take(30)}...",
+                                    text = "Head towards ${req.customerAddress.ifBlank { "Customer Location" }.take(30)}...",
                                     color = Color.White,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 14.sp,
@@ -285,11 +335,13 @@ fun AgentLiveCustomerRouteScreen(
                 FloatingActionButton(
                     onClick = {
                         coroutineScope.launch {
-                            agentLatLng?.let { pos ->
-                                cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(pos, 16f), 500)
-                            } ?: run {
-                                cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(customerLatLng, 16f), 500)
-                            }
+                            try {
+                                agentLatLng?.let { pos ->
+                                    cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(pos, 16f), 500)
+                                } ?: run {
+                                    cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(customerLatLng, 16f), 500)
+                                }
+                            } catch (_: Exception) {}
                         }
                     },
                     modifier = Modifier
@@ -339,7 +391,7 @@ fun AgentLiveCustomerRouteScreen(
                                     fontSize = 15.sp
                                 )
                                 Text(
-                                    text = req.customerAddress,
+                                    text = req.customerAddress.ifBlank { "Address not specified" },
                                     fontSize = 12.sp,
                                     color = Color.Gray,
                                     maxLines = 1,

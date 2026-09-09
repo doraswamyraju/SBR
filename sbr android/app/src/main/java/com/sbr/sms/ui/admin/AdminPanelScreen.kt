@@ -2,8 +2,7 @@ package com.sbr.sms.ui.admin
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -28,15 +27,16 @@ import com.sbr.sms.ui.admin.AdminReferralsScreen
 
 enum class AdminSection(val title: String, val icon: ImageVector) {
     Dashboard("Dashboard", Icons.Default.Dashboard),
-    Products("Products & Services", Icons.Default.ShoppingCart),
-    Referrals("Referrals & Rewards", Icons.Default.Share),
     Agents("Agents", Icons.Default.Group),
     Customers("Customers", Icons.Default.People),
+    Products("Products & Services", Icons.Default.ShoppingCart),
+    Referrals("Referrals & Claims", Icons.Default.CardGiftcard),
     OurCustomers("Our Customers List", Icons.Default.PeopleOutline),
-    Requests("Requests", Icons.Default.List),
+    Requests("Requests", Icons.AutoMirrored.Filled.List),
     Reports("Reports", Icons.Default.Assessment),
     Payments("Payments", Icons.Default.Payment),
-    LiveTracking("All Active Agents", Icons.Default.Map)
+    LiveTracking("All Active Agents", Icons.Default.Map),
+    Settings("Settings", Icons.Default.Settings)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -155,15 +155,16 @@ fun AdminPanelScreen(
                         viewModel = dashboardViewModel,
                         onCardClick = onCardClick
                     )
-                    AdminSection.Products -> ProductsCatalogScreen(isAdmin = true)
-                    AdminSection.Referrals -> AdminReferralsScreen()
                     AdminSection.Agents -> AgentManagementScreen(navController)
                     AdminSection.Customers -> CustomerManagementScreen(navController)
+                    AdminSection.Products -> ProductsCatalogScreen(isAdmin = true)
+                    AdminSection.Referrals -> AdminReferralsScreen()
                     AdminSection.OurCustomers -> OurCustomersScreen(isAdmin = true)
                     AdminSection.Requests -> ServiceRequestsScreen(navController)
-                    AdminSection.LiveTracking -> AdminMultiAgentMapScreen(navController)
-                    AdminSection.Payments -> PaymentsScreen(navController)
                     AdminSection.Reports -> ReportsScreen(navController)
+                    AdminSection.Payments -> PaymentsScreen(navController)
+                    AdminSection.LiveTracking -> AdminMultiAgentMapScreen(navController)
+                    AdminSection.Settings -> SettingsScreen(navController)
                 }
             }
         }

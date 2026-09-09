@@ -17,4 +17,5 @@ interface UserRepository {
     suspend fun login(email: String, password: String): User?
     suspend fun signup(name: String, email: String, password: String, role: String): User?
     suspend fun logout()
+    suspend fun deleteProfile(): Boolean
 }

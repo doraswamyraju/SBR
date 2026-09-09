@@ -138,9 +138,9 @@ fun AgentInventoryScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(item.productId?.name ?: "Spare Part", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                                        if (!item.productId?.sku.isNullOrBlank()) {
-                                            Text("SKU: ${item.productId?.sku}", fontSize = 12.sp, color = Color.Gray)
+                                        Text(item.displayName, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                        if (!item.sku.isNullOrBlank()) {
+                                            Text("SKU: ${item.sku}", fontSize = 12.sp, color = Color.Gray)
                                         }
                                         if (item.isLowStock) {
                                             Row(verticalAlignment = Alignment.CenterVertically) {

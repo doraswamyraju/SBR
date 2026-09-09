@@ -2,6 +2,7 @@ package com.sbr.sms.ui.customer.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sbr.sms.data.CredentialManager
 import com.sbr.sms.data.models.ServiceRequest
 import com.sbr.sms.data.repositories.ServiceRequestRepository
 import com.google.firebase.auth.FirebaseAuth
@@ -34,12 +35,17 @@ sealed interface CustomerPaymentsUiState {
 @OptIn(ExperimentalCoroutinesApi::class)
 class CustomerPaymentsViewModel @Inject constructor(
     private val serviceRequestRepository: ServiceRequestRepository,
+    private val credentialManager: CredentialManager,
     private val auth: FirebaseAuth
 ) : ViewModel() {
 
     // This is the final state exposed to the UI.
     val uiState: StateFlow<CustomerPaymentsUiState> =
-        flow { emit(auth.currentUser?.uid) }
+        flow {
+            val savedUserId = credentialManager.savedUserId.first()
+            val userId = if (savedUserId.isNotBlank()) savedUserId else auth.currentUser?.uid
+            emit(userId)
+        }
             .flatMapLatest { customerId ->
                 if (customerId == null) {
                     // If no user is logged in, return a flow containing just the Error state.
@@ -50,9 +56,9 @@ class CustomerPaymentsViewModel @Inject constructor(
                         // ...and map the result into a Success state INSIDE this block.
                         .map { history ->
                             // Calculate the stats from the payment history list.
-                            val totalPaid = history.sumOf { it.paymentAmount ?: 0.0 }
+                            val totalPaid = history.sumOf { it.paymentAmount ?: it.finalAmount ?: 0.0 }
                             // A "free" service is one marked as Paid but with a 0.0 amount.
-                            val freeServices = history.count { (it.paymentAmount ?: 0.0) == 0.0 }
+                            val freeServices = history.count { (it.paymentAmount ?: it.finalAmount ?: 0.0) == 0.0 }
 
                             val stats = CustomerPaymentStats(
                                 totalPaymentsMade = totalPaid,

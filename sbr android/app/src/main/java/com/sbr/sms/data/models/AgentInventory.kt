@@ -23,16 +23,34 @@ data class ProductRef(
 
 data class AgentInventoryItem(
     @SerializedName("id", alternate = ["_id"]) val id: String = "",
-    val agentId: String = "",
-    val productId: ProductRef? = null,
+    val agentId: Any? = null,
+    val posProductId: Int? = null,
+    val productId: Any? = null,
+    @SerializedName("productName", alternate = ["name"]) val productName: String = "Spare Part",
+    val sku: String? = null,
+    val category: String? = "General Spares",
     val quantity: Int = 0,
-    val minAlertThreshold: Int = 2,
+    @SerializedName("minThreshold", alternate = ["minAlertThreshold"]) val minThreshold: Int? = 1,
+    @SerializedName("unitPrice", alternate = ["price"]) val unitPrice: Double? = 0.0,
+    val lastUpdated: String? = null,
     val lastRestockedAt: String? = null,
     val createdAt: String? = null,
     val updatedAt: String? = null
 ) {
     val _id: String get() = id
-    val isLowStock: Boolean get() = quantity <= minAlertThreshold
+    val minAlertThreshold: Int get() = minThreshold ?: 1
+    val isLowStock: Boolean get() = quantity <= (minThreshold ?: 1)
+    val displayName: String get() = productName.takeIf { it.isNotBlank() } ?: "Spare Part"
+
+    val resolvedProductId: String
+        get() {
+            if (productId is String && productId.isNotBlank()) return productId
+            if (productId is Map<*, *>) {
+                val idVal = productId["id"] ?: productId["_id"]
+                if (idVal is String) return idVal
+            }
+            return id
+        }
 }
 
 data class IndentItem(

@@ -1,10 +1,17 @@
 package com.sbr.sms.ui.customer
 
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
@@ -12,11 +19,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sbr.sms.data.models.CustomerDashboardStats
 import com.sbr.sms.data.models.ServiceRequest
@@ -25,6 +38,7 @@ import com.sbr.sms.ui.common.UiState
 import com.sbr.sms.ui.common.components.StatusChip
 import com.sbr.sms.ui.customer.viewmodels.CustomerDashboardUiState
 import com.sbr.sms.ui.customer.viewmodels.CustomerDashboardViewModel
+import com.sbr.sms.ui.theme.SBRBlue
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -39,11 +53,13 @@ fun CustomerDashboardScreen(
     val uiState by viewModel.uiState.collectAsState()
     val submissionStatus by viewModel.submissionStatus.collectAsState()
     val context = LocalContext.current
+    val customerProfile by viewModel.customerProfile.collectAsState()
 
     LaunchedEffect(submissionStatus) {
         when (val status = submissionStatus) {
             is UiState.Success -> {
                 Toast.makeText(context, "Request submitted successfully!", Toast.LENGTH_SHORT).show()
+                onShowDialogChange(false)
                 viewModel.resetSubmissionStatus()
             }
             is UiState.Error -> {
@@ -56,10 +72,11 @@ fun CustomerDashboardScreen(
 
     if (showDialog) {
         NewRequestDialog(
+            customerProfile = customerProfile,
+            isSubmitting = submissionStatus is UiState.Loading,
             onDismiss = { onShowDialogChange(false) },
             onSubmit = { serviceType, description, address, lat, lng ->
                 viewModel.submitNewRequest(serviceType, description, address, lat, lng)
-                onShowDialogChange(false)
             }
         )
     }
@@ -71,8 +88,8 @@ fun CustomerDashboardScreen(
             is CustomerDashboardUiState.Success -> {
                 DashboardContent(
                     stats = state.stats,
-                    // Pass the new date down to the content composable
                     nextServiceDate = state.nextServiceDate,
+                    activeTrackableJob = state.activeTrackableJob,
                     onNavigateToSection = onNavigateToSection,
                     onNavigate = onNavigate
                 )
@@ -84,42 +101,221 @@ fun CustomerDashboardScreen(
 @Composable
 private fun DashboardContent(
     stats: CustomerDashboardStats,
-    // Receive the next service date
     nextServiceDate: Date?,
+    activeTrackableJob: ServiceRequest?,
     onNavigateToSection: (CustomerSection) -> Unit,
     onNavigate: (String) -> Unit
 ) {
+    val context = LocalContext.current
+
+    fun openGoogleReview() {
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://g.page/r/CbdJS-IzWTe2EBE/review"))
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(context, "Unable to open browser", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         item {
             Text(
                 "Welcome, ${stats.customerName}",
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
             )
         }
+
+        // Active Technician Live Tracking Banner (matching iOS layout)
+        if (activeTrackableJob != null) {
+            item {
+                ActiveTechnicianBanner(
+                    activeJob = activeTrackableJob,
+                    onClick = {
+                        onNavigate(AppRoutes.CustomerLiveTracking.createRoute(activeTrackableJob.id))
+                    }
+                )
+            }
+        }
+
         item {
             SummaryGrid(
                 stats = stats,
-                nextServiceDate = nextServiceDate, // Pass date to the grid
+                nextServiceDate = nextServiceDate,
                 onNavigateToSection = onNavigateToSection
             )
         }
+
         item {
             Text("Quick Actions", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         }
+
         item {
             QuickActionsGrid(onNavigateToSection = onNavigateToSection)
         }
+
         item {
             Text("Recent Activity", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         }
-        items(stats.recentActivities, key = { it.id }) { request ->
-            RecentActivityItem(request = request, onClick = {
-                onNavigate(AppRoutes.CustomerRequestDetail.createRoute(request.id))
-            })
+
+        if (stats.recentActivities.isEmpty()) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Text(
+                        "No service requests booked yet.",
+                        modifier = Modifier.padding(24.dp).fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        color = Color.Gray
+                    )
+                }
+            }
+        } else {
+            items(stats.recentActivities, key = { it.id }) { request ->
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    RecentActivityItem(
+                        request = request,
+                        onClick = {
+                            onNavigate(AppRoutes.CustomerRequestDetail.createRoute(request.id))
+                        }
+                    )
+
+                    // Google Maps Review Glow Button if requested
+                    if ((request.status == "Completed" || request.status == "Paid") && request.requestReview == true) {
+                        OutlinedButton(
+                            onClick = { openGoogleReview() },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.5.dp, SBRBlue),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = SBRBlue.copy(alpha = 0.06f),
+                                contentColor = SBRBlue
+                            )
+                        ) {
+                            Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Leave Sri Balaji Renewables Review", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActiveTechnicianBanner(
+    activeJob: ServiceRequest,
+    onClick: () -> Unit
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.35f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scale"
+    )
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(14.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0xFF1E40AF), // Deep royal blue
+                            Color(0xFF3B82F6), // Vibrant blue
+                            Color(0xFF4F46E5)  // Indigo
+                        )
+                    )
+                )
+                .padding(14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Pulsing Green Live Dot
+                Box(
+                    modifier = Modifier.size(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(14.dp)
+                            .scale(scale)
+                            .clip(CircleShape)
+                            .background(Color(0xFF4ADE80).copy(alpha = 0.4f))
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(9.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF22C55E))
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Technician Assigned • Live GPS Active",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                    Text(
+                        text = "${activeJob.assignedAgentName ?: "Technician"} is assigned for ${activeJob.serviceType}",
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color.White.copy(alpha = 0.22f),
+                    contentColor = Color.White
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Navigation,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = Color.White
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Track Live",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -132,31 +328,32 @@ private fun SummaryGrid(
 ) {
     val dateFormatter = remember { SimpleDateFormat("dd MMM, yyyy", Locale.getDefault()) }
 
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             InfoCard(
                 title = "Active Requests",
                 value = stats.activeRequests.toString(),
+                isPrimary = true,
                 modifier = Modifier.weight(1f).clickable { onNavigateToSection(CustomerSection.Requests) }
             )
             InfoCard(
                 title = "Pending Payments",
                 value = "₹${"%,.0f".format(stats.pendingPayments)}",
+                isPrimary = true,
                 modifier = Modifier.weight(1f).clickable { onNavigateToSection(CustomerSection.Payments) }
             )
         }
-        // NEW: Add a card to display the next scheduled service date.
         InfoCard(
             title = "Next Scheduled Service",
             value = nextServiceDate?.let { dateFormatter.format(it) } ?: "Not Scheduled",
-            isPrimary = false // Use a different color to distinguish it
+            isPrimary = false
         )
     }
 }
 
 @Composable
 private fun QuickActionsGrid(onNavigateToSection: (CustomerSection) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         QuickActionCard(
             title = "My Requests",
             icon = Icons.AutoMirrored.Filled.List,
@@ -165,7 +362,7 @@ private fun QuickActionsGrid(onNavigateToSection: (CustomerSection) -> Unit) {
         )
         QuickActionCard(
             title = "Make Payment",
-            icon = Icons.Default.Payment,
+            icon = Icons.Default.CreditCard,
             onClick = { onNavigateToSection(CustomerSection.Payments) },
             modifier = Modifier.weight(1f)
         )
@@ -178,69 +375,87 @@ private fun QuickActionsGrid(onNavigateToSection: (CustomerSection) -> Unit) {
     }
 }
 
-
 @Composable
 private fun InfoCard(
     title: String,
     value: String,
     modifier: Modifier = Modifier,
-    isPrimary: Boolean = true // Added a flag to control color
+    isPrimary: Boolean = true
 ) {
-    val containerColor = if (isPrimary) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer
-    val contentColor = if (isPrimary) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer
+    val containerColor = if (isPrimary) SBRBlue else MaterialTheme.colorScheme.surfaceVariant
+    val contentColor = if (isPrimary) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
 
     Card(
-        modifier = modifier.fillMaxWidth(), // make all cards fill width for consistency
-        elevation = CardDefaults.cardElevation(8.dp),
-        shape = MaterialTheme.shapes.large,
+        modifier = modifier.fillMaxWidth().height(105.dp),
+        elevation = CardDefaults.cardElevation(4.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(14.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
                 color = contentColor
             )
-            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = value,
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = contentColor
+                fontWeight = FontWeight.Black,
+                color = contentColor,
+                modifier = Modifier.align(Alignment.End)
             )
         }
     }
 }
 
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun QuickActionCard(title: String, icon: ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun QuickActionCard(
+    title: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Card(
-        modifier = modifier.height(120.dp),
-        onClick = onClick,
+        modifier = modifier
+            .height(115.dp)
+            .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(2.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(12.dp),
+                .padding(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = title,
-                modifier = Modifier.size(32.dp),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
-            )
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(SBRBlue.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = title,
+                    modifier = Modifier.size(24.dp),
+                    tint = SBRBlue
+                )
+            }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = title,
                 textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -250,8 +465,8 @@ private fun QuickActionCard(title: String, icon: ImageVector, onClick: () -> Uni
 private fun RecentActivityItem(request: ServiceRequest, onClick: () -> Unit) {
     val formattedDate = remember(request.createdAt) {
         request.createdAt?.let { timestamp ->
-            SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()).format(timestamp)
-        } ?: "Date not available"
+            SimpleDateFormat("dd MMM, HH:mm", Locale.getDefault()).format(timestamp)
+        } ?: "Recent"
     }
 
     Card(
@@ -259,26 +474,60 @@ private fun RecentActivityItem(request: ServiceRequest, onClick: () -> Unit) {
             .fillMaxWidth()
             .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(2.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
         ) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(SBRBlue.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Handyman,
+                    contentDescription = null,
+                    tint = SBRBlue,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+
+            Spacer(Modifier.width(12.dp))
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = request.serviceType,
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = formattedDate,
+                    text = request.customerAddress.takeIf { it.isNotBlank() } ?: formattedDate,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
-            StatusChip(status = request.status)
+
+            Spacer(Modifier.width(8.dp))
+
+            Column(horizontalAlignment = Alignment.End) {
+                StatusChip(status = request.status)
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = formattedDate,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.Gray
+                )
+            }
         }
     }
 }

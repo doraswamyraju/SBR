@@ -27,6 +27,9 @@ interface ApiService {
     @PUT("api/users/profile")
     suspend fun updateProfile(@Body fields: Map<String, Any>): Response<ApiResponse<UserDto>>
 
+    @DELETE("api/users/profile")
+    suspend fun deleteProfile(): Response<ApiResponse<Map<String, Any>>>
+
     @PUT("api/users/agent/location")
     suspend fun updateAgentCoordinates(@Body coordinates: Map<String, Double>): Response<ApiResponse<Map<String, Double>>>
 
@@ -205,4 +208,11 @@ interface ApiService {
         @Path("id") id: String,
         @Body request: RejectIndentRequest
     ): Response<ApiResponse<com.sbr.sms.data.models.AgentIndent>>
+
+    // Settings Endpoints
+    @GET("api/settings")
+    suspend fun getSettings(): Response<ApiResponse<Map<String, String>>>
+
+    @PUT("api/settings")
+    suspend fun updateSettings(@Body body: Map<String, String>): Response<ApiResponse<Map<String, String>>>
 }

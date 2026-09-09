@@ -22,6 +22,7 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.Priority
 import com.google.firebase.auth.FirebaseAuth
+import com.sbr.sms.data.api.ApiService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
@@ -52,6 +53,7 @@ class AgentRequestsViewModel @Inject constructor(
     private val serviceRequestRepository: ServiceRequestRepository,
     private val userRepository: UserRepository,
     private val storageRepository: StorageRepository,
+    val apiService: ApiService,
     private val auth: FirebaseAuth,
     private val application: Application,
     private val fusedLocationProviderClient: FusedLocationProviderClient
@@ -141,6 +143,10 @@ class AgentRequestsViewModel @Inject constructor(
                 _uiState.value = state
             }
         }
+    }
+
+    fun refresh() {
+        refreshTrigger.value++
     }
 
     fun acceptRequest(requestId: String) {

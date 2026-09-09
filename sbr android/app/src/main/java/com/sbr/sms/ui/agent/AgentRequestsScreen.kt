@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.sbr.sms.data.models.ServiceRequest
 import com.sbr.sms.ui.agent.viewmodels.AgentDashboardUiState
 import com.sbr.sms.ui.agent.viewmodels.AgentRequestsViewModel
 import com.sbr.sms.ui.agent.viewmodels.RequestWithCustomerDetails
@@ -30,6 +31,19 @@ fun AgentRequestsScreen(
     viewModel: AgentRequestsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var assessingRequest by remember { mutableStateOf<ServiceRequest?>(null) }
+
+    if (assessingRequest != null) {
+        AgentAssessmentDialog(
+            request = assessingRequest!!,
+            apiService = viewModel.apiService,
+            onDismiss = { assessingRequest = null },
+            onAcceptedSuccess = {
+                assessingRequest = null
+                viewModel.refresh()
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -57,8 +71,8 @@ fun AgentRequestsScreen(
                         RequestAcceptanceList(
                             requestsWithDetails = state.assignedRequests,
                             isJobActive = state.activeRequest != null,
-                            onAccept = { requestId ->
-                                viewModel.acceptRequest(requestId)
+                            onAssessAndAccept = { req ->
+                                assessingRequest = req
                             }
                         )
                     }
@@ -70,10 +84,9 @@ fun AgentRequestsScreen(
 
 @Composable
 private fun RequestAcceptanceList(
-    // CHANGED: The parameter now takes the new data class
     requestsWithDetails: List<RequestWithCustomerDetails>,
     isJobActive: Boolean,
-    onAccept: (String) -> Unit
+    onAssessAndAccept: (ServiceRequest) -> Unit
 ) {
     val context = LocalContext.current
     val dateFormatter = remember { SimpleDateFormat("dd MMM, yyyy HH:mm", Locale.getDefault()) }
@@ -99,7 +112,6 @@ private fun RequestAcceptanceList(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // NEW: Display Customer Name
                     Text(
                         text = "Customer: ${details.customerName}",
                         style = MaterialTheme.typography.bodyLarge
@@ -121,7 +133,6 @@ private fun RequestAcceptanceList(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // NEW: "Call Customer" button
                         OutlinedButton(
                             onClick = {
                                 details.customerPhone?.let { phone ->
@@ -134,19 +145,17 @@ private fun RequestAcceptanceList(
                         ) {
                             Icon(Icons.Default.Call, contentDescription = "Call Icon", modifier = Modifier.size(ButtonDefaults.IconSize))
                             Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
-                            Text("Call Customer")
+                            Text("Call")
                         }
 
-                        // "Accept Request" button
                         Button(
                             onClick = {
-                                onAccept(request.id)
-                                Toast.makeText(context, "Request Accepted!", Toast.LENGTH_SHORT).show()
+                                onAssessAndAccept(request)
                             },
                             enabled = !isJobActive,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1.3f)
                         ) {
-                            Text("Accept")
+                            Text("Assess & Accept")
                         }
                     }
                 }

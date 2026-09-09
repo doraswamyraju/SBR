@@ -7,12 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Navigation
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.*
 import androidx.navigation.NavHostController
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -56,20 +51,21 @@ fun AgentActiveRequestsScreen(
     val isUploading by viewModel.isUploading.collectAsState()
     val context = LocalContext.current
 
-    var showPaymentDialog by remember { mutableStateOf(false) }
+    var showPaymentBreakdownDialog by remember { mutableStateOf(false) }
     var showReviewDialog by remember { mutableStateOf(false) }
     var tempImageUri by remember { mutableStateOf<Uri?>(null) }
 
-    // CHANGED: Variable now holds the full details object.
+    // Variable holds the full details object.
     val activeRequestDetails = (uiState as? AgentDashboardUiState.Success)?.activeRequest
 
-    if (showPaymentDialog && activeRequestDetails != null) {
-        PaymentDetailsDialog(
-            requestAmount = activeRequestDetails.request.paymentAmount ?: 0.0,
-            onDismiss = { showPaymentDialog = false },
-            onSubmit = { amount, method, isFree ->
-                viewModel.collectPayment(activeRequestDetails.request.id, amount, method)
-                showPaymentDialog = false
+    if (showPaymentBreakdownDialog && activeRequestDetails != null) {
+        AgentPaymentBreakdownDialog(
+            job = activeRequestDetails.request,
+            apiService = viewModel.apiService,
+            onDismiss = { showPaymentBreakdownDialog = false },
+            onCompletedSuccess = {
+                showPaymentBreakdownDialog = false
+                viewModel.refresh()
             }
         )
     }
@@ -87,6 +83,7 @@ fun AgentActiveRequestsScreen(
                     onClick = {
                         viewModel.handleImageUpload(activeRequestDetails.request.id, tempImageUri!!, "after", requestReview = true)
                         showReviewDialog = false
+                        showPaymentBreakdownDialog = true
                     }
                 ) {
                     Text("Yes, Request Review")
@@ -98,6 +95,7 @@ fun AgentActiveRequestsScreen(
                         onClick = {
                             viewModel.handleImageUpload(activeRequestDetails.request.id, tempImageUri!!, "after", requestReview = false)
                             showReviewDialog = false
+                            showPaymentBreakdownDialog = true
                         }
                     ) {
                         Text("No, Complete Only")
@@ -173,7 +171,7 @@ fun AgentActiveRequestsScreen(
                             },
                             onUploadBefore = { launchCamera("before") },
                             onUploadAfter = { launchCamera("after") },
-                            onCollectPayment = { showPaymentDialog = true }
+                            onCollectPayment = { showPaymentBreakdownDialog = true }
                         )
                     }
                 }
@@ -233,9 +231,68 @@ fun ActiveRequestCard(
             )
             JobTimer(request = request)
 
+            // Allocated Spare Parts Card
+            if (request.requiredComponents.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Build,
+                                contentDescription = "Spares",
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                "Allocated Van Spares (${request.requiredComponents.size})",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        request.requiredComponents.forEach { comp ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 3.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        comp.name,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    if (!comp.sku.isNullOrBlank()) {
+                                        Text(
+                                            "SKU: ${comp.sku}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                                Text(
+                                    "${comp.quantity}x • ₹${"%,.0f".format((comp.unitPrice ?: 0.0) * comp.quantity)}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             if(request.paymentStatus == "Paid") {
                 ListItem(
-                    headlineContent = { Text("₹${"%,.0f".format(request.paymentAmount)} via ${request.paymentMethod}", fontWeight = FontWeight.Bold) },
+                    headlineContent = { Text("₹${"%,.0f".format(request.paymentAmount ?: request.finalAmount ?: 0.0)} via ${request.paymentMethod ?: "Cash"}", fontWeight = FontWeight.Bold) },
                     leadingContent = { Icon(Icons.Default.Done, contentDescription = "Payment") },
                     supportingContent = { Text("Payment Collected") }
                 )
@@ -282,7 +339,7 @@ fun ActiveRequestCard(
                 "In Progress" -> {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         Button(onClick = onUploadBefore, modifier = Modifier.weight(1f), enabled = request.beforeImageUrl == null) {
-                            Text("Upload Before Image")
+                            Text(if (request.beforeImageUrl == null) "Upload Before" else "Before Done ✓")
                         }
                         Button(onClick = onUploadAfter, modifier = Modifier.weight(1f), enabled = request.beforeImageUrl != null) {
                             Text("Upload After & Complete")
@@ -291,7 +348,7 @@ fun ActiveRequestCard(
                 }
                 "Completed" -> {
                     Button(onClick = onCollectPayment, modifier = Modifier.fillMaxWidth()) {
-                        Text("Update Payment Details")
+                        Text("Settle Payment Breakdown & Collect")
                     }
                 }
                 "Paid" -> {

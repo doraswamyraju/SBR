@@ -81,4 +81,31 @@ class AgentProfileViewModel @Inject constructor(
             }
         }
     }
+
+    fun logout(onComplete: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                userRepository.logout()
+                auth.signOut()
+                onComplete()
+            } catch (e: Exception) {
+                Log.e("AgentProfileVM", "Failed to logout", e)
+                onComplete()
+            }
+        }
+    }
+
+    fun deleteAccount(onComplete: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                val success = userRepository.deleteProfile()
+                if (success) {
+                    auth.signOut()
+                    onComplete()
+                }
+            } catch (e: Exception) {
+                Log.e("AgentProfileVM", "Failed to delete account", e)
+            }
+        }
+    }
 }

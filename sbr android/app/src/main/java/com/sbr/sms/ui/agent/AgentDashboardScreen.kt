@@ -25,12 +25,28 @@ import com.sbr.sms.ui.agent.viewmodels.RequestWithCustomerDetails
 import java.text.SimpleDateFormat
 import java.util.*
 
+import com.sbr.sms.data.models.ServiceRequest
+
 @Composable
 fun AgentDashboardScreen(
     viewModel: AgentRequestsViewModel,
     onNavigateToSection: (AgentSection) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var assessingRequest by remember { mutableStateOf<ServiceRequest?>(null) }
+
+    if (assessingRequest != null) {
+        AgentAssessmentDialog(
+            request = assessingRequest!!,
+            apiService = viewModel.apiService,
+            onDismiss = { assessingRequest = null },
+            onAcceptedSuccess = {
+                assessingRequest = null
+                viewModel.refresh()
+                onNavigateToSection(AgentSection.ActiveService)
+            }
+        )
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
@@ -44,7 +60,7 @@ fun AgentDashboardScreen(
                 DashboardContent(
                     stats = state.stats,
                     newRequests = state.assignedRequests,
-                    viewModel = viewModel,
+                    onAssessAndAccept = { req -> assessingRequest = req },
                     onNavigateToSection = onNavigateToSection
                 )
             }
@@ -56,7 +72,7 @@ fun AgentDashboardScreen(
 private fun DashboardContent(
     stats: AgentDashboardStats,
     newRequests: List<RequestWithCustomerDetails>,
-    viewModel: AgentRequestsViewModel,
+    onAssessAndAccept: (ServiceRequest) -> Unit,
     onNavigateToSection: (AgentSection) -> Unit
 ) {
     LazyColumn(
@@ -80,7 +96,7 @@ private fun DashboardContent(
                 Text("New Assigned Requests", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             }
             items(newRequests, key = { it.request.id }) { details ->
-                RequestCard(details = details, viewModel = viewModel)
+                RequestCard(details = details, onAssessAndAccept = { onAssessAndAccept(details.request) })
             }
         } else {
             item {
@@ -143,7 +159,10 @@ private fun QuickActionsGrid(onNavigateToSection: (AgentSection) -> Unit) {
 }
 
 @Composable
-private fun RequestCard(details: RequestWithCustomerDetails, viewModel: AgentRequestsViewModel) {
+private fun RequestCard(
+    details: RequestWithCustomerDetails,
+    onAssessAndAccept: () -> Unit
+) {
     val context = LocalContext.current
     val dateFormatter = remember { SimpleDateFormat("dd MMM, HH:mm", Locale.getDefault()) }
     val request = details.request
@@ -178,13 +197,10 @@ private fun RequestCard(details: RequestWithCustomerDetails, viewModel: AgentReq
                 }
 
                 Button(
-                    onClick = {
-                        viewModel.acceptRequest(request.id)
-                        Toast.makeText(context, "Request Accepted!", Toast.LENGTH_SHORT).show()
-                    },
-                    modifier = Modifier.weight(1f)
+                    onClick = onAssessAndAccept,
+                    modifier = Modifier.weight(1.3f)
                 ) {
-                    Text("Accept")
+                    Text("Assess & Accept")
                 }
             }
         }
