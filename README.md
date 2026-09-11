@@ -8,12 +8,21 @@ This repository contains the complete codebase for the Sri Balaji Renewables (SB
 
 ---
 
+## Production Domains & Architecture
+
+| Module | Production URL | Server Directory / Port | Purpose |
+| :--- | :--- | :--- | :--- |
+| **SBR SMS Web Portal** | `https://sribalajirenewables.com` <br> `https://www.sribalajirenewables.com` | `/var/www/sbr.sriddha.com/web` | Public website and web management portal |
+| **SBR Backend API** | `https://sribalajirenewables.com/api` | `/var/www/sbr.sriddha.com/backend` <br> (Node.js on Port `5006`) | Core REST API backend (PM2 process: `sbr-backend`) |
+| **SBR Static Uploads** | `https://sribalajirenewables.com/uploads` | `/var/www/sbr.sriddha.com/backend/uploads` | Customer & service request media attachments |
+| **Inventory / POS** | `https://pos.sribalajirenewables.com` | `/var/www/rajugariventures/sbr-pos` <br> (PHP 8.1 FPM) | Inventory & POS web application |
+
+---
+
 ## Production Deployment (VPS)
 
-The project is deployed on the VPS under:
-`/var/www/sbr.sriddha.com/repo`
-
-Follow these instructions to pull and deploy updates onto the live server.
+- **VPS Host:** `147.93.107.21`
+- **Repository Path:** `/var/www/sbr.sriddha.com/repo`
 
 ### 1. SSH into the VPS
 ```bash
@@ -39,7 +48,7 @@ npm run build
 rm -rf /var/www/sbr.sriddha.com/web/*
 cp -r "/var/www/sbr.sriddha.com/repo/sbr web/build/"* /var/www/sbr.sriddha.com/web/
 ```
-*Note: The Nginx configuration maps sbr.sriddha.com directly to `/var/www/sbr.sriddha.com/web/`. Therefore, the compiled files must be copied from the repo build directory.*
+*Note: Nginx routes `sribalajirenewables.com` to `/var/www/sbr.sriddha.com/web/`.*
 
 ### 4. Deploy Backend (API Module)
 If backend controller logic or models are updated:
@@ -50,4 +59,12 @@ rsync -av --exclude 'node_modules' --exclude '.env' /var/www/sbr.sriddha.com/rep
 # Restart the PM2 process to apply changes
 pm2 restart sbr-backend
 ```
-*Note: PM2 runs the active server process from `/var/www/sbr.sriddha.com/backend/server.js`.*
+*Note: PM2 runs the active server process from `/var/www/sbr.sriddha.com/backend/server.js` on port `5006`.*
+
+---
+
+## Nginx Site Configurations
+
+- **SMS Portal & API:** `/etc/nginx/sites-available/sribalajirenewables.com`
+- **POS / Inventory:** `/etc/nginx/sites-available/pos.sribalajirenewables.com`
+- **SSL Certificates:** Managed by Let's Encrypt Certbot (`certbot --nginx`)
