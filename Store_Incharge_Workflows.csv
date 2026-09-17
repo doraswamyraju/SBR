@@ -1,0 +1,27 @@
+Store In-Charge - Daily Operational Workflows & Action Checklist,,,,
+Workflow Phase,Action Item,System Feature / Tab,Step-by-Step Procedure,Key Safeguard
+Morning Dispatch,Review Open Tickets,Dispatch Management,"1. Filter tickets by 'Pending'
+2. Inspect customer service urgency and location
+3. Match ticket with technician skill set",Ensures high priority tickets are handled first
+Morning Dispatch,Technician Assignment,Dispatch Management,"1. Click 'Assign' on ticket
+2. Select active Field Agent
+3. Status changes to 'Assigned' and push notification sent to agent",Checks agent current active load before assignment
+Morning Dispatch,Van Kit Top-up / Dispatch,Van Stock & Indents,"1. Review agent pending indents
+2. Verify available store stock
+3. Click 'Dispatch' to debit store & credit technician van kit",Prevents releasing unrecorded stock
+Throughout the Day,Live Tracking & Coordination,Dispatch Management,"1. Monitor Leaflet Live Map for agent locations
+2. Handle customer inquiry calls
+3. Re-route nearby technicians for urgent calls",Improves customer turnaround time
+Throughout the Day,Material Inward (GRN),Store Inventory,"1. Verify supplier delivery challan
+2. Enter received quantities & serial numbers
+3. Instant catalog stock increment",Maintains real-time physical store balance
+Evening Settlement,Agent Cash Collection,Cash Handovers,"1. Field agent submits daily cash summary
+2. Store In-charge counts physical notes
+3. Verify against system expected total",Requires dual confirmation
+Evening Settlement,Acknowledge & Record Discrepancy,Cash Handovers,"1. Click 'Acknowledge' in dashboard
+2. Enter actual received cash
+3. If difference exists, enter mandatory discrepancy notes
+4. Submit to update ledger",Automated discrepancy flag sent to Super Admin
+Evening Settlement,Generate Daily Settlement Sheet,Audit Ledger,"1. Export day's cash collection ledger
+2. Reconcile with bank cash deposit receipt
+3. Archive daily closing report",Full transparency between Store & Accounts

@@ -1,0 +1,7 @@
+Security Boundaries - Safeguarding Service Management & Core Infrastructure,,,
+Boundary Category,Restricted Action (Store In-Charge),Why Restricted (Risk Factor),Super Admin Escalation Workflow
+Data Protection,Permanent Deletion of Service Requests,"Risk of hiding incomplete, disputed, or fraudulent service jobs.",Store In-charge flags ticket as 'Disputed / Needs Review'. Only Super Admin can hard delete.
+Financial Integrity,Waiving Cash Dues or Editing Past Ledgers,Risk of cash embezzlement or untracked financial adjustments.,Store In-charge notes discrepancy during handover. Super Admin reviews and issues credit adjustments.
+Catalog & Pricing,Altering Base Selling Prices or Tax Rates,Unauthorized discounts or margin loss across web and mobile sales.,Price updates require Admin login. Store In-charge can only update physical bin locations & inventory count.
+Access Control,Modifying User Roles / Escalating Privileges,Risk of rogue account creation or privilege escalation.,Store In-charge can onboard new Field Agents; cannot modify existing Admin or In-Charge profiles.
+System Infrastructure,"Access to SMS, Push Notification & Payment Keys",Security breach or API credentials exposure.,Completely hidden from Store In-Charge dashboard. Configured solely by Super Admin.

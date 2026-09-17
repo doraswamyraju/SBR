@@ -63,6 +63,45 @@ pm2 restart sbr-backend
 
 ---
 
+## Documentation & Architecture Guides
+
+| Guide / Specification | Description |
+| :--- | :--- |
+| **[`STORE_INCHARGE_SPECIFICATION.md`](./STORE_INCHARGE_SPECIFICATION.md)** | Comprehensive Role-Based Access Control (RBAC), daily operations checklist, security boundaries, and API roadmap for the **Store In-Charge** role. |
+| **[`SBR_Store_Incharge_Role_Features_Matrix.xlsx`](./SBR_Store_Incharge_Role_Features_Matrix.xlsx)** | Multi-tab formatted Excel sheet comparing Super Admin vs. Store In-Charge across 8 key operational domains. |
+| **[`referral_plan_implementation_strategy.md`](./referral_plan_implementation_strategy.md)** | Architecture, schema, and UI flows for Customer Referral & Rewards system across Backend, Web, Android, and iOS. |
+| **[`android_ios_replica.md`](./android_ios_replica.md)** | Feature parity mapping and release verification between Android (Jetpack Compose) and iOS (SwiftUI). |
+
+---
+
+## Recent Milestones & Work Completed
+
+1. **Store In-Charge RBAC & Operational Framework**:
+   - Built a complete matrix separating Super Admin business controls from Store In-Charge operational workflows.
+   - Guarded critical operations (permanent ticket deletion, price altering, financial waivers, API secrets) under Super Admin only.
+   - Created Excel generator (`generate_excel_matrix.py`) producing structured spreadsheets with styling, risk badges, and auto-adjusted columns.
+   - Formatted CSV exports (`Role_&_Feature_Matrix.csv`, `Store_Incharge_Workflows.csv`, `Security_&_Boundaries.csv`).
+2. **Referral Program Strategy**:
+   - Designed full end-to-end referral model with unique codes, 1-click WhatsApp sharing, and admin approval pipeline.
+3. **Android & iOS App Alignment**:
+   - Verified 1:1 parity between Kotlin Compose and SwiftUI client implementations.
+   - Updated build configs for compileSdk 36 and Google Play Store compliance.
+
+---
+
+## Next Steps to Continue From Here
+
+When resuming development:
+1. **Backend Role Support**:
+   - Update `User.js` model in `sbr-backend/models/User.js` with `'store_incharge'` role.
+   - Implement role authorization middleware for store operations (inventory indents, cash handover acknowledgments, van dispatches).
+2. **Web Portal UI Updates**:
+   - Update `sbr web` navigation/sidebar to conditionally render Store In-Charge tabs while hiding Admin settings and price management.
+3. **Mobile & POS Integration**:
+   - Wire van stock indents and physical cash handovers with real-time push notifications for Field Agents and Store In-Charges.
+
+---
+
 ## Nginx Site Configurations
 
 - **SMS Portal & API:** `/etc/nginx/sites-available/sribalajirenewables.com`

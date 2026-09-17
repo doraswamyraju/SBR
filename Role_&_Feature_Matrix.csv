@@ -1,0 +1,62 @@
+Sri Balaji Renewables (SBR) - Feature Matrix & Role-Based Access Control,,,,,,
+Role Comparison: Super Admin vs Store In-Charge (Operations & Store Leadership without Service System Disruption),,,,,,
+Module / Domain,Feature / Capability,Available Options & Actions,Store In-Charge Access,Super Admin Access,Operational Rationale & Safeguards,Risk Level
+1. Dispatch & Service Tickets,View & Filter Service Tickets,"• View live ticket queue
+• Filter by status (Pending, Assigned, In-Progress, Completed, Cancelled)
+• Filter by date, priority, technician
+• Search customer name/phone",Full Access,Full Access,Enables smooth daily job dispatch and coordination with field agents.,Low
+1. Dispatch & Service Tickets,Assign / Re-Assign Technicians,"• Assign open tickets to field technicians
+• Reassign tickets if technician is unavailable or overloaded
+• View real-time technician workload",Full Access,Full Access,Store In-charge manages technician availability and parts pairing.,Low
+1. Dispatch & Service Tickets,Create Service Ticket (Manual Entry),"• Create ticket for call-in / walk-in customer
+• Select service type (Solar, Softener, Scale Guard, Ro, Repair)
+• Set scheduled date & initial priority",Allowed,Allowed,Ensures walk-in store customers get immediate service dispatch.,Low
+1. Dispatch & Service Tickets,Update Service Status & Notes,"• Mark status: In-Progress, On-Hold, Completed
+• Add internal dispatch & coordination notes",Allowed,Allowed,Required for daily status follow-up and field updates.,Low
+1. Dispatch & Service Tickets,Update Payment Collection Status,"• Mark payment as Received (Cash/UPI/Bank)
+• Record transaction ID & notes",Allowed,Allowed,Enables job closure upon payment verification.,Low
+1. Dispatch & Service Tickets,Permanent Ticket Deletion,• Hard delete service tickets and history from database,Restricted (Admin Only),Full Access,Prevents accidental or malicious audit trail deletion.,Critical
+1. Dispatch & Service Tickets,Live Agent & Ticket Map Tracking,• Interactive Leaflet Map tracking of active agents and service coordinates,Full Access,Full Access,Essential for locating agents and nearby emergency tickets.,Low
+2. Inventory & Van Stock,Central Warehouse Stock Tracking,"• Real-time stock counts across all categories (Solar, Softeners, Valves, Spares, Kits)
+• Low stock warning badges
+• Search by SKU & Barcode",Full Access,Full Access,Core responsibility: monitoring store health.,Low
+2. Inventory & Van Stock,Stock Inward / GRN Entry,"• Inward receipt of new vendor supplies & factory shipments
+• Record PO number, invoice, batch number, received quantity",Full Control,Full Control,Store In-charge accepts and logs incoming materials.,Medium
+2. Inventory & Van Stock,Stock Outward to Van Kits (Transfer),"• Issue parts/products directly to Field Agent Van Kits
+• Specify agent, item SKU, and quantity
+• Auto-deduct from main store and credit agent van balance",Full Control,Full Control,Core responsibility: equipping field technicians daily.,Medium
+2. Inventory & Van Stock,Agent Indent Approval & Dispatch,"• Review parts replenishment indents requested by agents
+• Approve & Dispatch (Deducts central inventory, updates van)
+• Reject Indent with reason/notes",Full Authority,Full Authority,Store In-charge validates necessity before releasing parts.,Medium
+2. Inventory & Van Stock,Agent Van Stock Live Audit,"• View live inventory balances inside each agent's van
+• Reconcile items consumed in jobs against stock transferred",Full Access,Full Access,Maintains real-time field inventory accountability.,Low
+2. Inventory & Van Stock,Damaged / Scrap / Return Logging,"• Log defective parts returned from field or customer sites
+• Categorize as Under Warranty, Defective, Scrap",Allowed (Flag for Admin),Full Control,Store In-charge logs physical receipt; Admin approves write-off value.,Medium
+2. Inventory & Van Stock,Low-Stock Reorder Threshold Setup,• Define minimum threshold quantities per product SKU for automated reorder warnings,Allowed,Allowed,Proactive inventory management.,Low
+3. Cash & Financial Reconciliation,Review Agent Cash Handovers,"• View pending cash submissions from field agents with job breakdown, customer details, and collected cash amounts",Full Access,Full Access,Primary physical point of contact for field cash collection.,Low
+3. Cash & Financial Reconciliation,Acknowledge Cash & Note Discrepancy,"• Verify physical currency received against agent claim
+• Enter exact received amount
+• Flag discrepancies with store notes & timestamp
+• Instant ledger update",Full Authority,Full Authority,Eliminates cash leakage with dual-party reconciliation.,High
+3. Cash & Financial Reconciliation,Cash Audit Ledger & Export,"• Complete chronological log of verified handovers
+• Filter by date, month, agent, status
+• Export reports to Excel/CSV",View & Export,View & Export,Daily settlement and handover to management.,Low
+3. Cash & Financial Reconciliation,Bank Deposit Logging,"• Record handover of daily physical cash into bank account
+• Enter deposit slip number & bank transaction reference",Record & Submit,Full Approval,Provides clear audit trail from Agent -> Store In-charge -> Bank.,Medium
+3. Cash & Financial Reconciliation,Financial Record Alteration / Waiver,• Modify past verified cash ledger entries or waive agent cash dues,Restricted (Admin Only),Full Access,Protects financial integrity and prevents tampering.,Critical
+4. Technician Management,Technician Directory & Live Status,"• View roster of technicians, contact details, ratings, completed jobs, online/offline status",Full Access,Full Access,Daily operational coordination.,Low
+4. Technician Management,Onboard New Technician,"• Create agent profile (Name, Phone, Email, Temporary Password, Specialization, Location)",Allowed (Configurable),Full Control,Allows Store In-charge to quickly onboard local field technicians.,Medium
+4. Technician Management,Account Deactivation & Password Reset,"• Suspend/terminate technician accounts, reset passwords, change access credentials",Restricted (Admin Only),Full Control,Security control strictly governed by Super Admin.,High
+5. Customer Database,View Customers & Service History,"• Search and inspect customer details, addresses, equipment installed, service history",Full Access,Full Access,Required to verify past installations and customer requests.,Low
+5. Customer Database,Manual Customer Entry,"• Add customer record (Name, Phone, Address, Product, Model, Purchase Date)",Allowed,Allowed,Enables registering direct retail or walk-in buyers.,Low
+5. Customer Database,Bulk Customer Upload (Excel/CSV),• Upload master customer lists via spreadsheet,Append Only,Replace & Overwrite,Store in-charge can add new batches; cannot wipe existing master.,High
+5. Customer Database,Delete Customer Records,• Remove customer profiles or delete historical records,Restricted (Admin Only),Full Control,Prevents accidental loss of warranty and service records.,Critical
+6. Product & Spare Parts Catalog,"Browse Products, Manuals & Specs","• View product specs, models, warranty cards, installation brochures",Full Access,Full Access,Essential for customer queries and technician guidance.,Low
+6. Product & Spare Parts Catalog,Edit Stock Levels & Warehouse Bins,"• Update available quantity, rack/bin location in store",Allowed,Allowed,Ensures warehouse location accuracy.,Low
+6. Product & Spare Parts Catalog,Modify Base Prices & Taxes,"• Edit master selling price (MRP), GST rates, customer discounts",View Only,Full Control,Pricing policy is reserved for Super Admin.,High
+6. Product & Spare Parts Catalog,Add / Delete Products from Catalog,• Create new official product offerings or delete catalog listings,Restricted (Admin Only),Full Control,Preserves catalog integrity across apps and web store.,High
+7. Referral & Loyalty Program,View Referral Network & Stats,• View customer referral tree and accumulated points,View Only,Full Control,Informational access for store inquiries.,Low
+7. Referral & Loyalty Program,Approve & Payout Referral Rewards,• Approve cash/credit payouts for referral earnings,Restricted (Admin Only),Full Control,Financial disbursement controlled by Super Admin.,High
+8. System & Governance,Blog & Marketing Content,"• Create, edit, and publish blogs on website",Hidden / View Only,Full Control,Marketing and branding responsibility.,Low
+8. System & Governance,System Settings & API Keys,"• Manage SMS Gateway keys, FCM push tokens, payment gateways",Restricted (Hidden),Full Control,Guards infrastructure security.,Critical
+8. System & Governance,User Role & Permission Elevation,• Change user roles (e.g. promoting Agent to Admin/In-charge),Restricted (Admin Only),Full Control,Prevents unauthorized privilege escalation.,Critical
