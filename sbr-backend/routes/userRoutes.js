@@ -7,7 +7,9 @@ const {
   updateAgentCoordinates,
   deleteUser,
   updateFcmToken,
-  deleteProfile
+  deleteProfile,
+  resetPasswordEmail,
+  manualPasswordReset
 } = require('../controllers/userController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
@@ -22,6 +24,9 @@ router.put('/profile', updateProfile);
 router.delete('/profile', deleteProfile);
 router.post('/fcm-token', updateFcmToken);
 router.put('/agent/location', authorize('AGENT'), updateAgentCoordinates);
+
+router.post('/:id/reset-password-email', authorize('ADMIN'), resetPasswordEmail);
+router.post('/:id/manual-password', authorize('ADMIN'), manualPasswordReset);
 
 router.route('/:id')
   .get(getUserById)

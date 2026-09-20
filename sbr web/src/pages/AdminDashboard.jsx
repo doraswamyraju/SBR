@@ -26,11 +26,17 @@ import {
   UploadCloud,
   FileSpreadsheet,
   Layers,
-  Gift
+  Gift,
+  Edit2,
+  Key,
+  Lock,
+  Mail,
+  ShieldAlert
 } from 'lucide-react';
 import OurCustomersTab from '../components/OurCustomersTab';
 import AdminProductsTab from '../components/AdminProductsTab';
 import AdminReferralsTab from '../components/AdminReferralsTab';
+import AdminPaymentsTab from '../components/AdminPaymentsTab';
 import './Dashboard.css';
 
 
@@ -69,6 +75,21 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
   });
   const [agentFormLoading, setAgentFormLoading] = useState(false);
   const [agentFormError, setAgentFormError] = useState('');
+
+  // Edit User State
+  const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [editUserLoading, setEditUserLoading] = useState(false);
+  const [editUserError, setEditUserError] = useState('');
+
+  // Password Management State
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [passwordUser, setPasswordUser] = useState(null);
+  const [passwordTab, setPasswordTab] = useState('email'); // 'email' or 'manual'
+  const [manualPassword, setManualPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   // Customer List Upload & Management States
   const [isCustomerListUploadModalOpen, setIsCustomerListUploadModalOpen] = useState(false);
@@ -170,6 +191,118 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
       setAgentFormError(err.message);
     } finally {
       setAgentFormLoading(false);
+    }
+  };
+
+  // Edit User Handlers
+  const handleOpenEditUser = (u) => {
+    setEditingUser({
+      _id: u._id,
+      name: u.name || '',
+      email: u.email || '',
+      phone: u.phone || '',
+      role: u.role || 'CUSTOMER',
+      status: u.status || 'Active',
+      specialization: u.specialization || '',
+      location: u.location || '',
+      address: u.address || '',
+      isRecurring: u.isRecurring || false
+    });
+    setEditUserError('');
+    setIsEditUserModalOpen(true);
+  };
+
+  const handleUpdateUserSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    setEditUserLoading(true);
+    setEditUserError('');
+    try {
+      const res = await api.put(`api/users/${editingUser._id}`, editingUser);
+      if (res.success) {
+        setIsEditUserModalOpen(false);
+        setEditingUser(null);
+        fetchData();
+        alert('User profile updated successfully!');
+      } else {
+        throw new Error(res.error || 'Failed to update user');
+      }
+    } catch (err) {
+      setEditUserError(err.message || 'Failed to update user');
+    } finally {
+      setEditUserLoading(false);
+    }
+  };
+
+  // Delete User Handler
+  const handleDeleteUser = async (userId, userName) => {
+    if (!window.confirm(`Are you sure you want to delete user account "${userName}"? This will permanently remove their access.`)) {
+      return;
+    }
+    try {
+      const res = await api.delete(`api/users/${userId}`);
+      if (res.success) {
+        setUsers(prev => prev.filter(u => u._id !== userId));
+        alert(`User account "${userName}" has been deleted successfully.`);
+      } else {
+        throw new Error(res.error || 'Failed to delete user');
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to delete user');
+    }
+  };
+
+  // Password Reset Modal Handlers
+  const handleOpenPasswordModal = (u) => {
+    setPasswordUser(u);
+    setPasswordTab('email');
+    setManualPassword('');
+    setPasswordMessage('');
+    setPasswordError('');
+    setIsPasswordModalOpen(true);
+  };
+
+  const handleSendResetEmail = async () => {
+    if (!passwordUser) return;
+    setPasswordLoading(true);
+    setPasswordMessage('');
+    setPasswordError('');
+    try {
+      const res = await api.post(`api/users/${passwordUser._id}/reset-password-email`, {});
+      if (res.success) {
+        setPasswordMessage(res.message || `Password reset email sent to ${passwordUser.email}!`);
+      } else {
+        throw new Error(res.error || 'Failed to send reset email');
+      }
+    } catch (err) {
+      setPasswordError(err.message || 'Failed to send password reset email');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  const handleManualPasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (!passwordUser) return;
+    if (!manualPassword || manualPassword.trim().length < 6) {
+      setPasswordError('New password must be at least 6 characters long.');
+      return;
+    }
+    setPasswordLoading(true);
+    setPasswordMessage('');
+    setPasswordError('');
+    try {
+      const res = await api.post(`api/users/${passwordUser._id}/manual-password`, { password: manualPassword });
+      if (res.success) {
+        setPasswordMessage(`Password for ${passwordUser.name} has been updated successfully.`);
+        setManualPassword('');
+      } else {
+        throw new Error(res.error || 'Failed to update password');
+      }
+    } catch (err) {
+      setPasswordError(err.message || 'Failed to update password');
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
@@ -328,6 +461,12 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
             onClick={() => switchTab('referrals')}
           >
             <Gift size={18} /> Referral Program
+          </button>
+          <button 
+            className={`menu-item ${activeTab === 'payments' ? 'active' : ''}`}
+            onClick={() => switchTab('payments')}
+          >
+            <CreditCard size={18} /> Payments Report
           </button>
 
 
@@ -616,12 +755,13 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
                     <th>Status</th>
                     <th>Completed Jobs</th>
                     <th>Current GPS</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {agents.length === 0 ? (
                     <tr>
-                      <td colSpan="8" style={{ textAlign: 'center', color: '#64748b', padding: '30px' }}>No service agent accounts registered.</td>
+                      <td colSpan="9" style={{ textAlign: 'center', color: '#64748b', padding: '30px' }}>No service agent accounts registered.</td>
                     </tr>
                   ) : (
                     agents.map(agent => (
@@ -650,6 +790,34 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
                             <span style={{ color: '#64748b', fontSize: '12px' }}>No coordinates</span>
                           )}
                         </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            <button
+                              className="btn-outline"
+                              style={{ padding: '6px 8px', borderRadius: '6px', color: '#0284c7', border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer' }}
+                              onClick={() => handleOpenEditUser(agent)}
+                              title="Edit Agent Account"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                            <button
+                              className="btn-outline"
+                              style={{ padding: '6px 8px', borderRadius: '6px', color: '#d97706', border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer' }}
+                              onClick={() => handleOpenPasswordModal(agent)}
+                              title="Reset Password"
+                            >
+                              <Key size={14} />
+                            </button>
+                            <button
+                              className="btn-outline"
+                              style={{ padding: '6px 8px', borderRadius: '6px', color: '#dc2626', border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer' }}
+                              onClick={() => handleDeleteUser(agent._id, agent.name)}
+                              title="Delete Agent Account"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))
                   )}
@@ -673,12 +841,13 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
                     <th>Recurring Service</th>
                     <th>Next Scheduled Date</th>
                     <th>Signed Up</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {customers.length === 0 ? (
                     <tr>
-                      <td colSpan="7" style={{ textAlign: 'center', color: '#64748b', padding: '30px' }}>No customer accounts registered.</td>
+                      <td colSpan="8" style={{ textAlign: 'center', color: '#64748b', padding: '30px' }}>No customer accounts registered.</td>
                     </tr>
                   ) : (
                     customers.map(cust => (
@@ -697,6 +866,34 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
                         </td>
                         <td style={{ fontSize: '12px', color: '#64748b' }}>
                           {new Date(cust.createdAt).toLocaleDateString()}
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            <button
+                              className="btn-outline"
+                              style={{ padding: '6px 8px', borderRadius: '6px', color: '#0284c7', border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer' }}
+                              onClick={() => handleOpenEditUser(cust)}
+                              title="Edit Customer Profile"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                            <button
+                              className="btn-outline"
+                              style={{ padding: '6px 8px', borderRadius: '6px', color: '#d97706', border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer' }}
+                              onClick={() => handleOpenPasswordModal(cust)}
+                              title="Reset Password"
+                            >
+                              <Key size={14} />
+                            </button>
+                            <button
+                              className="btn-outline"
+                              style={{ padding: '6px 8px', borderRadius: '6px', color: '#dc2626', border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer' }}
+                              onClick={() => handleDeleteUser(cust._id, cust.name)}
+                              title="Delete Customer Account"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -776,6 +973,10 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
         {activeTab === 'referrals' && (
           <AdminReferralsTab />
         )}
+
+        {activeTab === 'payments' && (
+          <AdminPaymentsTab users={users} />
+        )}
       </main>
 
       {/* Map Live Location Modal */}
@@ -813,6 +1014,271 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
                 Status: <span className={`badge badge-${trackingRequest.status.toLowerCase().replace(' ', '-')}`}>{trackingRequest.status}</span>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {isEditUserModalOpen && editingUser && (
+        <div className="modal-backdrop" onClick={() => setIsEditUserModalOpen(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Edit2 size={18} color="#0284c7" /> Edit Account: {editingUser.name}
+              </h3>
+              <button 
+                type="button" 
+                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
+                onClick={() => setIsEditUserModalOpen(false)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {editUserError && <div className="error-banner" style={{ marginBottom: '15px' }}>{editUserError}</div>}
+
+            <form onSubmit={handleUpdateUserSubmit} className="dashboard-form" style={{ gap: '12px' }}>
+              <div className="input-group">
+                <label>Full Name</label>
+                <input
+                  type="text"
+                  required
+                  value={editingUser.name}
+                  onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="input-group">
+                  <label>Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    value={editingUser.email}
+                    onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                  />
+                </div>
+                <div className="input-group">
+                  <label>Phone Number</label>
+                  <input
+                    type="tel"
+                    value={editingUser.phone}
+                    onChange={(e) => setEditingUser({ ...editingUser, phone: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="input-group">
+                  <label>Role</label>
+                  <select
+                    value={editingUser.role}
+                    onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
+                  >
+                    <option value="AGENT">AGENT</option>
+                    <option value="CUSTOMER">CUSTOMER</option>
+                    <option value="STORE_INCHARGE">STORE_INCHARGE</option>
+                    <option value="ADMIN">ADMIN</option>
+                  </select>
+                </div>
+                <div className="input-group">
+                  <label>Account Status</label>
+                  <select
+                    value={editingUser.status}
+                    onChange={(e) => setEditingUser({ ...editingUser, status: e.target.value })}
+                  >
+                    <option value="Online">Online</option>
+                    <option value="Offline">Offline</option>
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+              </div>
+
+              {(editingUser.role === 'AGENT' || editingUser.role === 'agent') && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="input-group">
+                    <label>Specialization</label>
+                    <input
+                      type="text"
+                      value={editingUser.specialization}
+                      onChange={(e) => setEditingUser({ ...editingUser, specialization: e.target.value })}
+                      placeholder="e.g. Solar Water Heaters"
+                    />
+                  </div>
+                  <div className="input-group">
+                    <label>Assigned Location</label>
+                    <input
+                      type="text"
+                      value={editingUser.location}
+                      onChange={(e) => setEditingUser({ ...editingUser, location: e.target.value })}
+                      placeholder="e.g. Tirupati"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {(editingUser.role === 'CUSTOMER' || editingUser.role === 'customer') && (
+                <div className="input-group">
+                  <label>Address</label>
+                  <input
+                    type="text"
+                    value={editingUser.address}
+                    onChange={(e) => setEditingUser({ ...editingUser, address: e.target.value })}
+                    placeholder="Customer site address"
+                  />
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button 
+                  type="button" 
+                  className="btn-secondary" 
+                  onClick={() => setIsEditUserModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn-primary" 
+                  disabled={editUserLoading}
+                >
+                  {editUserLoading ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Password Reset Modal (Email & Manual) */}
+      {isPasswordModalOpen && passwordUser && (
+        <div className="modal-backdrop" onClick={() => setIsPasswordModalOpen(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Key size={18} color="#d97706" /> Password Management
+              </h3>
+              <button 
+                type="button" 
+                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
+                onClick={() => setIsPasswordModalOpen(false)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* User Target Card */}
+            <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '18px' }}>
+              <div style={{ fontWeight: '700', color: '#0f172a', fontSize: '15px' }}>{passwordUser.name}</div>
+              <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
+                {passwordUser.email} &bull; <span style={{ color: '#0284c7', fontWeight: '600' }}>{passwordUser.role}</span>
+              </div>
+            </div>
+
+            {/* Tab Selector */}
+            <div style={{ display: 'flex', background: '#e2e8f0', padding: '4px', borderRadius: '8px', marginBottom: '18px' }}>
+              <button
+                type="button"
+                onClick={() => { setPasswordTab('email'); setPasswordMessage(''); setPasswordError(''); }}
+                style={{
+                  flex: 1,
+                  padding: '8px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  background: passwordTab === 'email' ? '#fff' : 'transparent',
+                  color: passwordTab === 'email' ? '#0f172a' : '#64748b',
+                  boxShadow: passwordTab === 'email' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <Mail size={15} /> Reset via Email
+              </button>
+              <button
+                type="button"
+                onClick={() => { setPasswordTab('manual'); setPasswordMessage(''); setPasswordError(''); }}
+                style={{
+                  flex: 1,
+                  padding: '8px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  background: passwordTab === 'manual' ? '#fff' : 'transparent',
+                  color: passwordTab === 'manual' ? '#0f172a' : '#64748b',
+                  boxShadow: passwordTab === 'manual' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <Lock size={15} /> Manual Password Reset
+              </button>
+            </div>
+
+            {passwordMessage && (
+              <div style={{ background: '#dcfce7', color: '#15803d', padding: '12px 16px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px', border: '1px solid #bbf7d0', fontWeight: '500' }}>
+                {passwordMessage}
+              </div>
+            )}
+
+            {passwordError && (
+              <div className="error-banner" style={{ marginBottom: '16px' }}>
+                {passwordError}
+              </div>
+            )}
+
+            {passwordTab === 'email' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <p style={{ fontSize: '13px', color: '#475569', margin: 0, lineHeight: 1.5 }}>
+                  Clicking the button below will automatically generate a secure temporary password, update the database, and email credentials directly to <strong>{passwordUser.email}</strong>.
+                </p>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={handleSendResetEmail}
+                  disabled={passwordLoading}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px' }}
+                >
+                  <Mail size={16} /> {passwordLoading ? 'Sending Reset Email...' : 'Send Password Reset Email'}
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleManualPasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div className="input-group">
+                  <label>Enter New Password</label>
+                  <input
+                    type="text"
+                    required
+                    minLength={6}
+                    placeholder="Minimum 6 characters"
+                    value={manualPassword}
+                    onChange={(e) => setManualPassword(e.target.value)}
+                  />
+                  <span style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+                    The user can immediately log in with this new password.
+                  </span>
+                </div>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={passwordLoading}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px' }}
+                >
+                  <Lock size={16} /> {passwordLoading ? 'Updating Password...' : 'Update Password Directly'}
+                </button>
+              </form>
+            )}
           </div>
         </div>
       )}

@@ -31,7 +31,7 @@ import com.sbr.sms.ui.customer.CustomerPanelScreen
 import com.sbr.sms.ui.details.CustomerRequestDetailScreen
 import com.sbr.sms.ui.details.RequestDetailScreen
 
-import com.sbr.sms.ui.storeincharge.StoreInchargeDashboardScreen
+import com.sbr.sms.ui.storeincharge.StoreInchargePanelScreen
 
 sealed class AppRoutes(val route: String) {
     object AuthFlow : AppRoutes("authFlow")
@@ -94,7 +94,7 @@ fun AppNavHost(viewModel: AuthViewModel = hiltViewModel()) {
         composable(AppRoutes.AdminPanel.route) { AdminPanelScreen(navController) }
         composable(AppRoutes.AgentPanel.route) { AgentPanelScreen(navController) }
         composable(AppRoutes.CustomerPanel.route) { CustomerPanelScreen(navController) }
-        composable(AppRoutes.StoreInchargePanel.route) { StoreInchargeDashboardScreen() }
+        composable(AppRoutes.StoreInchargePanel.route) { StoreInchargePanelScreen(navController) }
         composable(
             route = AppRoutes.AdminAddEditCustomer.route,
             arguments = listOf(navArgument("customerId") {
