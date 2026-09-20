@@ -71,7 +71,7 @@ const AdminPaymentsTab = ({ users = [] }) => {
 
   // Filter Agents list
   const agentsList = useMemo(() => {
-    return users.filter(u => u.role === 'AGENT' || u.role === 'agent');
+    return (users || []).filter(u => u && (String(u.role || '').toUpperCase() === 'AGENT'));
   }, [users]);
 
   // Date Calculation Helper
@@ -81,11 +81,11 @@ const AdminPaymentsTab = ({ users = [] }) => {
     if (isNaN(itemDate.getTime())) return true;
 
     const today = new Date();
-    const itemDateStart = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate()).getTime();
-    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    const itemDateStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    const testDateStart = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate()).getTime();
 
     if (dateFilterType === 'today') {
-      return itemDateStart === todayStart;
+      return testDateStart === itemDateStart;
     } else if (dateFilterType === 'week') {
       const dayOfWeek = today.getDay();
       const firstDayOfWeek = new Date(today);
@@ -107,11 +107,14 @@ const AdminPaymentsTab = ({ users = [] }) => {
 
   // Filtered Service Requests Payments
   const filteredServicePayments = useMemo(() => {
-    return requests.filter(req => {
+    return (requests || []).filter(req => {
+      if (!req) return false;
       // Must have payment amount or be completed/paid
-      const hasPayment = Number(req.paymentAmount) > 0 || 
-        req.paymentStatus?.toLowerCase() === 'paid' || 
-        req.status?.toLowerCase() === 'completed';
+      const amt = Number(req.paymentAmount) || 0;
+      const payStatus = String(req.paymentStatus || '').toLowerCase();
+      const jobStatus = String(req.status || '').toLowerCase();
+
+      const hasPayment = amt > 0 || payStatus === 'paid' || jobStatus === 'completed';
       
       if (!hasPayment) return false;
 
@@ -124,18 +127,18 @@ const AdminPaymentsTab = ({ users = [] }) => {
       const agentMatches = selectedAgentId === 'all' || agentIdVal === selectedAgentId;
 
       // Payment Method filter
-      const method = (req.paymentMethod || 'Cash').toLowerCase();
+      const method = String(req.paymentMethod || 'Cash').toLowerCase();
       const methodMatches = selectedPaymentMethod === 'all' || 
         (selectedPaymentMethod === 'Cash' && (method.includes('cash') || !req.paymentMethod)) ||
         (selectedPaymentMethod === 'Online' && (method.includes('online') || method.includes('upi') || method.includes('card') || method.includes('net')));
 
       // Search Query
-      const query = searchQuery.toLowerCase().trim();
-      const sType = (req.serviceType || '').toLowerCase();
-      const addr = (req.customerAddress || '').toLowerCase();
-      const custName = (typeof req.customerId === 'object' ? req.customerId?.name : '').toLowerCase();
-      const agentName = (typeof req.assignedAgentId === 'object' ? req.assignedAgentId?.name : '').toLowerCase();
-      const reqId = (req._id || '').toLowerCase();
+      const query = String(searchQuery || '').toLowerCase().trim();
+      const sType = String(req.serviceType || '').toLowerCase();
+      const addr = String(req.customerAddress || '').toLowerCase();
+      const custName = String((req.customerId && typeof req.customerId === 'object' ? req.customerId.name : req.customerName) || '').toLowerCase();
+      const agentName = String((req.assignedAgentId && typeof req.assignedAgentId === 'object' ? req.assignedAgentId.name : '') || '').toLowerCase();
+      const reqId = String(req._id || '').toLowerCase();
 
       const searchMatches = !query || 
         sType.includes(query) || 
@@ -150,16 +153,17 @@ const AdminPaymentsTab = ({ users = [] }) => {
 
   // Filtered Handovers
   const filteredHandovers = useMemo(() => {
-    return handovers.filter(item => {
+    return (handovers || []).filter(item => {
+      if (!item) return false;
       const dateMatches = isDateInRange(item.date || item.submittedAt);
       const agentIdVal = item.agentId?._id || item.agentId?.id || (typeof item.agentId === 'string' ? item.agentId : null);
       const agentMatches = selectedAgentId === 'all' || agentIdVal === selectedAgentId;
       const statusMatches = selectedStatus === 'all' || item.status === selectedStatus;
 
-      const query = searchQuery.toLowerCase().trim();
-      const agentName = (item.agentId?.name || '').toLowerCase();
-      const inchargeName = (item.storeInchargeId?.name || '').toLowerCase();
-      const notes = (item.inchargeNotes || item.agentNotes || '').toLowerCase();
+      const query = String(searchQuery || '').toLowerCase().trim();
+      const agentName = String((item.agentId && typeof item.agentId === 'object' ? item.agentId.name : '') || '').toLowerCase();
+      const inchargeName = String((item.storeInchargeId && typeof item.storeInchargeId === 'object' ? item.storeInchargeId.name : '') || '').toLowerCase();
+      const notes = String(item.inchargeNotes || item.agentNotes || '').toLowerCase();
       const searchMatches = !query || agentName.includes(query) || inchargeName.includes(query) || notes.includes(query);
 
       return dateMatches && agentMatches && statusMatches && searchMatches;
@@ -176,7 +180,7 @@ const AdminPaymentsTab = ({ users = [] }) => {
     filteredServicePayments.forEach(req => {
       const amt = Number(req.paymentAmount) || 0;
       totalRevenue += amt;
-      const method = (req.paymentMethod || 'Cash').toLowerCase();
+      const method = String(req.paymentMethod || 'Cash').toLowerCase();
       if (method.includes('online') || method.includes('upi') || method.includes('card')) {
         digitalCollections += amt;
       } else {
@@ -218,7 +222,8 @@ const AdminPaymentsTab = ({ users = [] }) => {
     const map = {};
 
     // First populate from all active agents
-    agentsList.forEach(a => {
+    (agentsList || []).forEach(a => {
+      if (!a) return;
       map[a._id] = {
         id: a._id,
         name: a.name || 'Agent',
@@ -234,10 +239,11 @@ const AdminPaymentsTab = ({ users = [] }) => {
     });
 
     // Aggregate Service Requests payments
-    filteredServicePayments.forEach(req => {
+    (filteredServicePayments || []).forEach(req => {
+      if (!req) return;
       const agentId = req.assignedAgentId?._id || req.assignedAgentId?.id || (typeof req.assignedAgentId === 'string' ? req.assignedAgentId : 'unassigned');
-      const agentName = req.assignedAgentId?.name || (typeof req.assignedAgentId === 'string' ? 'Assigned Agent' : 'Unassigned Agent');
-      const agentPhone = req.assignedAgentId?.phone || 'N/A';
+      const agentName = (req.assignedAgentId && typeof req.assignedAgentId === 'object' ? req.assignedAgentId.name : null) || (typeof req.assignedAgentId === 'string' ? 'Assigned Agent' : 'Unassigned Agent');
+      const agentPhone = (req.assignedAgentId && typeof req.assignedAgentId === 'object' ? req.assignedAgentId.phone : null) || 'N/A';
 
       if (!map[agentId]) {
         map[agentId] = {
@@ -255,7 +261,7 @@ const AdminPaymentsTab = ({ users = [] }) => {
       }
 
       const amt = Number(req.paymentAmount) || 0;
-      const method = (req.paymentMethod || 'Cash').toLowerCase();
+      const method = String(req.paymentMethod || 'Cash').toLowerCase();
 
       map[agentId].jobsCount += 1;
       map[agentId].totalCollected += amt;
@@ -268,12 +274,13 @@ const AdminPaymentsTab = ({ users = [] }) => {
     });
 
     // Aggregate Handovers if any
-    filteredHandovers.forEach(h => {
+    (filteredHandovers || []).forEach(h => {
+      if (!h) return;
       const agentId = h.agentId?._id || h.agentId?.id || (typeof h.agentId === 'string' ? h.agentId : null);
       if (agentId && map[agentId]) {
         const ack = h.acknowledgedAmount !== null && h.acknowledgedAmount !== undefined 
           ? Number(h.acknowledgedAmount) 
-          : (h.status === 'ACKNOWLEDGED' ? Number(h.totalCollectedCash) : 0);
+          : (h.status === 'ACKNOWLEDGED' ? Number(h.totalCollectedCash || 0) : 0);
         map[agentId].storeAcknowledged += ack;
         map[agentId].discrepancy += (Number(h.discrepancyAmount) || 0);
         if (h.status === 'SUBMITTED') map[agentId].pendingHandovers += 1;
@@ -308,10 +315,10 @@ const AdminPaymentsTab = ({ users = [] }) => {
       const dateStr = d ? new Date(d).toLocaleDateString() : '';
       const reqId = req._id || '';
       const sType = req.serviceType || 'Service';
-      const custName = typeof req.customerId === 'object' ? req.customerId?.name : 'Customer';
-      const custAddr = (req.customerAddress || '').replace(/"/g, '""');
-      const agName = typeof req.assignedAgentId === 'object' ? req.assignedAgentId?.name : 'Unassigned';
-      const agPhone = typeof req.assignedAgentId === 'object' ? req.assignedAgentId?.phone : '';
+      const custName = (req.customerId && typeof req.customerId === 'object' ? req.customerId.name : req.customerName) || 'Customer';
+      const custAddr = String(req.customerAddress || '').replace(/"/g, '""');
+      const agName = (req.assignedAgentId && typeof req.assignedAgentId === 'object' ? req.assignedAgentId.name : null) || (typeof req.assignedAgentId === 'string' ? 'Assigned' : 'Unassigned');
+      const agPhone = (req.assignedAgentId && typeof req.assignedAgentId === 'object' ? req.assignedAgentId.phone : '') || '';
       const pMethod = req.paymentMethod || 'Cash';
       const pStatus = req.paymentStatus || req.status || 'Paid';
       const amt = req.paymentAmount || 0;
