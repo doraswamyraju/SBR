@@ -31,7 +31,9 @@ import {
   Key,
   Lock,
   Mail,
-  ShieldAlert
+  ShieldAlert,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import OurCustomersTab from '../components/OurCustomersTab';
 import AdminProductsTab from '../components/AdminProductsTab';
@@ -69,10 +71,13 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
     name: '',
     email: '',
     password: '',
+    confirmPassword: '',
     phone: '',
     specialization: '',
     location: ''
   });
+  const [showNewAgentPassword, setShowNewAgentPassword] = useState(false);
+  const [showNewAgentConfirmPassword, setShowNewAgentConfirmPassword] = useState(false);
   const [agentFormLoading, setAgentFormLoading] = useState(false);
   const [agentFormError, setAgentFormError] = useState('');
 
@@ -85,8 +90,11 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
   // Password Management State
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [passwordUser, setPasswordUser] = useState(null);
-  const [passwordTab, setPasswordTab] = useState('email'); // 'email' or 'manual'
+  const [passwordTab, setPasswordTab] = useState('manual'); // 'email' or 'manual'
   const [manualPassword, setManualPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showManualPassword, setShowManualPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState('');
   const [passwordError, setPasswordError] = useState('');
@@ -143,23 +151,21 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
       const res = await api.put(`api/requests/${requestId}/assign`, { agentId });
       if (res.success) {
         // Refresh requests lists
-        const updatedRequests = requests.map(req => 
-          req._id === requestId ? { ...req, assignedAgentId: users.find(u => u._id === agentId), status: 'Assigned' } : req
-        );
-        setRequests(updatedRequests);
-        fetchData(); // refresh to get fully populated details
+        fetchData();
+        alert('Agent assigned successfully');
       }
     } catch (err) {
       alert(err.message || 'Failed to assign agent');
     }
   };
 
-  const handleDeleteRequest = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this service request?')) return;
+  const handleDeleteRequest = async (requestId) => {
+    if (!window.confirm('Are you sure you want to delete this service request? This cannot be undone.')) return;
     try {
-      const res = await api.delete(`api/requests/${id}`);
+      const res = await api.delete(`api/requests/${requestId}`);
       if (res.success) {
-        setRequests(requests.filter(req => req._id !== id));
+        fetchData();
+        alert('Service request deleted successfully');
       }
     } catch (err) {
       alert(err.message || 'Failed to delete request');
@@ -168,20 +174,19 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
 
   const handleCreateAgentSubmit = async (e) => {
     e.preventDefault();
+    if (newAgent.password !== newAgent.confirmPassword) {
+      setAgentFormError('Passwords do not match. Please ensure both passwords match.');
+      return;
+    }
     setAgentFormLoading(true);
     setAgentFormError('');
     try {
-      // Register new user via auth register API, but using custom call to not override admin session
-      const res = await fetch('http://localhost:5006/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...newAgent, role: 'AGENT' })
-      });
-      const data = await res.json();
+      const { confirmPassword: _, ...agentPayload } = newAgent;
+      const data = await api.post('api/auth/register', { ...agentPayload, role: 'AGENT' });
       
       if (data.success) {
         setIsAgentModalOpen(false);
-        setNewAgent({ name: '', email: '', password: '', phone: '', specialization: '', location: '' });
+        setNewAgent({ name: '', email: '', password: '', confirmPassword: '', phone: '', specialization: '', location: '' });
         fetchData(); // reload users
         alert('Service agent account created successfully!');
       } else {
@@ -255,8 +260,11 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
   // Password Reset Modal Handlers
   const handleOpenPasswordModal = (u) => {
     setPasswordUser(u);
-    setPasswordTab('email');
+    setPasswordTab('manual'); // Default to manual as requested
     setManualPassword('');
+    setConfirmPassword('');
+    setShowManualPassword(false);
+    setShowConfirmPassword(false);
     setPasswordMessage('');
     setPasswordError('');
     setIsPasswordModalOpen(true);
@@ -288,14 +296,19 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
       setPasswordError('New password must be at least 6 characters long.');
       return;
     }
+    if (manualPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match. Please re-enter the exact same password in both fields.');
+      return;
+    }
     setPasswordLoading(true);
     setPasswordMessage('');
     setPasswordError('');
     try {
-      const res = await api.post(`api/users/${passwordUser._id}/manual-password`, { password: manualPassword });
+      const res = await api.post(`api/users/${passwordUser._id}/manual-password`, { password: manualPassword.trim() });
       if (res.success) {
         setPasswordMessage(`Password for ${passwordUser.name} has been updated successfully.`);
         setManualPassword('');
+        setConfirmPassword('');
       } else {
         throw new Error(res.error || 'Failed to update password');
       }
@@ -1257,22 +1270,82 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
               <form onSubmit={handleManualPasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div className="input-group">
                   <label>Enter New Password</label>
-                  <input
-                    type="text"
-                    required
-                    minLength={6}
-                    placeholder="Minimum 6 characters"
-                    value={manualPassword}
-                    onChange={(e) => setManualPassword(e.target.value)}
-                  />
-                  <span style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
-                    The user can immediately log in with this new password.
-                  </span>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <input
+                      type={showManualPassword ? "text" : "password"}
+                      required
+                      minLength={6}
+                      placeholder="Minimum 6 characters"
+                      value={manualPassword}
+                      onChange={(e) => setManualPassword(e.target.value)}
+                      style={{ paddingRight: '40px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowManualPassword(!showManualPassword)}
+                      style={{
+                        position: 'absolute',
+                        right: '10px',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#64748b',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                      title={showManualPassword ? "Hide Password" : "View Password"}
+                    >
+                      {showManualPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
+
+                <div className="input-group">
+                  <label>Re-enter / Confirm Password</label>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      required
+                      minLength={6}
+                      placeholder="Re-type identical password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      style={{ paddingRight: '40px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      style={{
+                        position: 'absolute',
+                        right: '10px',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#64748b',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                      title={showConfirmPassword ? "Hide Password" : "View Password"}
+                    >
+                      {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  {confirmPassword && manualPassword !== confirmPassword && (
+                    <span style={{ fontSize: '11px', color: '#dc2626', marginTop: '4px', fontWeight: '500' }}>
+                      Passwords do not match
+                    </span>
+                  )}
+                  {confirmPassword && manualPassword === confirmPassword && (
+                    <span style={{ fontSize: '11px', color: '#15803d', marginTop: '4px', fontWeight: '500' }}>
+                      ✓ Passwords match
+                    </span>
+                  )}
+                </div>
+
                 <button
                   type="submit"
                   className="btn-primary"
-                  disabled={passwordLoading}
+                  disabled={passwordLoading || (confirmPassword && manualPassword !== confirmPassword)}
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px' }}
                 >
                   <Lock size={16} /> {passwordLoading ? 'Updating Password...' : 'Update Password Directly'}
@@ -1325,13 +1398,76 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
 
               <div className="input-group">
                 <label>Password</label>
-                <input
-                  type="password"
-                  required
-                  value={newAgent.password}
-                  onChange={(e) => setNewAgent({ ...newAgent, password: e.target.value })}
-                  placeholder="Minimum 6 characters"
-                />
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input
+                    type={showNewAgentPassword ? "text" : "password"}
+                    required
+                    minLength={6}
+                    value={newAgent.password}
+                    onChange={(e) => setNewAgent({ ...newAgent, password: e.target.value })}
+                    placeholder="Minimum 6 characters"
+                    style={{ paddingRight: '40px' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewAgentPassword(!showNewAgentPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#64748b',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                    title={showNewAgentPassword ? "Hide Password" : "View Password"}
+                  >
+                    {showNewAgentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="input-group">
+                <label>Confirm / Re-enter Password</label>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input
+                    type={showNewAgentConfirmPassword ? "text" : "password"}
+                    required
+                    minLength={6}
+                    value={newAgent.confirmPassword}
+                    onChange={(e) => setNewAgent({ ...newAgent, confirmPassword: e.target.value })}
+                    placeholder="Re-enter password"
+                    style={{ paddingRight: '40px' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewAgentConfirmPassword(!showNewAgentConfirmPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#64748b',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                    title={showNewAgentConfirmPassword ? "Hide Password" : "View Password"}
+                  >
+                    {showNewAgentConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                {newAgent.confirmPassword && newAgent.password !== newAgent.confirmPassword && (
+                  <span style={{ fontSize: '11px', color: '#dc2626', marginTop: '4px', fontWeight: '500' }}>
+                    Passwords do not match
+                  </span>
+                )}
+                {newAgent.confirmPassword && newAgent.password === newAgent.confirmPassword && (
+                  <span style={{ fontSize: '11px', color: '#15803d', marginTop: '4px', fontWeight: '500' }}>
+                    ✓ Passwords match
+                  </span>
+                )}
               </div>
 
               <div className="input-group">
@@ -1368,7 +1504,7 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
               <button 
                 type="submit" 
                 className="btn-primary" 
-                disabled={agentFormLoading}
+                disabled={agentFormLoading || (newAgent.confirmPassword && newAgent.password !== newAgent.confirmPassword) || newAgent.password.length < 6}
                 style={{ marginTop: '10px' }}
               >
                 {agentFormLoading ? 'Creating Agent...' : 'Create Account'}

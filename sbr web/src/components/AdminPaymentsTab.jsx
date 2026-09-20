@@ -16,8 +16,10 @@ import {
   ChevronDown,
   ChevronUp,
   Store,
-  ArrowDownRight,
-  ArrowUpRight
+  Wallet,
+  Smartphone,
+  Check,
+  Building
 } from 'lucide-react';
 import { api } from '../utils/api';
 
@@ -27,6 +29,9 @@ const AdminPaymentsTab = ({ users = [] }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Active Sub Tab: 'all-payments' (Service requests & collections) vs 'handovers' (EOD Store Incharge submissions)
+  const [activeSubTab, setActiveSubTab] = useState('all-payments');
+
   // Date Range Filters
   const [dateFilterType, setDateFilterType] = useState('all'); // 'today', 'week', 'month', 'custom', 'all'
   const [customStartDate, setCustomStartDate] = useState('');
@@ -34,10 +39,11 @@ const AdminPaymentsTab = ({ users = [] }) => {
 
   // Other Filters
   const [selectedAgentId, setSelectedAgentId] = useState('all');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('all'); // 'all', 'Cash', 'Online', 'UPI'
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Expanded Row State for completed requests details
+  // Expanded Row State
   const [expandedRowId, setExpandedRowId] = useState(null);
 
   const fetchPaymentsData = async () => {
@@ -45,7 +51,7 @@ const AdminPaymentsTab = ({ users = [] }) => {
     setError('');
     try {
       const [handoverRes, requestRes] = await Promise.all([
-        api.get('api/handovers/all'),
+        api.get('api/handovers/all').catch(() => ({ success: true, data: [] })),
         api.get('api/requests')
       ]);
 
@@ -68,20 +74,20 @@ const AdminPaymentsTab = ({ users = [] }) => {
     return users.filter(u => u.role === 'AGENT' || u.role === 'agent');
   }, [users]);
 
-  // Date Calculation Helpers
-  const isDateInRange = (dateStr) => {
-    if (!dateStr) return false;
-    const itemDate = new Date(dateStr);
+  // Date Calculation Helper
+  const isDateInRange = (dateVal) => {
+    if (!dateVal) return true; // If no date, include in 'all'
+    const itemDate = new Date(dateVal);
+    if (isNaN(itemDate.getTime())) return true;
+
     const today = new Date();
-    
-    // Normalize to start of day for accurate comparison
     const itemDateStart = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate()).getTime();
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
 
     if (dateFilterType === 'today') {
       return itemDateStart === todayStart;
     } else if (dateFilterType === 'week') {
-      const dayOfWeek = today.getDay(); // 0 (Sun) to 6 (Sat)
+      const dayOfWeek = today.getDay();
       const firstDayOfWeek = new Date(today);
       firstDayOfWeek.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
       firstDayOfWeek.setHours(0, 0, 0, 0);
@@ -99,30 +105,62 @@ const AdminPaymentsTab = ({ users = [] }) => {
     return true; // 'all'
   };
 
-  // Filtered Handovers
-  const filteredHandovers = useMemo(() => {
-    return handovers.filter(item => {
-      // Date filter (check item.date or item.submittedAt)
-      const dateMatches = isDateInRange(item.date || item.submittedAt);
+  // Filtered Service Requests Payments
+  const filteredServicePayments = useMemo(() => {
+    return requests.filter(req => {
+      // Must have payment amount or be completed/paid
+      const hasPayment = Number(req.paymentAmount) > 0 || 
+        req.paymentStatus?.toLowerCase() === 'paid' || 
+        req.status?.toLowerCase() === 'completed';
+      
+      if (!hasPayment) return false;
+
+      // Date filter
+      const reqDate = req.paymentTimestamp || req.completedAt || req.createdAt || req.updatedAt;
+      const dateMatches = isDateInRange(reqDate);
 
       // Agent filter
-      const agentIdVal = item.agentId?._id || item.agentId?.id || (typeof item.agentId === 'string' ? item.agentId : null);
+      const agentIdVal = req.assignedAgentId?._id || req.assignedAgentId?.id || (typeof req.assignedAgentId === 'string' ? req.assignedAgentId : null);
       const agentMatches = selectedAgentId === 'all' || agentIdVal === selectedAgentId;
 
-      // Status filter
-      const statusMatches = selectedStatus === 'all' || item.status === selectedStatus;
+      // Payment Method filter
+      const method = (req.paymentMethod || 'Cash').toLowerCase();
+      const methodMatches = selectedPaymentMethod === 'all' || 
+        (selectedPaymentMethod === 'Cash' && (method.includes('cash') || !req.paymentMethod)) ||
+        (selectedPaymentMethod === 'Online' && (method.includes('online') || method.includes('upi') || method.includes('card') || method.includes('net')));
 
       // Search Query
       const query = searchQuery.toLowerCase().trim();
+      const sType = (req.serviceType || '').toLowerCase();
+      const addr = (req.customerAddress || '').toLowerCase();
+      const custName = (typeof req.customerId === 'object' ? req.customerId?.name : '').toLowerCase();
+      const agentName = (typeof req.assignedAgentId === 'object' ? req.assignedAgentId?.name : '').toLowerCase();
+      const reqId = (req._id || '').toLowerCase();
+
+      const searchMatches = !query || 
+        sType.includes(query) || 
+        addr.includes(query) || 
+        custName.includes(query) || 
+        agentName.includes(query) || 
+        reqId.includes(query);
+
+      return dateMatches && agentMatches && methodMatches && searchMatches;
+    });
+  }, [requests, dateFilterType, customStartDate, customEndDate, selectedAgentId, selectedPaymentMethod, searchQuery]);
+
+  // Filtered Handovers
+  const filteredHandovers = useMemo(() => {
+    return handovers.filter(item => {
+      const dateMatches = isDateInRange(item.date || item.submittedAt);
+      const agentIdVal = item.agentId?._id || item.agentId?.id || (typeof item.agentId === 'string' ? item.agentId : null);
+      const agentMatches = selectedAgentId === 'all' || agentIdVal === selectedAgentId;
+      const statusMatches = selectedStatus === 'all' || item.status === selectedStatus;
+
+      const query = searchQuery.toLowerCase().trim();
       const agentName = (item.agentId?.name || '').toLowerCase();
-      const agentPhone = (item.agentId?.phone || '').toLowerCase();
       const inchargeName = (item.storeInchargeId?.name || '').toLowerCase();
       const notes = (item.inchargeNotes || item.agentNotes || '').toLowerCase();
-      const searchMatches = !query || 
-        agentName.includes(query) || 
-        agentPhone.includes(query) || 
-        inchargeName.includes(query) || 
-        notes.includes(query);
+      const searchMatches = !query || agentName.includes(query) || inchargeName.includes(query) || notes.includes(query);
 
       return dateMatches && agentMatches && statusMatches && searchMatches;
     });
@@ -130,13 +168,25 @@ const AdminPaymentsTab = ({ users = [] }) => {
 
   // Aggregate Metrics
   const metrics = useMemo(() => {
-    let totalCollected = 0;
-    let totalAcknowledged = 0;
+    let totalRevenue = 0;
+    let cashCollections = 0;
+    let digitalCollections = 0;
+    let totalJobsCount = filteredServicePayments.length;
+
+    filteredServicePayments.forEach(req => {
+      const amt = Number(req.paymentAmount) || 0;
+      totalRevenue += amt;
+      const method = (req.paymentMethod || 'Cash').toLowerCase();
+      if (method.includes('online') || method.includes('upi') || method.includes('card')) {
+        digitalCollections += amt;
+      } else {
+        cashCollections += amt;
+      }
+    });
+
+    let storeAcknowledgedCash = 0;
     let totalDiscrepancy = 0;
-    let totalCompletedJobs = 0;
-    let settledCount = 0;
-    let pendingCount = 0;
-    let discrepancyCount = 0;
+    let pendingHandoversCount = 0;
 
     filteredHandovers.forEach(h => {
       const collected = Number(h.totalCollectedCash) || 0;
@@ -145,132 +195,151 @@ const AdminPaymentsTab = ({ users = [] }) => {
         : (h.status === 'ACKNOWLEDGED' ? collected : 0);
       const disc = Number(h.discrepancyAmount) || 0;
 
-      totalCollected += collected;
-      totalAcknowledged += ack;
+      storeAcknowledgedCash += ack;
       totalDiscrepancy += disc;
-      totalCompletedJobs += (h.completedRequests?.length || 0);
 
-      if (h.status === 'ACKNOWLEDGED') settledCount++;
-      else if (h.status === 'DISCREPANCY') {
-        settledCount++;
-        discrepancyCount++;
-      } else {
-        pendingCount++;
-      }
+      if (h.status === 'SUBMITTED') pendingHandoversCount++;
     });
 
-    const settlementRate = filteredHandovers.length > 0 
-      ? Math.round((settledCount / filteredHandovers.length) * 100) 
-      : 100;
-
     return {
-      totalCollected,
-      totalAcknowledged,
+      totalRevenue,
+      cashCollections,
+      digitalCollections,
+      totalJobsCount,
+      storeAcknowledgedCash,
       totalDiscrepancy,
-      totalCompletedJobs,
-      settledCount,
-      pendingCount,
-      discrepancyCount,
-      settlementRate,
+      pendingHandoversCount,
       totalHandovers: filteredHandovers.length
     };
-  }, [filteredHandovers]);
+  }, [filteredServicePayments, filteredHandovers]);
 
   // Agent-Wise Breakdown Summary Table
   const agentWiseBreakup = useMemo(() => {
     const map = {};
 
-    filteredHandovers.forEach(h => {
-      const agentId = h.agentId?._id || h.agentId?.id || (typeof h.agentId === 'string' ? h.agentId : 'unknown');
-      const agentName = h.agentId?.name || 'Unknown Agent';
-      const agentPhone = h.agentId?.phone || 'N/A';
+    // First populate from all active agents
+    agentsList.forEach(a => {
+      map[a._id] = {
+        id: a._id,
+        name: a.name || 'Agent',
+        phone: a.phone || 'N/A',
+        jobsCount: 0,
+        cashCollected: 0,
+        digitalCollected: 0,
+        totalCollected: 0,
+        storeAcknowledged: 0,
+        discrepancy: 0,
+        pendingHandovers: 0
+      };
+    });
+
+    // Aggregate Service Requests payments
+    filteredServicePayments.forEach(req => {
+      const agentId = req.assignedAgentId?._id || req.assignedAgentId?.id || (typeof req.assignedAgentId === 'string' ? req.assignedAgentId : 'unassigned');
+      const agentName = req.assignedAgentId?.name || (typeof req.assignedAgentId === 'string' ? 'Assigned Agent' : 'Unassigned Agent');
+      const agentPhone = req.assignedAgentId?.phone || 'N/A';
 
       if (!map[agentId]) {
         map[agentId] = {
           id: agentId,
           name: agentName,
           phone: agentPhone,
+          jobsCount: 0,
+          cashCollected: 0,
+          digitalCollected: 0,
           totalCollected: 0,
-          totalAcknowledged: 0,
-          totalDiscrepancy: 0,
-          completedJobs: 0,
-          handoverCount: 0,
-          pendingHandovers: 0,
-          discrepancyCount: 0
+          storeAcknowledged: 0,
+          discrepancy: 0,
+          pendingHandovers: 0
         };
       }
 
-      const collected = Number(h.totalCollectedCash) || 0;
-      const ack = h.acknowledgedAmount !== null && h.acknowledgedAmount !== undefined 
-        ? Number(h.acknowledgedAmount) 
-        : (h.status === 'ACKNOWLEDGED' ? collected : 0);
-      const disc = Number(h.discrepancyAmount) || 0;
+      const amt = Number(req.paymentAmount) || 0;
+      const method = (req.paymentMethod || 'Cash').toLowerCase();
 
-      map[agentId].totalCollected += collected;
-      map[agentId].totalAcknowledged += ack;
-      map[agentId].totalDiscrepancy += disc;
-      map[agentId].completedJobs += (h.completedRequests?.length || 0);
-      map[agentId].handoverCount += 1;
+      map[agentId].jobsCount += 1;
+      map[agentId].totalCollected += amt;
 
-      if (h.status === 'SUBMITTED') map[agentId].pendingHandovers += 1;
-      if (h.status === 'DISCREPANCY') map[agentId].discrepancyCount += 1;
+      if (method.includes('online') || method.includes('upi') || method.includes('card')) {
+        map[agentId].digitalCollected += amt;
+      } else {
+        map[agentId].cashCollected += amt;
+      }
     });
 
-    return Object.values(map);
-  }, [filteredHandovers]);
+    // Aggregate Handovers if any
+    filteredHandovers.forEach(h => {
+      const agentId = h.agentId?._id || h.agentId?.id || (typeof h.agentId === 'string' ? h.agentId : null);
+      if (agentId && map[agentId]) {
+        const ack = h.acknowledgedAmount !== null && h.acknowledgedAmount !== undefined 
+          ? Number(h.acknowledgedAmount) 
+          : (h.status === 'ACKNOWLEDGED' ? Number(h.totalCollectedCash) : 0);
+        map[agentId].storeAcknowledged += ack;
+        map[agentId].discrepancy += (Number(h.discrepancyAmount) || 0);
+        if (h.status === 'SUBMITTED') map[agentId].pendingHandovers += 1;
+      }
+    });
+
+    return Object.values(map).filter(a => a.totalCollected > 0 || a.jobsCount > 0);
+  }, [agentsList, filteredServicePayments, filteredHandovers]);
 
   // Export CSV Report
   const handleExportCSV = () => {
-    if (filteredHandovers.length === 0) {
-      alert('No payment handover records to export for the selected filter.');
+    if (filteredServicePayments.length === 0 && filteredHandovers.length === 0) {
+      alert('No payment records to export for the selected filters.');
       return;
     }
 
     const headers = [
       'Date',
-      'Agent Name',
+      'Transaction / Request ID',
+      'Service Type',
+      'Customer Name',
+      'Customer Address',
+      'Assigned Agent',
       'Agent Phone',
-      'Total Collected Cash (INR)',
-      'Completed Jobs Count',
-      'Handover Status',
-      'Store Incharge Verified Amount (INR)',
-      'Variance / Discrepancy (INR)',
-      'Store Incharge Name',
-      'Store Incharge Phone',
-      'Store Incharge Remarks',
-      'Agent Remarks',
-      'Submitted At',
-      'Acknowledged At'
+      'Payment Method',
+      'Payment Status',
+      'Collected Amount (INR)'
     ];
 
-    const rows = filteredHandovers.map(h => [
-      `"${h.date || ''}"`,
-      `"${h.agentId?.name || 'Unknown'}"`,
-      `"${h.agentId?.phone || ''}"`,
-      `"${h.totalCollectedCash || 0}"`,
-      `"${h.completedRequests?.length || 0}"`,
-      `"${h.status || 'SUBMITTED'}"`,
-      `"${h.acknowledgedAmount !== null && h.acknowledgedAmount !== undefined ? h.acknowledgedAmount : ''}"`,
-      `"${h.discrepancyAmount || 0}"`,
-      `"${h.storeInchargeId?.name || ''}"`,
-      `"${h.storeInchargeId?.phone || ''}"`,
-      `"${(h.inchargeNotes || '').replace(/"/g, '""')}"`,
-      `"${(h.agentNotes || '').replace(/"/g, '""')}"`,
-      `"${h.submittedAt ? new Date(h.submittedAt).toLocaleString() : ''}"`,
-      `"${h.acknowledgedAt ? new Date(h.acknowledgedAt).toLocaleString() : ''}"`
-    ]);
+    const rows = filteredServicePayments.map(req => {
+      const d = req.paymentTimestamp || req.completedAt || req.createdAt || '';
+      const dateStr = d ? new Date(d).toLocaleDateString() : '';
+      const reqId = req._id || '';
+      const sType = req.serviceType || 'Service';
+      const custName = typeof req.customerId === 'object' ? req.customerId?.name : 'Customer';
+      const custAddr = (req.customerAddress || '').replace(/"/g, '""');
+      const agName = typeof req.assignedAgentId === 'object' ? req.assignedAgentId?.name : 'Unassigned';
+      const agPhone = typeof req.assignedAgentId === 'object' ? req.assignedAgentId?.phone : '';
+      const pMethod = req.paymentMethod || 'Cash';
+      const pStatus = req.paymentStatus || req.status || 'Paid';
+      const amt = req.paymentAmount || 0;
+
+      return [
+        `"${dateStr}"`,
+        `"${reqId}"`,
+        `"${sType}"`,
+        `"${custName}"`,
+        `"${custAddr}"`,
+        `"${agName}"`,
+        `"${agPhone}"`,
+        `"${pMethod}"`,
+        `"${pStatus}"`,
+        `"${amt}"`
+      ];
+    });
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `SBR_Payments_Report_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `SBR_Collections_Report_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  // Print Report Handler
   const handlePrint = () => {
     window.print();
   };
@@ -284,7 +353,7 @@ const AdminPaymentsTab = ({ users = [] }) => {
             <CreditCard className="text-primary" size={24} /> Financial Collections & Payments Report
           </h2>
           <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '14px' }}>
-            Field cash handovers, technician collections breakup, and Store In-Charge audit verification responses.
+            Live tracking of customer service job payments, field cash collections, and Store In-Charge reconciliation responses.
           </p>
         </div>
         
@@ -432,9 +501,8 @@ const AdminPaymentsTab = ({ users = [] }) => {
             </div>
           )}
 
-          {/* Secondary Filters: Agent, Status, Search */}
+          {/* Secondary Filters: Agent, Method, Search */}
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-            {/* Agent Select */}
             <select 
               value={selectedAgentId} 
               onChange={(e) => setSelectedAgentId(e.target.value)}
@@ -446,24 +514,21 @@ const AdminPaymentsTab = ({ users = [] }) => {
               ))}
             </select>
 
-            {/* Status Select */}
             <select 
-              value={selectedStatus} 
-              onChange={(e) => setSelectedStatus(e.target.value)}
+              value={selectedPaymentMethod} 
+              onChange={(e) => setSelectedPaymentMethod(e.target.value)}
               style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff' }}
             >
-              <option value="all">All Statuses</option>
-              <option value="ACKNOWLEDGED">Acknowledged & Settled</option>
-              <option value="SUBMITTED">Pending Store Verification</option>
-              <option value="DISCREPANCY">Discrepancy / Variance</option>
+              <option value="all">All Methods</option>
+              <option value="Cash">Cash Collections</option>
+              <option value="Online">Online / Digital / UPI</option>
             </select>
 
-            {/* Search Box */}
             <div style={{ position: 'relative' }}>
               <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
               <input 
                 type="text" 
-                placeholder="Search agent, notes..."
+                placeholder="Search job, agent, notes..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{ padding: '8px 12px 8px 30px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', width: '180px' }}
@@ -477,76 +542,76 @@ const AdminPaymentsTab = ({ users = [] }) => {
       {/* KPI Metric Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
         
-        {/* Card 1: Total Collected */}
+        {/* Card 1: Total Revenue Collections */}
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '13px', fontWeight: '600', color: '#64748b' }}>Total Field Cash Collected</span>
+            <span style={{ fontSize: '13px', fontWeight: '600', color: '#64748b' }}>Total Revenue / Collections</span>
             <div style={{ background: '#e0f2fe', color: '#0284c7', padding: '6px', borderRadius: '8px' }}>
               <DollarSign size={18} />
             </div>
           </div>
           <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a' }}>
-            ₹{metrics.totalCollected.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            ₹{metrics.totalRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
           <div style={{ fontSize: '12px', color: '#64748b' }}>
-            Across <strong>{metrics.totalCompletedJobs}</strong> completed service visits
+            From <strong>{metrics.totalJobsCount}</strong> completed service jobs
           </div>
         </div>
 
-        {/* Card 2: Total Settled / Acknowledged */}
+        {/* Card 2: Cash Collections */}
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '13px', fontWeight: '600', color: '#64748b' }}>Store Verified & Counted</span>
+            <span style={{ fontSize: '13px', fontWeight: '600', color: '#64748b' }}>Cash Collected by Agents</span>
             <div style={{ background: '#dcfce7', color: '#16a34a', padding: '6px', borderRadius: '8px' }}>
-              <CheckCircle size={18} />
+              <Wallet size={18} />
             </div>
           </div>
           <div style={{ fontSize: '24px', fontWeight: '800', color: '#15803d' }}>
-            ₹{metrics.totalAcknowledged.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            ₹{metrics.cashCollections.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
           <div style={{ fontSize: '12px', color: '#64748b' }}>
-            <strong>{metrics.settledCount}</strong> of <strong>{metrics.totalHandovers}</strong> handovers confirmed
+            Subject to EOD Store In-Charge handover
           </div>
         </div>
 
-        {/* Card 3: Discrepancies */}
+        {/* Card 3: Digital / Online Collections */}
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '13px', fontWeight: '600', color: '#64748b' }}>Net Physical Discrepancy</span>
-            <div style={{ background: metrics.totalDiscrepancy !== 0 ? '#fee2e2' : '#f1f5f9', color: metrics.totalDiscrepancy !== 0 ? '#dc2626' : '#64748b', padding: '6px', borderRadius: '8px' }}>
-              <AlertTriangle size={18} />
+            <span style={{ fontSize: '13px', fontWeight: '600', color: '#64748b' }}>Digital / UPI Collections</span>
+            <div style={{ background: '#f3e8ff', color: '#7c3aed', padding: '6px', borderRadius: '8px' }}>
+              <Smartphone size={18} />
             </div>
           </div>
-          <div style={{ fontSize: '24px', fontWeight: '800', color: metrics.totalDiscrepancy > 0 ? '#dc2626' : (metrics.totalDiscrepancy < 0 ? '#ea580c' : '#0f172a') }}>
-            {metrics.totalDiscrepancy > 0 ? `+₹${metrics.totalDiscrepancy.toLocaleString('en-IN')}` : (metrics.totalDiscrepancy < 0 ? `-₹${Math.abs(metrics.totalDiscrepancy).toLocaleString('en-IN')}` : '₹0.00')}
+          <div style={{ fontSize: '24px', fontWeight: '800', color: '#7c3aed' }}>
+            ₹{metrics.digitalCollections.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
-          <div style={{ fontSize: '12px', color: metrics.discrepancyCount > 0 ? '#dc2626' : '#64748b', fontWeight: metrics.discrepancyCount > 0 ? '600' : '400' }}>
-            {metrics.discrepancyCount > 0 ? `${metrics.discrepancyCount} discrepancy flags detected` : 'Perfect cash balance'}
+          <div style={{ fontSize: '12px', color: '#64748b' }}>
+            Directly credited to company accounts
           </div>
         </div>
 
-        {/* Card 4: Pending Verification */}
+        {/* Card 4: Store Incharge Verified */}
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '13px', fontWeight: '600', color: '#64748b' }}>Pending Store Response</span>
+            <span style={{ fontSize: '13px', fontWeight: '600', color: '#64748b' }}>Store In-Charge Counted</span>
             <div style={{ background: '#fef3c7', color: '#d97706', padding: '6px', borderRadius: '8px' }}>
-              <Clock size={18} />
+              <Building size={18} />
             </div>
           </div>
           <div style={{ fontSize: '24px', fontWeight: '800', color: '#d97706' }}>
-            {metrics.pendingCount}
+            ₹{metrics.storeAcknowledgedCash.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
-          <div style={{ fontSize: '12px', color: '#64748b' }}>
-            Settlement Rate: <strong>{metrics.settlementRate}%</strong>
+          <div style={{ fontSize: '12px', color: metrics.totalDiscrepancy !== 0 ? '#dc2626' : '#64748b' }}>
+            {metrics.totalDiscrepancy !== 0 ? `Variance: ₹${metrics.totalDiscrepancy}` : 'No variance reported'}
           </div>
         </div>
 
       </div>
 
-      {/* Agent-Wise Breakup Summary Table */}
+      {/* Agent-Wise Collections Breakup Summary Table */}
       <div style={{ marginBottom: '32px' }}>
         <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <User size={18} color="#0284c7" /> Field Agent-Wise Cash Collection Summary
+          <User size={18} color="#0284c7" /> Field Agent-Wise Collections Breakup
         </h3>
 
         <div className="table-wrapper">
@@ -555,18 +620,18 @@ const AdminPaymentsTab = ({ users = [] }) => {
               <tr>
                 <th>Agent Name</th>
                 <th>Phone</th>
-                <th style={{ textAlign: 'center' }}>Jobs Count</th>
-                <th style={{ textAlign: 'right' }}>Total Cash Collected</th>
-                <th style={{ textAlign: 'right' }}>Store Verified</th>
-                <th style={{ textAlign: 'right' }}>Variance</th>
-                <th style={{ textAlign: 'center' }}>Handovers (Pending / Total)</th>
+                <th style={{ textAlign: 'center' }}>Completed Jobs</th>
+                <th style={{ textAlign: 'right' }}>Cash Collected</th>
+                <th style={{ textAlign: 'right' }}>Digital / UPI</th>
+                <th style={{ textAlign: 'right' }}>Total Collections</th>
+                <th style={{ textAlign: 'right' }}>Store Reconciled</th>
               </tr>
             </thead>
             <tbody>
               {agentWiseBreakup.length === 0 ? (
                 <tr>
                   <td colSpan="7" style={{ textAlign: 'center', color: '#64748b', padding: '24px' }}>
-                    No agent collection records matching this period filter.
+                    No collections found matching the selected period.
                   </td>
                 </tr>
               ) : (
@@ -574,25 +639,21 @@ const AdminPaymentsTab = ({ users = [] }) => {
                   <tr key={item.id}>
                     <td style={{ fontWeight: '600', color: '#0f172a' }}>{item.name}</td>
                     <td>{item.phone}</td>
-                    <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{item.completedJobs}</td>
-                    <td style={{ textAlign: 'right', fontWeight: '700', color: '#0284c7' }}>
+                    <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{item.jobsCount}</td>
+                    <td style={{ textAlign: 'right', fontWeight: '600', color: '#15803d' }}>
+                      ₹{item.cashCollected.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td style={{ textAlign: 'right', fontWeight: '600', color: '#7c3aed' }}>
+                      ₹{item.digitalCollected.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td style={{ textAlign: 'right', fontWeight: '800', color: '#0284c7' }}>
                       ₹{item.totalCollected.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </td>
-                    <td style={{ textAlign: 'right', fontWeight: '700', color: '#16a34a' }}>
-                      ₹{item.totalAcknowledged.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td style={{ textAlign: 'right', fontWeight: '700', color: item.totalDiscrepancy !== 0 ? '#dc2626' : '#64748b' }}>
-                      {item.totalDiscrepancy !== 0 ? `₹${item.totalDiscrepancy.toLocaleString('en-IN')}` : '₹0.00'}
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      {item.pendingHandovers > 0 ? (
-                        <span style={{ background: '#fef3c7', color: '#b45309', padding: '4px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold' }}>
-                          {item.pendingHandovers} Pending / {item.handoverCount} Total
-                        </span>
+                    <td style={{ textAlign: 'right', fontWeight: '600', color: '#0f172a' }}>
+                      {item.storeAcknowledged > 0 ? (
+                        <span style={{ color: '#15803d' }}>₹{item.storeAcknowledged.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                       ) : (
-                        <span style={{ background: '#dcfce7', color: '#15803d', padding: '4px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold' }}>
-                          All Settled ({item.handoverCount})
-                        </span>
+                        <span style={{ color: '#94a3b8' }}>Pending Handover</span>
                       )}
                     </td>
                   </tr>
@@ -603,27 +664,148 @@ const AdminPaymentsTab = ({ users = [] }) => {
         </div>
       </div>
 
-      {/* Comprehensive Detailed Handover Ledger with Store In-Charge Response */}
-      <div>
-        <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Store size={18} color="#059669" /> Daily Cash Handovers & Store In-Charge Response Audit Ledger
-        </h3>
+      {/* Sub-Tabs: Service Job Collections vs Handover Reconciliation Ledger */}
+      <div style={{ marginBottom: '20px' }}>
+        <div style={{ display: 'flex', borderBottom: '2px solid #e2e8f0', gap: '20px' }}>
+          <button
+            onClick={() => setActiveSubTab('all-payments')}
+            style={{
+              padding: '10px 16px',
+              border: 'none',
+              background: 'transparent',
+              fontSize: '14px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              color: activeSubTab === 'all-payments' ? '#0284c7' : '#64748b',
+              borderBottom: activeSubTab === 'all-payments' ? '3px solid #0284c7' : '3px solid transparent',
+              marginBottom: '-2px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            <CreditCard size={16} /> Individual Service Job Collections ({filteredServicePayments.length})
+          </button>
 
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
-            <RefreshCw className="spin" size={24} style={{ margin: '0 auto 10px auto' }} />
-            <p>Loading financial records...</p>
-          </div>
-        ) : error ? (
-          <div style={{ background: '#fef2f2', color: '#b91c1c', padding: '16px', borderRadius: '8px', border: '1px solid #fecaca' }}>
-            {error}
-          </div>
-        ) : (
+          <button
+            onClick={() => setActiveSubTab('handovers')}
+            style={{
+              padding: '10px 16px',
+              border: 'none',
+              background: 'transparent',
+              fontSize: '14px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              color: activeSubTab === 'handovers' ? '#0284c7' : '#64748b',
+              borderBottom: activeSubTab === 'handovers' ? '3px solid #0284c7' : '3px solid transparent',
+              marginBottom: '-2px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            <Store size={16} /> EOD Cash Handovers & Store In-Charge Audit ({filteredHandovers.length})
+          </button>
+        </div>
+      </div>
+
+      {/* Content for SubTab 1: Individual Service Job Payments */}
+      {activeSubTab === 'all-payments' && (
+        <div>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+              <RefreshCw className="spin" size={24} style={{ margin: '0 auto 10px auto' }} />
+              <p>Loading service collections...</p>
+            </div>
+          ) : (
+            <div className="table-wrapper">
+              <table className="custom-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Request ID</th>
+                    <th>Service Type</th>
+                    <th>Customer Name & Address</th>
+                    <th>Assigned Agent</th>
+                    <th>Payment Method</th>
+                    <th>Status</th>
+                    <th style={{ textAlign: 'right' }}>Collected Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredServicePayments.length === 0 ? (
+                    <tr>
+                      <td colSpan="8" style={{ textAlign: 'center', color: '#64748b', padding: '30px' }}>
+                        No service payment records matching the selected period and filters.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredServicePayments.map(req => {
+                      const d = req.paymentTimestamp || req.completedAt || req.createdAt || req.updatedAt;
+                      const dateStr = d ? new Date(d).toLocaleDateString() : 'N/A';
+                      const custName = typeof req.customerId === 'object' ? req.customerId?.name : 'Customer';
+                      const agName = typeof req.assignedAgentId === 'object' ? req.assignedAgentId?.name : (typeof req.assignedAgentId === 'string' ? 'Assigned' : 'Unassigned');
+                      const pMethod = req.paymentMethod || 'Cash';
+                      const amt = Number(req.paymentAmount) || 0;
+
+                      const isOnline = pMethod.toLowerCase().includes('online') || pMethod.toLowerCase().includes('upi') || pMethod.toLowerCase().includes('card');
+
+                      return (
+                        <tr key={req._id}>
+                          <td style={{ fontSize: '12px', color: '#475569', fontWeight: '500' }}>{dateStr}</td>
+                          <td style={{ fontFamily: 'monospace', color: '#0284c7', fontSize: '12px', fontWeight: 'bold' }}>
+                            #{String(req._id).slice(-6).toUpperCase()}
+                          </td>
+                          <td style={{ fontWeight: '600', color: '#0f172a' }}>{req.serviceType}</td>
+                          <td>
+                            <div style={{ fontWeight: '600', fontSize: '13px' }}>{custName}</div>
+                            <div style={{ fontSize: '11.5px', color: '#64748b' }}>{req.customerAddress || 'No address'}</div>
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: '600', color: '#0f172a' }}>{agName}</div>
+                            {typeof req.assignedAgentId === 'object' && req.assignedAgentId?.phone && (
+                              <div style={{ fontSize: '11px', color: '#64748b' }}>{req.assignedAgentId.phone}</div>
+                            )}
+                          </td>
+                          <td>
+                            <span style={{
+                              background: isOnline ? '#f3e8ff' : '#dcfce7',
+                              color: isOnline ? '#7c3aed' : '#15803d',
+                              padding: '4px 8px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: '700'
+                            }}>
+                              {pMethod}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="badge badge-completed">
+                              {req.paymentStatus || req.status || 'PAID'}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'right', fontWeight: '800', color: '#0f172a', fontSize: '14px' }}>
+                            ₹{amt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Content for SubTab 2: EOD Cash Handovers & Store In-Charge Ledger */}
+      {activeSubTab === 'handovers' && (
+        <div>
           <div className="table-wrapper">
             <table className="custom-table">
               <thead>
                 <tr>
-                  <th>Date & Handover</th>
+                  <th>Date & Timestamp</th>
                   <th>Field Agent</th>
                   <th style={{ textAlign: 'right' }}>Submitted Cash</th>
                   <th style={{ textAlign: 'center' }}>Jobs</th>
@@ -637,7 +819,7 @@ const AdminPaymentsTab = ({ users = [] }) => {
                 {filteredHandovers.length === 0 ? (
                   <tr>
                     <td colSpan="8" style={{ textAlign: 'center', color: '#64748b', padding: '30px' }}>
-                      No handover records found matching the active filters.
+                      No EOD cash handovers recorded yet for the selected period.
                     </td>
                   </tr>
                 ) : (
@@ -730,7 +912,7 @@ const AdminPaymentsTab = ({ users = [] }) => {
                           </td>
                         </tr>
 
-                        {/* Expanded Sub-Table showing the completed service requests for this handover */}
+                        {/* Expanded Sub-Table */}
                         {isExpanded && (
                           <tr>
                             <td colSpan="8" style={{ background: '#f8fafc', padding: '16px 20px', borderBottom: '2px solid #cbd5e1' }}>
@@ -783,8 +965,8 @@ const AdminPaymentsTab = ({ users = [] }) => {
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
