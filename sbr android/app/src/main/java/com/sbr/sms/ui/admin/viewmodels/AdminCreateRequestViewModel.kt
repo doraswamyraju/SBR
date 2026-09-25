@@ -43,6 +43,9 @@ class AdminCreateRequestViewModel @Inject constructor(
     private val _description = MutableStateFlow("")
     val description: StateFlow<String> = _description.asStateFlow()
 
+    private val _customerAddress = MutableStateFlow("")
+    val customerAddress: StateFlow<String> = _customerAddress.asStateFlow()
+
     private val _isRecurring = MutableStateFlow(false)
     val isRecurring: StateFlow<Boolean> = _isRecurring.asStateFlow()
 
@@ -52,15 +55,24 @@ class AdminCreateRequestViewModel @Inject constructor(
                 viewModelScope.launch {
                     val newCustomer = userRepository.getUser(newId) as? Customer
                     _selectedCustomer.value = newCustomer
+                    if (newCustomer?.address != null) {
+                        _customerAddress.value = newCustomer.address
+                    }
                     savedStateHandle.remove<String>("newly_created_customer_id")
                 }
             }
         }
     }
 
-    fun onCustomerSelected(customer: Customer) { _selectedCustomer.value = customer }
+    fun onCustomerSelected(customer: Customer) {
+        _selectedCustomer.value = customer
+        if (!customer.address.isNullOrBlank()) {
+            _customerAddress.value = customer.address
+        }
+    }
     fun onServiceTypeChange(type: String) { _serviceType.value = type }
     fun onDescriptionChange(desc: String) { _description.value = desc }
+    fun onAddressChange(address: String) { _customerAddress.value = address }
     fun onRecurringChange(isChecked: Boolean) { _isRecurring.value = isChecked }
 
     fun createRequest() {
@@ -79,12 +91,13 @@ class AdminCreateRequestViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = CreateRequestUiState.Loading
             try {
-                // First, create the service request
+                // First, create the service request with standardized address
+                val finalAddress = _customerAddress.value.ifBlank { customer.address ?: "No address provided" }
                 val request = ServiceRequest(
                     customerId = customer.id,
                     serviceType = service,
                     description = _description.value,
-                    customerAddress = customer.address ?: "No address provided",
+                    customerAddress = finalAddress,
                     createdBy = "ADMIN"
                 )
                 serviceRequestRepository.addRequest(request)

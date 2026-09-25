@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -89,12 +90,38 @@ fun AdminCreateRequestScreen(
                 )
             }
 
+            val customerAddress by viewModel.customerAddress.collectAsState()
+            var showMapPicker by remember { mutableStateOf(false) }
+
+            if (showMapPicker) {
+                com.sbr.sms.ui.common.components.MapPinPickerDialog(
+                    initialAddress = customerAddress,
+                    onDismiss = { showMapPicker = false },
+                    onLocationSelected = { _, _, resolvedAddress ->
+                        viewModel.onAddressChange(resolvedAddress)
+                        showMapPicker = false
+                    }
+                )
+            }
+
+            OutlinedTextField(
+                value = customerAddress,
+                onValueChange = { viewModel.onAddressChange(it) },
+                label = { Text("Service Installation / Site Address") },
+                modifier = Modifier.fillMaxWidth(),
+                trailingIcon = {
+                    IconButton(onClick = { showMapPicker = true }) {
+                        Icon(Icons.Default.LocationOn, contentDescription = "Pick on Map", tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            )
+
             TextButton(
                 onClick = {
                     navController.navigate(AppRoutes.AdminAddEditCustomer.createRoute(null))
                 }
             ) {
-                Text("Or, Add a New Customer")
+                Text("Or, Add a New Customer Profile")
             }
 
             HorizontalDivider()
@@ -102,7 +129,7 @@ fun AdminCreateRequestScreen(
             OutlinedTextField(
                 value = serviceType,
                 onValueChange = { viewModel.onServiceTypeChange(it) },
-                label = { Text("Service Type") },
+                label = { Text("Service Type (e.g. Solar Cleaning, Softener Servicing)") },
                 modifier = Modifier.fillMaxWidth()
             )
             OutlinedTextField(

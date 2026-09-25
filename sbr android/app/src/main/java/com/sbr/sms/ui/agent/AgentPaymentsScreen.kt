@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.sbr.sms.navigation.AppRoutes
@@ -49,11 +50,13 @@ fun AgentPaymentsScreen(
                 }
             }
             is AgentPaymentsUiState.Success -> {
+                val activeFilter by viewModel.selectedFilter.collectAsState()
                 PaymentsContent(
                     stats = state.stats,
                     transactions = state.transactions,
+                    activeFilter = activeFilter,
+                    onFilterSelect = { viewModel.setDateFilter(it) },
                     onViewDetails = { requestId ->
-                        // Navigate to the generic detail screen, which both admin and agent can view.
                         navController.navigate(AppRoutes.RequestDetail.createRoute(requestId))
                     }
                 )
@@ -66,31 +69,60 @@ fun AgentPaymentsScreen(
 private fun PaymentsContent(
     stats: AgentPaymentStats,
     transactions: List<AgentPaymentInfo>,
+    activeFilter: com.sbr.sms.ui.agent.viewmodels.PaymentDateFilter,
+    onFilterSelect: (com.sbr.sms.ui.agent.viewmodels.PaymentDateFilter) -> Unit,
     onViewDetails: (String) -> Unit
 ) {
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Date Filter Row
+        item {
+            androidx.compose.foundation.lazy.LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(com.sbr.sms.ui.agent.viewmodels.PaymentDateFilter.values()) { flt ->
+                    FilterChip(
+                        selected = activeFilter == flt,
+                        onClick = { onFilterSelect(flt) },
+                        label = { Text(flt.label) }
+                    )
+                }
+            }
+        }
+
+        // Executive KPI Summary 2x2 Cards
         item {
             SummaryCards(stats = stats)
         }
+
         item {
-            Text(
-                "Collection History",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Collection History (${activeFilter.label})",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text("${transactions.size} records", color = androidx.compose.ui.graphics.Color.Gray, fontSize = 12.sp)
+            }
         }
+
         if (transactions.isEmpty()) {
             item {
-                Text(
-                    "No payment collections found.",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 32.dp),
-                    textAlign = TextAlign.Center
-                )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Box(modifier = Modifier.padding(32.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Text("No payment collections found for '${activeFilter.label}'.", textAlign = TextAlign.Center, color = androidx.compose.ui.graphics.Color.Gray)
+                    }
+                }
             }
         } else {
             items(transactions, key = { it.request.id }) { transaction ->
@@ -106,33 +138,72 @@ private fun PaymentsContent(
 @Composable
 private fun SummaryCards(stats: AgentPaymentStats) {
     val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("en", "IN")) }
-    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        InfoCard(
-            label = "Total Collections",
-            value = currencyFormat.format(stats.totalCollections),
-            icon = Icons.Default.TrendingUp,
-            modifier = Modifier.weight(1f)
-        )
-        InfoCard(
-            label = "Today's Collections",
-            value = currencyFormat.format(stats.todaysCollections),
-            icon = Icons.Default.Today,
-            modifier = Modifier.weight(1f)
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+            InfoCard(
+                label = "Selected Filter Total",
+                value = currencyFormat.format(stats.filteredCollections),
+                icon = Icons.Default.TrendingUp,
+                iconBg = androidx.compose.ui.graphics.Color(0xFFE0F2FE),
+                iconTint = androidx.compose.ui.graphics.Color(0xFF0284C7),
+                modifier = Modifier.weight(1f)
+            )
+            InfoCard(
+                label = "Today's Collections",
+                value = currencyFormat.format(stats.todaysCollections),
+                icon = Icons.Default.Today,
+                iconBg = androidx.compose.ui.graphics.Color(0xFFFEF3C7),
+                iconTint = androidx.compose.ui.graphics.Color(0xFFD97706),
+                modifier = Modifier.weight(1f)
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+            InfoCard(
+                label = "Settled Handovers",
+                value = currencyFormat.format(stats.settledHandovers),
+                icon = Icons.Default.CreditCard,
+                iconBg = androidx.compose.ui.graphics.Color(0xFFDCFCE7),
+                iconTint = androidx.compose.ui.graphics.Color(0xFF16A34A),
+                modifier = Modifier.weight(1f)
+            )
+            InfoCard(
+                label = "Pending EOD Cash",
+                value = currencyFormat.format(stats.pendingEodCash),
+                icon = Icons.Default.CreditCard,
+                iconBg = androidx.compose.ui.graphics.Color(0xFFFFEDD5),
+                iconTint = androidx.compose.ui.graphics.Color(0xFFEA580C),
+                modifier = Modifier.weight(1f)
+            )
+        }
     }
 }
 
 @Composable
-private fun InfoCard(label: String, value: String, icon: ImageVector, modifier: Modifier = Modifier) {
+private fun InfoCard(
+    label: String,
+    value: String,
+    icon: ImageVector,
+    iconBg: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primaryContainer,
+    iconTint: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primary,
+    modifier: Modifier = Modifier
+) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(4.dp)
+        elevation = CardDefaults.cardElevation(2.dp),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Icon(imageVector = icon, contentDescription = label, tint = MaterialTheme.colorScheme.primary)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = label, style = MaterialTheme.typography.labelLarge)
-            Text(text = value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Surface(
+                color = iconBg,
+                shape = androidx.compose.foundation.shape.CircleShape,
+                modifier = Modifier.size(32.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(imageVector = icon, contentDescription = label, tint = iconTint, modifier = Modifier.size(18.dp))
+                }
+            }
+            Text(text = label, style = MaterialTheme.typography.labelSmall, color = androidx.compose.ui.graphics.Color.Gray)
+            Text(text = value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         }
     }
 }

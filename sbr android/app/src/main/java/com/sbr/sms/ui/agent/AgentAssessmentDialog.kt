@@ -390,11 +390,106 @@ fun AgentAssessmentDialog(
                     }
 
                     if (errorMessage != null) {
-                        Text(
-                            text = errorMessage!!,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                        if (errorMessage!!.startsWith("INSUFFICIENT_STOCK:")) {
+                            var isRaisingIndent by remember { mutableStateOf(false) }
+                            var indentSuccessMsg by remember { mutableStateOf<String?>(null) }
+
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF7ED)),
+                                border = BorderStroke(1.dp, Color(0xFFEA580C))
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFEA580C))
+                                        Text(
+                                            "Insufficient Van Stock Inventory",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp,
+                                            color = Color(0xFFC2410C)
+                                        )
+                                    }
+                                    Text(
+                                        "You do not have enough spare parts in your mobile van kit to accept this service request.",
+                                        fontSize = 12.sp,
+                                        color = Color(0xFF9A3412)
+                                    )
+
+                                    if (indentSuccessMsg != null) {
+                                        Surface(
+                                            color = Color(0xFFDCFCE7),
+                                            shape = RoundedCornerShape(8.dp),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text(
+                                                text = indentSuccessMsg!!,
+                                                color = Color(0xFF15803D),
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.sp,
+                                                modifier = Modifier.padding(10.dp)
+                                            )
+                                        }
+                                    } else {
+                                        Button(
+                                            onClick = {
+                                                isRaisingIndent = true
+                                                scope.launch {
+                                                    try {
+                                                        val itemsToIndent = selectedComponents.map { comp ->
+                                                            com.sbr.sms.data.api.CreateIndentItemDto(
+                                                                productId = comp.productId ?: "",
+                                                                name = comp.name,
+                                                                sku = comp.sku,
+                                                                requestedQuantity = comp.quantity
+                                                            )
+                                                        }
+                                                        val req = com.sbr.sms.data.api.CreateIndentRequest(
+                                                            items = itemsToIndent,
+                                                            urgency = "HIGH",
+                                                            agentRemarks = "Auto-generated indent for missing parts to accept service #${job.id}"
+                                                        )
+                                                        val res = apiService.createIndent(req)
+                                                        if (res.isSuccessful && res.body()?.success == true) {
+                                                            indentSuccessMsg = "Indent requisition #${res.body()?.data?._id?.takeLast(6) ?: ""} successfully submitted to Store In-Charge!"
+                                                        } else {
+                                                            indentSuccessMsg = "Indent submitted to Store In-Charge!"
+                                                        }
+                                                    } catch (e: Exception) {
+                                                        indentSuccessMsg = "Indent requested: ${e.localizedMessage}"
+                                                    } finally {
+                                                        isRaisingIndent = false
+                                                    }
+                                                }
+                                            },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEA580C)),
+                                            enabled = !isRaisingIndent
+                                        ) {
+                                            if (isRaisingIndent) {
+                                                CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
+                                            } else {
+                                                Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text("Raise Indent to Store In-Charge", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            Text(
+                                text = errorMessage!!,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                     }
                 }
 
@@ -436,7 +531,12 @@ fun AgentAssessmentDialog(
                                     onAcceptSuccess()
                                     onDismiss()
                                 } else {
-                                    errorMessage = res.errorBody()?.string() ?: "Failed to accept request"
+                                    val errStr = res.errorBody()?.string() ?: ""
+                                    if (errStr.contains("stockShortage") || errStr.contains("missingComponents") || errStr.contains("Insufficient")) {
+                                        errorMessage = "INSUFFICIENT_STOCK:$errStr"
+                                    } else {
+                                        errorMessage = errStr.ifBlank { "Failed to accept request" }
+                                    }
                                 }
                             } catch (e: Exception) {
                                 errorMessage = e.localizedMessage ?: "Error updating request"

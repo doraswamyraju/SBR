@@ -85,7 +85,11 @@ class StoreInchargeViewModel @Inject constructor(
 
                 val usersRes = apiService.getAllUsers()
                 if (usersRes.isSuccessful && usersRes.body()?.success == true) {
-                    agents.value = (usersRes.body()?.data ?: emptyList()).filter { it.role.equals("AGENT", ignoreCase = true) }
+                    val agentList = (usersRes.body()?.data ?: emptyList()).filter { it.role.equals("AGENT", ignoreCase = true) }
+                    agents.value = agentList
+                    if (selectedAgentForStock.value.isNullOrBlank() && agentList.isNotEmpty()) {
+                        loadAgentVanStock(agentList.first().id)
+                    }
                 }
 
                 val handRes = apiService.getPendingHandovers()
@@ -93,9 +97,19 @@ class StoreInchargeViewModel @Inject constructor(
                     pendingHandovers.value = handRes.body()?.data ?: emptyList()
                 }
 
+                val allHandRes = apiService.getAllHandovers()
+                if (allHandRes.isSuccessful && allHandRes.body()?.success == true) {
+                    allHandovers.value = allHandRes.body()?.data ?: emptyList()
+                }
+
                 val indRes = apiService.getPendingIndents()
                 if (indRes.isSuccessful && indRes.body()?.success == true) {
                     pendingIndents.value = indRes.body()?.data ?: emptyList()
+                }
+
+                val allIndRes = apiService.getAllIndents()
+                if (allIndRes.isSuccessful && allIndRes.body()?.success == true) {
+                    allIndents.value = allIndRes.body()?.data ?: emptyList()
                 }
             } catch (e: Exception) {
                 message.value = e.localizedMessage
@@ -223,6 +237,9 @@ fun StoreInchargeDashboardScreen(
     }
     val totalPendingCash = remember(handovers) {
         handovers.sumOf { it.totalCollectedCash }
+    }
+    val recentRequests = remember(requests) {
+        requests.take(3)
     }
 
     LazyColumn(
@@ -446,6 +463,88 @@ fun StoreInchargeDashboardScreen(
                                 }
                             }
                             Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = Color(0xFF16A34A))
+                        }
+                    }
+                }
+            }
+        }
+
+        // Real-Time Activity & Recent Operational Feed
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Latest Updates & Recent Activity",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                TextButton(onClick = { onNavigateToSection(StoreInchargeSection.Dispatch) }) {
+                    Text("View All Dispatches")
+                }
+            }
+        }
+
+        if (requests.isEmpty() && indents.isEmpty() && handovers.isEmpty()) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Box(modifier = Modifier.padding(24.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Text("No recent operational updates found.", color = Color.Gray, fontSize = 13.sp)
+                    }
+                }
+            }
+        } else {
+            // Latest Service Requests (Up to 3)
+            items(recentRequests) { req ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().clickable { onNavigateToSection(StoreInchargeSection.Dispatch) },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Surface(
+                                color = Color(0xFFE0F2FE),
+                                shape = CircleShape,
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.Build, contentDescription = null, tint = Color(0xFF0284C7), modifier = Modifier.size(20.dp))
+                                }
+                            }
+                            Column {
+                                Text(req.serviceType, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Text(req.customerAddress ?: "Customer Site", fontSize = 12.sp, color = Color.Gray)
+                            }
+                        }
+                        Surface(
+                            color = when (req.status.lowercase()) {
+                                "completed" -> Color(0xFFDCFCE7)
+                                "in-progress" -> Color(0xFFFEF3C7)
+                                else -> Color(0xFFFEE2E2)
+                            },
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                text = req.status,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = when (req.status.lowercase()) {
+                                    "completed" -> Color(0xFF15803D)
+                                    "in-progress" -> Color(0xFFB45309)
+                                    else -> Color(0xFFB91C1C)
+                                },
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
                         }
                     }
                 }

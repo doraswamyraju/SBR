@@ -172,6 +172,9 @@ fun StoreInchargeDispatchScreen(
                             onAssignClick = { selectedRequestForAssign = req },
                             onCardClick = {
                                 navController.navigate(AppRoutes.RequestDetail.createRoute(req.id))
+                            },
+                            onViewDetailsClick = {
+                                navController.navigate(AppRoutes.RequestDetail.createRoute(req.id))
                             }
                         )
                     }
@@ -261,7 +264,8 @@ fun StoreTicketCard(
     request: ServiceRequest,
     agents: List<UserDto>,
     onAssignClick: () -> Unit,
-    onCardClick: () -> Unit
+    onCardClick: () -> Unit,
+    onViewDetailsClick: () -> Unit
 ) {
     val assignedAgent = remember(request.assignedAgentId, agents) {
         agents.find { it.id == request.assignedAgentId }
@@ -354,22 +358,33 @@ fun StoreTicketCard(
                         color = if (assignedAgent != null) MaterialTheme.colorScheme.onSurface else Color.Gray
                     )
                 }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedButton(
+                    onClick = onViewDetailsClick,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                ) {
+                    Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("View Details", fontSize = 12.sp)
+                }
 
                 Button(
                     onClick = onAssignClick,
                     shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
                 ) {
-                    Icon(
-                        Icons.Default.PersonAdd,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp)
-                    )
+                    Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        if (assignedAgent != null) "Re-assign" else "Assign Tech",
-                        fontSize = 12.sp
-                    )
+                    Text(if (assignedAgent != null) "Re-assign" else "Assign Tech", fontSize = 12.sp)
                 }
             }
         }

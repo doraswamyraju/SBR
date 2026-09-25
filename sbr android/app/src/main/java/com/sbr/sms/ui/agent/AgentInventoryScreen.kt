@@ -169,56 +169,106 @@ fun AgentInventoryScreen(
                     }
                 }
             } else {
-                if (indents.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No indents raised.", color = Color.Gray)
+                var indentFilter by remember { mutableStateOf("ALL") }
+                val filteredIndents = remember(indents, indentFilter) {
+                    when (indentFilter) {
+                        "PENDING" -> indents.filter { it.status.equals("PENDING", ignoreCase = true) }
+                        "DISPATCHED" -> indents.filter { it.status.equals("DISPATCHED", ignoreCase = true) }
+                        "REJECTED" -> indents.filter { it.status.equals("REJECTED", ignoreCase = true) }
+                        else -> indents
                     }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize().padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        items(indents) { ind ->
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color.White),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                            ) {
-                                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text("Requisition #${ind._id.takeLast(6)}", fontWeight = FontWeight.Bold)
-                                        Surface(
-                                            color = when (ind.status) {
-                                                "DISPATCHED" -> Color(0xFFD1FAE5)
-                                                "REJECTED" -> Color(0xFFFEE2E2)
-                                                else -> Color(0xFFFEF3C7)
-                                            },
-                                            shape = RoundedCornerShape(4.dp)
+                }
+
+                Column(modifier = Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        listOf("ALL", "PENDING", "DISPATCHED", "REJECTED").forEach { flt ->
+                            val count = when (flt) {
+                                "ALL" -> indents.size
+                                else -> indents.count { it.status.equals(flt, ignoreCase = true) }
+                            }
+                            FilterChip(
+                                selected = indentFilter == flt,
+                                onClick = { indentFilter = flt },
+                                label = { Text("$flt ($count)", fontSize = 11.sp) }
+                            )
+                        }
+                    }
+
+                    if (filteredIndents.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("No indents found for filter '$indentFilter'.", color = Color.Gray)
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            items(filteredIndents, key = { it._id }) { ind ->
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                ) {
+                                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Text(
-                                                ind.status,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 11.sp,
-                                                color = when (ind.status) {
-                                                    "DISPATCHED" -> Color(0xFF059669)
-                                                    "REJECTED" -> Color(0xFFDC2626)
-                                                    else -> Color(0xFFD97706)
+                                            Column {
+                                                Text("Requisition #${ind._id.takeLast(6)}", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                                if (!ind.requestedAt.isNullOrBlank()) {
+                                                    Text("Date: ${ind.requestedAt.take(10)}", fontSize = 11.sp, color = Color.Gray)
+                                                }
+                                            }
+                                            Surface(
+                                                color = when (ind.status.uppercase()) {
+                                                    "DISPATCHED" -> Color(0xFFD1FAE5)
+                                                    "REJECTED" -> Color(0xFFFEE2E2)
+                                                    else -> Color(0xFFFEF3C7)
                                                 },
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                            )
+                                                shape = RoundedCornerShape(6.dp)
+                                            ) {
+                                                Text(
+                                                    ind.status.uppercase(),
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 11.sp,
+                                                    color = when (ind.status.uppercase()) {
+                                                        "DISPATCHED" -> Color(0xFF059669)
+                                                        "REJECTED" -> Color(0xFFDC2626)
+                                                        else -> Color(0xFFD97706)
+                                                    },
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                                )
+                                            }
                                         }
-                                    }
 
-                                    ind.items.forEach { itm ->
-                                        Text("${itm.name} x${itm.requestedQuantity}", fontSize = 13.sp)
-                                    }
+                                        HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
 
-                                    if (!ind.inchargeRemarks.isNullOrBlank()) {
-                                        Text("Store note: ${ind.inchargeRemarks}", fontSize = 11.sp, color = Color.Gray)
+                                        ind.items.forEach { itm ->
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text("• ${itm.name}", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                                Text("Qty Requested: ${itm.requestedQuantity}", fontSize = 12.sp, color = Color.DarkGray)
+                                            }
+                                        }
+
+                                        if (!ind.agentRemarks.isNullOrBlank()) {
+                                            Text("My Note: ${ind.agentRemarks}", fontSize = 11.sp, color = Color.Gray)
+                                        }
+
+                                        if (!ind.inchargeRemarks.isNullOrBlank()) {
+                                            Surface(
+                                                color = Color(0xFFF1F5F9),
+                                                shape = RoundedCornerShape(6.dp),
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Text("Store Manager Note: ${ind.inchargeRemarks}", fontSize = 11.sp, color = Color(0xFF334155), modifier = Modifier.padding(8.dp))
+                                            }
+                                        }
                                     }
                                 }
                             }
