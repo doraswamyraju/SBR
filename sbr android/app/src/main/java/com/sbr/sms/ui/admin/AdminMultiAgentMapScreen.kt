@@ -109,6 +109,14 @@ fun AdminMultiAgentMapScreen(
         }
     }
 
+    val azureMarkerIcon = remember {
+        try {
+            BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         // Background Map
         when (val state = uiState) {
@@ -134,9 +142,12 @@ fun AdminMultiAgentMapScreen(
                                 )
                             }
                             Marker(
-                                state = MarkerState(position = LatLng(lat, lng)),
+                                state = rememberMarkerState(
+                                    key = agentInfo.agent.id.ifBlank { agentInfo.request.id },
+                                    position = LatLng(lat, lng)
+                                ),
                                 title = agentInfo.agent.name.ifBlank { "Technician" },
-                                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE),
+                                icon = azureMarkerIcon
                             )
                         }
                     }

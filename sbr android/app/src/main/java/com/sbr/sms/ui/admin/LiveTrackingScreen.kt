@@ -95,10 +95,17 @@ fun LiveTrackingScreen(
                                 width = 12f
                             )
                         }
+                        val greenMarkerIcon = remember {
+                            try {
+                                BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)
+                            } catch (_: Exception) {
+                                null
+                            }
+                        }
                         Marker(
                             state = markerState,
                             title = "Agent Location",
-                            icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)
+                            icon = greenMarkerIcon
                         )
                     }
                     Card(
