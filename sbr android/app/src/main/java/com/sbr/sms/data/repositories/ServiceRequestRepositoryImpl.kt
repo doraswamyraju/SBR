@@ -129,7 +129,7 @@ class ServiceRequestRepositoryImpl @Inject constructor(
             paymentStatus = this.paymentStatus,
             paymentMethod = this.paymentMethod,
             paymentTimestamp = this.paymentTimestamp?.let { parseDate(it) },
-            locationPath = this.locationPath.map {
+            locationPath = (this.locationPath ?: emptyList()).map {
                 AgentLocation(
                     latitude = it.latitude,
                     longitude = it.longitude,

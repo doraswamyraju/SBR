@@ -27,7 +27,8 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.*
-import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.LocalContext
+import com.google.android.gms.maps.MapsInitializer
 
 private const val mapStyleJson = """
 [
@@ -41,12 +42,29 @@ fun AdminMultiAgentMapScreen(
     navController: NavHostController,
     viewModel: AdminMultiAgentMapViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
-    val cameraPositionState = rememberCameraPositionState()
+    val cameraPositionState = rememberCameraPositionState {
+        position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(LatLng(17.3850, 78.4867), 12f)
+    }
     val coroutineScope = rememberCoroutineScope()
 
     // State for the Bottom Sheet
     val scaffoldState = rememberBottomSheetScaffoldState()
+
+    val mapStyleOptions = remember {
+        try {
+            MapStyleOptions(mapStyleJson)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        try {
+            MapsInitializer.initialize(context)
+        } catch (_: Exception) {}
+    }
 
     // NEW: Improved camera logic with agent coordinate fallbacks
     LaunchedEffect(uiState) {
@@ -102,11 +120,12 @@ fun AdminMultiAgentMapScreen(
                     val lng = agentInfo.request.locationPath.lastOrNull()?.longitude ?: agentInfo.agent.currentLng
                     if (lat != null && lng != null) {
                         coroutineScope.launch {
-                            // When an agent is clicked, focus the map and collapse the sheet
-                            cameraPositionState.animate(
-                                CameraUpdateFactory.newLatLngZoom(LatLng(lat, lng), 16f)
-                            )
-                            scaffoldState.bottomSheetState.partialExpand()
+                            try {
+                                cameraPositionState.animate(
+                                    CameraUpdateFactory.newLatLngZoom(LatLng(lat, lng), 16f)
+                                )
+                                scaffoldState.bottomSheetState.partialExpand()
+                            } catch (_: Exception) {}
                         }
                     }
                 }
@@ -122,7 +141,7 @@ fun AdminMultiAgentMapScreen(
                     GoogleMap(
                         modifier = Modifier.fillMaxSize(),
                         cameraPositionState = cameraPositionState,
-                        properties = MapProperties(mapStyleOptions = MapStyleOptions(mapStyleJson))
+                        properties = MapProperties(mapStyleOptions = mapStyleOptions)
                     ) {
                         state.trackedAgents.forEach { agentInfo ->
                             val path = agentInfo.request.locationPath
