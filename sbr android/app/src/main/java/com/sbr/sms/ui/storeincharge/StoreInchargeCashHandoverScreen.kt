@@ -142,7 +142,7 @@ fun StoreInchargeCashHandoverScreen(
             title = { Text("Reconcile Field Cash Handover") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Technician: ${h.agentId?.name ?: "Field Agent"}", fontWeight = FontWeight.Bold)
+                    Text("Technician: ${h.agentUser?.name ?: "Field Agent"}", fontWeight = FontWeight.Bold)
                     Text("Date: ${h.date}", fontSize = 12.sp, color = Color.Gray)
                     Text("System Expected Cash: ₹${String.format("%.2f", h.totalCollectedCash)}", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
 
@@ -249,7 +249,7 @@ fun PendingHandoversTab(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column {
-                                    Text(h.agentId?.name ?: "Field Technician", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                    Text(h.agentUser?.name ?: "Field Technician", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                                     Text("Date: ${h.date}", fontSize = 12.sp, color = Color.Gray)
                                 }
                                 Text(
@@ -415,7 +415,7 @@ fun HandoverHistoryTab(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column {
-                                Text(h.agentId?.name ?: "Field Agent", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                Text(h.agentUser?.name ?: "Field Agent", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                                 Text("Date: ${h.date}", fontSize = 11.sp, color = Color.Gray)
                             }
                             Column(horizontalAlignment = Alignment.End) {

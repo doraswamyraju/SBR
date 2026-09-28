@@ -74,18 +74,42 @@ data class IndentItem(
 
 data class AgentIndent(
     @SerializedName("id", alternate = ["_id"]) val id: String = "",
-    val agentId: HandoverUser? = null,
+    val agentId: Any? = null,
     @SerializedName("serviceRequestId", alternate = ["requestId"]) val serviceRequestId: String? = null,
     val items: List<IndentItem> = emptyList(),
     val status: String = "PENDING", // PENDING, REQUESTED, APPROVED, DISPATCHED, REJECTED
     val urgency: String? = "MEDIUM", // LOW, MEDIUM, HIGH, CRITICAL
     val agentRemarks: String? = null,
     val inchargeRemarks: String? = null,
-    @SerializedName("storeInchargeId", alternate = ["dispatchedBy"]) val storeInchargeId: HandoverUser? = null,
+    @SerializedName("storeInchargeId", alternate = ["dispatchedBy"]) val storeInchargeId: Any? = null,
     val requestedAt: String? = null,
     val dispatchedAt: String? = null,
     val createdAt: String? = null,
     val updatedAt: String? = null
 ) {
     val _id: String get() = id
+
+    val resolvedAgentName: String
+        get() {
+            if (agentId is Map<*, *>) {
+                val n = agentId["name"] ?: agentId["email"]
+                if (n is String && n.isNotBlank()) return n
+            }
+            return "Technician"
+        }
+
+    val agentUser: HandoverUser?
+        get() {
+            if (agentId is Map<*, *>) {
+                val nameVal = (agentId["name"] ?: agentId["email"]) as? String ?: "Field Technician"
+                val phoneVal = agentId["phone"] as? String
+                val emailVal = agentId["email"] as? String
+                val idVal = (agentId["_id"] ?: agentId["id"]) as? String ?: ""
+                return HandoverUser(id = idVal, name = nameVal, email = emailVal, phone = phoneVal)
+            }
+            if (agentId is String && agentId.isNotBlank()) {
+                return HandoverUser(id = agentId, name = "Field Technician")
+            }
+            return null
+        }
 }

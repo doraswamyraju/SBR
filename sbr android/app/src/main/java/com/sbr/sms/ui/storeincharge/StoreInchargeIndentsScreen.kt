@@ -127,7 +127,7 @@ fun StoreInchargeIndentsScreen(
             title = { Text("Reject Part Requisition") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Technician: ${ind.agentId?.name ?: "Field Agent"}", fontWeight = FontWeight.Bold)
+                    Text("Technician: ${ind.agentUser?.name ?: "Field Agent"}", fontWeight = FontWeight.Bold)
                     Text("Items: ${ind.items.joinToString { "${it.name} (Qty: ${it.requestedQuantity})" }}", fontSize = 12.sp, color = Color.Gray)
                     OutlinedTextField(
                         value = rejectionReason,
@@ -236,9 +236,9 @@ fun PendingIndentsTab(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column {
-                                Text(ind.agentId?.name ?: "Field Technician", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                if (!ind.agentId?.phone.isNullOrBlank()) {
-                                    Text(ind.agentId?.phone ?: "", fontSize = 12.sp, color = Color.Gray)
+                                Text(ind.agentUser?.name ?: "Field Technician", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                if (!ind.agentUser?.phone.isNullOrBlank()) {
+                                    Text(ind.agentUser?.phone ?: "", fontSize = 12.sp, color = Color.Gray)
                                 }
                             }
                             Surface(
@@ -354,7 +354,7 @@ fun IndentsHistoryTab(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(ind.agentId?.name ?: "Field Agent", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            Text(ind.agentUser?.name ?: "Field Agent", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                             Surface(
                                 color = sBg,
                                 shape = RoundedCornerShape(4.dp)

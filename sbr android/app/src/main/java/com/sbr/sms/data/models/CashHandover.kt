@@ -13,13 +13,13 @@ data class HandoverUser(
 
 data class CashHandover(
     @SerializedName("id", alternate = ["_id"]) val id: String = "",
-    val agentId: HandoverUser? = null,
+    val agentId: Any? = null,
     val date: String = "",
     @SerializedName("totalCollectedCash", alternate = ["totalCash"]) val totalCollectedCash: Double = 0.0,
     val completedRequests: List<Any> = emptyList(),
     val status: String = "SUBMITTED", // SUBMITTED, ACKNOWLEDGED, DISCREPANCY, NOT_SUBMITTED
-    @SerializedName("acknowledgedBy", alternate = ["storeInchargeId"]) val acknowledgedBy: HandoverUser? = null,
-    val storeInchargeId: HandoverUser? = null,
+    @SerializedName("acknowledgedBy", alternate = ["storeInchargeId"]) val acknowledgedBy: Any? = null,
+    val storeInchargeId: Any? = null,
     val acknowledgedAmount: Double? = null,
     val discrepancyAmount: Double? = null,
     val inchargeNotes: String? = null,
@@ -30,10 +30,34 @@ data class CashHandover(
     val updatedAt: String? = null
 ) {
     val _id: String get() = id
+
+    val resolvedAgentName: String
+        get() {
+            if (agentId is Map<*, *>) {
+                val n = agentId["name"] ?: agentId["email"]
+                if (n is String && n.isNotBlank()) return n
+            }
+            return "Agent"
+        }
+
+    val agentUser: HandoverUser?
+        get() {
+            if (agentId is Map<*, *>) {
+                val nameVal = (agentId["name"] ?: agentId["email"]) as? String ?: "Field Agent"
+                val phoneVal = agentId["phone"] as? String
+                val emailVal = agentId["email"] as? String
+                val idVal = (agentId["_id"] ?: agentId["id"]) as? String ?: ""
+                return HandoverUser(id = idVal, name = nameVal, email = emailVal, phone = phoneVal)
+            }
+            if (agentId is String && agentId.isNotBlank()) {
+                return HandoverUser(id = agentId, name = "Field Agent")
+            }
+            return null
+        }
 }
 
 data class AgentDailySummary(
-    val agentId: String = "",
+    val agentId: Any? = null,
     val date: String = "",
     @SerializedName("totalCollectedCash", alternate = ["totalCash"]) val totalCollectedCash: Double = 0.0,
     @SerializedName("completedJobsCount", alternate = ["requestCount"]) val completedJobsCount: Int = 0,
