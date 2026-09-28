@@ -11,6 +11,8 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,8 +20,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sbr.sms.R.drawable.sbr_logo
 
@@ -32,10 +38,8 @@ fun AuthScreen(
     var showForgotPasswordDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Collect the saved email from the ViewModel
     val savedEmail by viewModel.savedEmail.collectAsState()
 
-    // Use an effect to set the email field once when the screen loads
     LaunchedEffect(savedEmail) {
         if (viewModel.email.isEmpty() && savedEmail.isNotEmpty()) {
             viewModel.email = savedEmail
@@ -65,17 +69,20 @@ fun AuthScreen(
         Column(
             modifier = Modifier
                 .padding(padding)
-                .padding(horizontal = 24.dp)
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
+                .imePadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(60.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             Image(
                 painter = painterResource(id = sbr_logo),
                 contentDescription = "SBR Logo",
-                modifier = Modifier.height(90.dp).padding(8.dp)
+                modifier = Modifier
+                    .height(80.dp)
+                    .padding(4.dp)
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -86,17 +93,19 @@ fun AuthScreen(
                 color = Color.Gray
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             TabRow(
                 selectedTabIndex = if (isLoginTabSelected) 0 else 1,
-                modifier = Modifier.fillMaxWidth(0.8f).clip(RoundedCornerShape(50))
+                modifier = Modifier
+                    .fillMaxWidth(0.85f)
+                    .clip(RoundedCornerShape(50))
             ) {
                 Tab(selected = isLoginTabSelected, onClick = { isLoginTabSelected = true }, text = { Text("Login") })
                 Tab(selected = !isLoginTabSelected, onClick = { isLoginTabSelected = false }, text = { Text("Sign Up") })
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             if (isLoginTabSelected) {
                 LoginFields(viewModel) { showForgotPasswordDialog = true }
@@ -104,7 +113,7 @@ fun AuthScreen(
                 SignUpFields(viewModel)
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(24.dp))
 
             if (viewModel.isLoading) {
                 CircularProgressIndicator(modifier = Modifier.padding(bottom = 16.dp))
@@ -113,9 +122,15 @@ fun AuthScreen(
             Button(
                 onClick = { if (isLoginTabSelected) viewModel.loginUser() else viewModel.signupUser() },
                 enabled = !viewModel.isLoading,
-                modifier = Modifier.fillMaxWidth().height(50.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
             ) {
-                Text(if (isLoginTabSelected) "Login" else "Sign Up")
+                Text(
+                    text = if (isLoginTabSelected) "Login" else "Sign Up",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
             Spacer(modifier = Modifier.height(32.dp))
         }
@@ -125,13 +140,14 @@ fun AuthScreen(
 
 @Composable
 private fun LoginFields(viewModel: AuthViewModel, onForgotPasswordClicked: () -> Unit) {
+    var passwordVisible by remember { mutableStateOf(false) }
+
     OutlinedTextField(
         value = viewModel.email,
         onValueChange = { viewModel.email = it },
         label = { Text("Email") },
         leadingIcon = { Icon(Icons.Default.MailOutline, contentDescription = null) },
-        // THE FIX: Using the full path to the class
-        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Email),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
         modifier = Modifier.fillMaxWidth()
     )
     Spacer(modifier = Modifier.height(8.dp))
@@ -140,9 +156,15 @@ private fun LoginFields(viewModel: AuthViewModel, onForgotPasswordClicked: () ->
         onValueChange = { viewModel.password = it },
         label = { Text("Password") },
         leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-        visualTransformation = PasswordVisualTransformation(),
-        // THE FIX: Using the full path to the class
-        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password),
+        trailingIcon = {
+            val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+            val description = if (passwordVisible) "Hide password" else "Show password"
+            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                Icon(imageVector = image, contentDescription = description)
+            }
+        },
+        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         modifier = Modifier.fillMaxWidth()
     )
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
@@ -156,6 +178,8 @@ private fun LoginFields(viewModel: AuthViewModel, onForgotPasswordClicked: () ->
 @Composable
 private fun SignUpFields(viewModel: AuthViewModel) {
     var expanded by remember { mutableStateOf(false) }
+    var passwordVisible by remember { mutableStateOf(false) }
+    var confirmPasswordVisible by remember { mutableStateOf(false) }
     val roles = listOf("Customer", "Agent")
 
     OutlinedTextField(
@@ -171,7 +195,7 @@ private fun SignUpFields(viewModel: AuthViewModel) {
         onValueChange = { viewModel.email = it },
         label = { Text("Email") },
         leadingIcon = { Icon(Icons.Default.MailOutline, contentDescription = null) },
-        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Email),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
         modifier = Modifier.fillMaxWidth()
     )
     Spacer(modifier = Modifier.height(8.dp))
@@ -180,7 +204,7 @@ private fun SignUpFields(viewModel: AuthViewModel) {
         onValueChange = { viewModel.phone = it },
         label = { Text("Phone Number") },
         leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
-        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
         modifier = Modifier.fillMaxWidth()
     )
     Spacer(modifier = Modifier.height(8.dp))
@@ -189,9 +213,15 @@ private fun SignUpFields(viewModel: AuthViewModel) {
         onValueChange = { viewModel.password = it },
         label = { Text("Password") },
         leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-        visualTransformation = PasswordVisualTransformation(),
-        // THE FIX: Using the full path to the class
-        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password),
+        trailingIcon = {
+            val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+            val description = if (passwordVisible) "Hide password" else "Show password"
+            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                Icon(imageVector = image, contentDescription = description)
+            }
+        },
+        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         modifier = Modifier.fillMaxWidth()
     )
     Spacer(modifier = Modifier.height(8.dp))
@@ -200,9 +230,15 @@ private fun SignUpFields(viewModel: AuthViewModel) {
         onValueChange = { viewModel.confirmPassword = it },
         label = { Text("Confirm Password") },
         leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-        visualTransformation = PasswordVisualTransformation(),
-        // THE FIX: Using the full path to the class
-        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password),
+        trailingIcon = {
+            val image = if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+            val description = if (confirmPasswordVisible) "Hide password" else "Show password"
+            IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                Icon(imageVector = image, contentDescription = description)
+            }
+        },
+        visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         modifier = Modifier.fillMaxWidth()
     )
     Spacer(modifier = Modifier.height(8.dp))
@@ -249,8 +285,7 @@ fun ForgotPasswordDialog(
                     value = email,
                     onValueChange = { email = it },
                     label = { Text("Email") },
-                    // THE FIX: Using the full path to the class
-                    keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Email)
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
                 )
             }
         },
@@ -262,3 +297,4 @@ fun ForgotPasswordDialog(
         }
     )
 }
+
