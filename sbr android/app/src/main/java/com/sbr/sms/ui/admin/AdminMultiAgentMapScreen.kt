@@ -3,12 +3,11 @@ package com.sbr.sms.ui.admin
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
@@ -17,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.sbr.sms.ui.admin.viewmodels.AdminMultiAgentMapViewModel
@@ -37,7 +37,6 @@ private const val mapStyleJson = """
 ]
 """
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminMultiAgentMapScreen(
     navController: NavHostController,
@@ -49,8 +48,7 @@ fun AdminMultiAgentMapScreen(
         position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(LatLng(17.3850, 78.4867), 12f)
     }
     val coroutineScope = rememberCoroutineScope()
-
-    val scaffoldState = rememberBottomSheetScaffoldState()
+    var isPanelExpanded by remember { mutableStateOf(false) }
 
     val mapStyleOptions = remember {
         try {
@@ -90,7 +88,7 @@ fun AdminMultiAgentMapScreen(
                         if (maxLat - minLat > 0.0001 || maxLng - minLng > 0.0001) {
                             val bounds = LatLngBounds(LatLng(minLat, minLng), LatLng(maxLat, maxLng))
                             cameraPositionState.animate(
-                                CameraUpdateFactory.newLatLngBounds(bounds, 120),
+                                CameraUpdateFactory.newLatLngBounds(bounds, 100),
                                 800
                             )
                         } else {
@@ -111,13 +109,73 @@ fun AdminMultiAgentMapScreen(
         }
     }
 
-    BottomSheetScaffold(
-        modifier = Modifier.fillMaxSize(),
-        scaffoldState = scaffoldState,
-        sheetPeekHeight = 110.dp,
-        sheetContent = {
-            ActiveAgentsSheetContent(
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Background Map
+        when (val state = uiState) {
+            is MultiAgentUiState.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            is MultiAgentUiState.Error -> Text(state.message, modifier = Modifier.align(Alignment.Center))
+            is MultiAgentUiState.Success -> {
+                GoogleMap(
+                    modifier = Modifier.fillMaxSize(),
+                    cameraPositionState = cameraPositionState,
+                    properties = MapProperties(mapStyleOptions = mapStyleOptions)
+                ) {
+                    state.trackedAgents.forEach { agentInfo ->
+                        val path = agentInfo.request.locationPath
+                        val lat = path.lastOrNull()?.latitude ?: agentInfo.agent.currentLat
+                        val lng = path.lastOrNull()?.longitude ?: agentInfo.agent.currentLng
+                        if (lat != null && lng != null && lat != 0.0 && lng != 0.0) {
+                            val validPath = path.filter { it.latitude != 0.0 && it.longitude != 0.0 }
+                            if (validPath.size >= 2) {
+                                Polyline(
+                                    points = validPath.map { LatLng(it.latitude, it.longitude) },
+                                    color = Color.Yellow,
+                                    width = 10f
+                                )
+                            }
+                            Marker(
+                                state = MarkerState(position = LatLng(lat, lng)),
+                                title = agentInfo.agent.name.ifBlank { "Technician" },
+                                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE),
+                            )
+                        }
+                    }
+                }
+
+                if (state.trackedAgents.isEmpty()) {
+                    Surface(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 16.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        color = Color.Black.copy(alpha = 0.75f)
+                    ) {
+                        Text(
+                            "No active technicians on duty right now.",
+                            color = Color.White,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Floating Bottom Panel
+        Surface(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(12.dp),
+            shape = RoundedCornerShape(16.dp),
+            tonalElevation = 6.dp,
+            shadowElevation = 8.dp,
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            ActiveAgentsPanelContent(
                 uiState = uiState,
+                isExpanded = isPanelExpanded,
+                onToggleExpand = { isPanelExpanded = !isPanelExpanded },
                 onAgentClick = { agentInfo ->
                     val lat = agentInfo.request.locationPath.lastOrNull()?.latitude ?: agentInfo.agent.currentLat
                     val lng = agentInfo.request.locationPath.lastOrNull()?.longitude ?: agentInfo.agent.currentLng
@@ -125,110 +183,85 @@ fun AdminMultiAgentMapScreen(
                         coroutineScope.launch {
                             try {
                                 cameraPositionState.animate(
-                                    CameraUpdateFactory.newLatLngZoom(LatLng(lat, lng), 15f),
+                                    CameraUpdateFactory.newLatLngZoom(LatLng(lat, lng), 16f),
                                     600
                                 )
-                                try {
-                                    scaffoldState.bottomSheetState.partialExpand()
-                                } catch (_: Exception) {}
                             } catch (_: Exception) {}
                         }
                     }
                 }
             )
         }
-    ) { padding ->
-        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
-            when (val state = uiState) {
-                is MultiAgentUiState.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                is MultiAgentUiState.Error -> Text(state.message, modifier = Modifier.align(Alignment.Center))
-                is MultiAgentUiState.Success -> {
-                    GoogleMap(
-                        modifier = Modifier.fillMaxSize(),
-                        cameraPositionState = cameraPositionState,
-                        properties = MapProperties(mapStyleOptions = mapStyleOptions)
-                    ) {
-                        state.trackedAgents.forEach { agentInfo ->
-                            val path = agentInfo.request.locationPath
-                            val lat = path.lastOrNull()?.latitude ?: agentInfo.agent.currentLat
-                            val lng = path.lastOrNull()?.longitude ?: agentInfo.agent.currentLng
-                            if (lat != null && lng != null && lat != 0.0 && lng != 0.0) {
-                                val validPath = path.filter { it.latitude != 0.0 && it.longitude != 0.0 }
-                                if (validPath.size >= 2) {
-                                    Polyline(
-                                        points = validPath.map { LatLng(it.latitude, it.longitude) },
-                                        color = Color.Yellow,
-                                        width = 10f
-                                    )
-                                }
-                                Marker(
-                                    state = MarkerState(position = LatLng(lat, lng)),
-                                    title = agentInfo.agent.name.ifBlank { "Technician" },
-                                    icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE),
-                                )
-                            }
-                        }
-                    }
-                    if (state.trackedAgents.isEmpty()) {
-                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                            Text("No agents are currently on an active job.")
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 
 @Composable
-private fun ActiveAgentsSheetContent(
+private fun ActiveAgentsPanelContent(
     uiState: MultiAgentUiState,
+    isExpanded: Boolean,
+    onToggleExpand: () -> Unit,
     onAgentClick: (TrackedAgentInfo) -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+            .padding(14.dp)
     ) {
-        Box(
+        Row(
             modifier = Modifier
-                .padding(vertical = 8.dp)
-                .width(40.dp)
-                .height(4.dp)
-                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f), shape = RoundedCornerShape(2.dp))
-                .align(Alignment.CenterHorizontally)
-        )
-        Text(
-            text = "Active Agents",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
+                .fillMaxWidth()
+                .clickable { onToggleExpand() },
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Group, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Active Technicians",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            IconButton(onClick = onToggleExpand) {
+                Icon(
+                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
+                    contentDescription = "Toggle Panel"
+                )
+            }
+        }
 
-        when (uiState) {
-            is MultiAgentUiState.Success -> {
-                if (uiState.trackedAgents.isEmpty()) {
-                    Text("No active agents found.", modifier = Modifier.padding(vertical = 16.dp))
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 350.dp),
-                        contentPadding = PaddingValues(bottom = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(
-                            uiState.trackedAgents,
-                            key = { it.agent.id.ifBlank { it.request.id } }
-                        ) { agentInfo ->
-                            AgentInfoRow(agentInfo = agentInfo, onClick = { onAgentClick(agentInfo) })
+        if (isExpanded) {
+            Spacer(modifier = Modifier.height(8.dp))
+            when (uiState) {
+                is MultiAgentUiState.Success -> {
+                    if (uiState.trackedAgents.isEmpty()) {
+                        Text(
+                            "No active technicians found.",
+                            fontSize = 13.sp,
+                            color = Color.Gray,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    } else {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 280.dp)
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            uiState.trackedAgents.forEach { agentInfo ->
+                                AgentInfoRow(agentInfo = agentInfo, onClick = { onAgentClick(agentInfo) })
+                            }
                         }
                     }
                 }
-            }
-            else -> {
-                Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                    Text("Loading agent data...")
+                else -> {
+                    Text(
+                        "Loading agent data...",
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
                 }
             }
         }
