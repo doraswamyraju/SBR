@@ -40,17 +40,35 @@ class AdminDashboardViewModel @Inject constructor(
                 userRepository.getAllUsersFlow()
             ) { allRequests, allUsers ->
                 val agents = allUsers.filter { it.role == UserRole.AGENT }
+                val agentList = agents.filterIsInstance<com.sbr.sms.data.models.Agent>()
+                val activeAgentCount = agentList.count { it.status == "Active" }
+
+                // Only count completed requests that haven't been paid yet
+                val pendingPaymentCount = allRequests.count { req ->
+                    req.status.equals("Completed", ignoreCase = true) &&
+                    !req.paymentStatus.equals("Paid", ignoreCase = true)
+                }
+
+                // Compute real satisfaction from agent ratings or default to 96f
+                val agentsWithRating = agentList.filter { it.rating > 0 }
+                val satisfactionScore = if (agentsWithRating.isNotEmpty()) {
+                    ((agentsWithRating.map { it.rating.toDouble() }.average() / 5.0) * 100.0).toFloat()
+                } else {
+                    96f
+                }
+
                 val stats = DashboardStats(
                     totalRequests = allRequests.size,
-                    activeAgents = agents.size,
-                    pendingPayments = allRequests.count { it.status == "Completed" },
-                    customerSatisfaction = 95f,
+                    activeAgents = if (activeAgentCount > 0) activeAgentCount else agents.size,
+                    pendingPayments = pendingPaymentCount,
+                    customerSatisfaction = satisfactionScore,
                     recentPendingRequests = allRequests
-                        .filter { it.status == "Pending" }
+                        .filter { it.status == "Pending" || it.assignedAgentId.isNullOrBlank() }
                         .sortedByDescending { it.createdAt }
                         .take(5)
                 )
                 AdminDashboardUiState.Success(stats, agents)
+
             }.catch { e ->
                 _uiState.value = AdminDashboardUiState.Error(e.message ?: "An error occurred")
             }.collect { state ->

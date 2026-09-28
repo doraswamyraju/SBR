@@ -1,6 +1,9 @@
 const CashHandover = require('../models/CashHandover');
 const ServiceRequest = require('../models/ServiceRequest');
 const User = require('../models/User');
+const { sendNotificationToUser, sendNotificationToRole } = require('../utils/notificationHelper');
+const { emitSocketEvent } = require('../utils/socketHelper');
+
 
 // Helper to get formatted date string YYYY-MM-DD in local/IST time
 const getTodayString = (dateObj = new Date()) => {
@@ -136,11 +139,25 @@ exports.submitHandover = async (req, res) => {
       submittedAt: new Date()
     });
 
+    // Notify Store In-Charge & Admin
+    await sendNotificationToRole(['ADMIN', 'STORE_INCHARGE'], {
+      title: 'Cash Handover Submitted',
+      body: `Agent ${req.user.name || 'Technician'} submitted ₹${amount} for ${targetDate}.`,
+      data: {
+        handoverId: String(newHandover._id),
+        type: 'HANDOVER_SUBMITTED'
+      }
+    });
+
+    emitSocketEvent('role:ADMIN', 'handover:submitted', newHandover);
+    emitSocketEvent('role:STORE_INCHARGE', 'handover:submitted', newHandover);
+
     res.status(201).json({
       success: true,
       message: 'Cash handover submitted successfully to Store In-Charge.',
       data: newHandover
     });
+
   } catch (error) {
     console.error('submitHandover Error:', error);
     res.status(500).json({ success: false, error: error.message });
@@ -252,6 +269,20 @@ exports.acknowledgeHandover = async (req, res) => {
 
     await handover.save();
 
+    // Notify Agent about acknowledgment
+    if (handover.agentId) {
+      const agentUserId = handover.agentId._id || handover.agentId;
+      sendNotificationToUser(agentUserId, {
+        title: discrepancy !== 0 ? 'Cash Handover Discrepancy' : 'Cash Handover Verified',
+        body: `Your cash handover for ${handover.date} (₹${actualReceived}) was acknowledged by ${req.user.name}.`,
+        data: {
+          handoverId: String(handover._id),
+          type: 'HANDOVER_ACKNOWLEDGED'
+        }
+      });
+      emitSocketEvent(`agent:${agentUserId}`, 'handover:acknowledged', handover);
+    }
+
     res.status(200).json({
       success: true,
       message: discrepancy !== 0
@@ -259,6 +290,7 @@ exports.acknowledgeHandover = async (req, res) => {
         : 'Cash handover verified and acknowledged successfully.',
       data: handover
     });
+
   } catch (error) {
     console.error('acknowledgeHandover Error:', error);
     res.status(500).json({ success: false, error: error.message });

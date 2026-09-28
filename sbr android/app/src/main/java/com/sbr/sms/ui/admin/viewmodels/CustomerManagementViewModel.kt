@@ -17,6 +17,10 @@ class CustomerManagementViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
+    val statusMessage = MutableStateFlow<String?>(null)
+    val errorMessage = MutableStateFlow<String?>(null)
+    val isLoading = MutableStateFlow(false)
+
     val customers: StateFlow<List<Customer>> = userRepository.getAllUsersFlow()
         .combine(_searchQuery) { users, query ->
             val customers = users.mapNotNull { it as? Customer }
@@ -39,14 +43,56 @@ class CustomerManagementViewModel @Inject constructor(
         _searchQuery.value = query
     }
 
-    // NEW: Function to delete a customer.
     fun deleteCustomer(customerId: String) {
         viewModelScope.launch {
             try {
                 userRepository.deleteUser(customerId)
+                statusMessage.value = "Customer deleted successfully."
             } catch (e: Exception) {
-                // Optionally handle error state here, e.g., show a toast
+                errorMessage.value = e.localizedMessage ?: "Failed to delete customer"
             }
         }
+    }
+
+    fun sendPasswordResetEmail(customerId: String) {
+        viewModelScope.launch {
+            isLoading.value = true
+            try {
+                val res = userRepository.resetPasswordEmail(customerId)
+                res.onSuccess {
+                    statusMessage.value = it
+                }.onFailure {
+                    errorMessage.value = it.localizedMessage ?: "Failed to send reset email"
+                }
+            } catch (e: Exception) {
+                errorMessage.value = e.localizedMessage
+            } finally {
+                isLoading.value = false
+            }
+        }
+    }
+
+    fun setManualPassword(customerId: String, newPass: String, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            isLoading.value = true
+            try {
+                val res = userRepository.manualPasswordReset(customerId, newPass)
+                res.onSuccess {
+                    statusMessage.value = it
+                    onSuccess()
+                }.onFailure {
+                    errorMessage.value = it.localizedMessage ?: "Failed to update password"
+                }
+            } catch (e: Exception) {
+                errorMessage.value = e.localizedMessage
+            } finally {
+                isLoading.value = false
+            }
+        }
+    }
+
+    fun clearMessages() {
+        statusMessage.value = null
+        errorMessage.value = null
     }
 }

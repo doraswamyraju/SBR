@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -53,6 +54,8 @@ class CredentialManager @Inject constructor(@ApplicationContext context: Context
     val savedUserPhone = credentialDataStore.data.map { preferences ->
         preferences[KEY_USER_PHONE] ?: ""
     }
+
+    suspend fun getUserId(): String = savedUserId.first()
 
     // Save functions
     suspend fun saveEmail(email: String) {

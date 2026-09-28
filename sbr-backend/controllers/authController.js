@@ -1,5 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const crypto = require('crypto');
+const { sendPasswordResetEmail } = require('../utils/emailHelper');
 
 // Helper to generate JWT token
 const generateToken = (id) => {
@@ -156,6 +158,39 @@ exports.logout = async (req, res) => {
     }
 
     res.status(200).json({ success: true, data: 'Logged out successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Forgot Password (Public) - Generates temporary password and sends email
+// @route   POST /api/auth/forgot-password
+// @access  Public
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, error: 'Please provide an email address' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'No account registered with this email address' });
+    }
+
+    // Generate clean temporary password e.g. SBR@4892
+    const randomDigits = Math.floor(1000 + Math.random() * 9000);
+    const tempPassword = `SBR@${randomDigits}`;
+
+    user.password = tempPassword;
+    await user.save();
+
+    await sendPasswordResetEmail(user.email, user.name, tempPassword, user.role);
+
+    res.status(200).json({
+      success: true,
+      message: 'A temporary password has been sent to your email address.'
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

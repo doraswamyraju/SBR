@@ -69,12 +69,12 @@ class AgentInventoryViewModel @Inject constructor(
         }
     }
 
-    fun submitIndent(productId: String, name: String, sku: String?, qty: Int, remarks: String) {
+    fun submitIndent(productId: String, name: String, sku: String?, qty: Int, urgency: String = "Normal", remarks: String) {
         viewModelScope.launch {
             try {
                 val req = CreateIndentRequest(
                     items = listOf(CreateIndentItemDto(productId, name, sku, qty)),
-                    urgency = "HIGH",
+                    urgency = urgency.uppercase(),
                     agentRemarks = remarks
                 )
                 val res = apiService.createIndent(req)
@@ -86,6 +86,7 @@ class AgentInventoryViewModel @Inject constructor(
             }
         }
     }
+
 }
 
 @Composable
@@ -102,6 +103,7 @@ fun AgentInventoryScreen(
 
     var selectedProductId by remember { mutableStateOf("") }
     var quantityText by remember { mutableStateOf("1") }
+    var selectedUrgency by remember { mutableStateOf("Normal") }
     var remarksText by remember { mutableStateOf("") }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -328,6 +330,22 @@ fun AgentInventoryScreen(
                         singleLine = true
                     )
 
+                    Column {
+                        Text("Urgency Level:", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(top = 4.dp)
+                        ) {
+                            listOf("Normal", "Urgent", "Emergency").forEach { u ->
+                                FilterChip(
+                                    selected = selectedUrgency == u,
+                                    onClick = { selectedUrgency = u },
+                                    label = { Text(u, fontSize = 11.sp) }
+                                )
+                            }
+                        }
+                    }
+
                     OutlinedTextField(
                         value = remarksText,
                         onValueChange = { remarksText = it },
@@ -341,9 +359,10 @@ fun AgentInventoryScreen(
                         val prod = products.find { it.id == selectedProductId }
                         if (prod != null) {
                             val qty = quantityText.toIntOrNull() ?: 1
-                            viewModel.submitIndent(prod.id, prod.name, prod.sku, qty, remarksText)
+                            viewModel.submitIndent(prod.id, prod.name, prod.sku, qty, selectedUrgency, remarksText)
                             showIndentDialog = false
                             selectedProductId = ""
+                            selectedUrgency = "Normal"
                             remarksText = ""
                         }
                     },
@@ -352,6 +371,7 @@ fun AgentInventoryScreen(
                     Text("Submit Requisition")
                 }
             },
+
             dismissButton = {
                 TextButton(onClick = { showIndentDialog = false }) {
                     Text("Cancel")

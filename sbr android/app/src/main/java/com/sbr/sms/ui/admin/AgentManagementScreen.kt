@@ -20,8 +20,10 @@ import com.sbr.sms.ui.admin.viewmodels.AgentManagementViewModel
 @Composable
 fun AgentManagementScreen(
     navController: NavHostController,
-    viewModel: AgentManagementViewModel = hiltViewModel()
+    viewModel: AgentManagementViewModel = hiltViewModel(),
+    isAdmin: Boolean = true
 ) {
+
     val agents by viewModel.agents.collectAsState()
     var filterSelection by remember { mutableStateOf("All") }
 
@@ -41,18 +43,19 @@ fun AgentManagementScreen(
                 .padding(16.dp)
         ) {
             // --- THE FIX IS HERE ---
-            // The "Import Agents" button has been removed. Only the correct "Add Agent" button remains.
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp)
-            ) {
-                Button(onClick = { navController.navigate(AppRoutes.AddAgent.route) }) {
-                    Text("Add New Agent")
+            if (isAdmin) {
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
+                ) {
+                    Button(onClick = { navController.navigate(AppRoutes.AddAgent.route) }) {
+                        Text("Add New Agent")
+                    }
                 }
             }
-            // --- END OF FIX ---
+
 
             // Filter Chips for agent status
             Row(
@@ -75,7 +78,7 @@ fun AgentManagementScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(filteredAgents, key = { it.id }) { agent ->
-                        AgentCard(agent, navController, viewModel)
+                        AgentCard(agent, navController, viewModel, isAdmin)
                     }
                 }
             }
@@ -100,7 +103,8 @@ fun FilterChip(
 fun AgentCard(
     user: User,
     navController: NavHostController,
-    viewModel: AgentManagementViewModel
+    viewModel: AgentManagementViewModel,
+    isAdmin: Boolean = true
 ) {
     // We only display the card if the user is confirmed to be an Agent
     if (user is Agent) {
@@ -109,30 +113,44 @@ fun AgentCard(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .clickable {
-                            navController.currentBackStackEntry?.savedStateHandle?.set("selectedAgent", user)
-                            navController.navigate(AppRoutes.AgentDetails.route)
-                        }
+                        .then(
+                            if (isAdmin) {
+                                Modifier.clickable {
+                                    navController.currentBackStackEntry?.savedStateHandle?.set("selectedAgent", user)
+                                    navController.navigate(AppRoutes.AgentDetails.route)
+                                }
+                            } else Modifier
+                        )
                 ) {
-                    Text("Name: ${user.name}", style = MaterialTheme.typography.titleMedium)
+                    Text("Name: ${user.name}", style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                     Text("Phone: ${user.phone ?: "N/A"}", style = MaterialTheme.typography.bodyMedium)
-                    Text("Location: ${user.location ?: "Unknown"}", style = MaterialTheme.typography.bodyMedium)
-                    Text("Status: ${user.status}", style = MaterialTheme.typography.bodyMedium)
-                }
-                // Toggle Switch to activate/deactivate the agent
-                Switch(
-                    checked = user.status == "Active",
-                    onCheckedChange = { isChecked ->
-                        viewModel.toggleAgentStatus(user, isChecked)
+                    user.specialization?.let {
+                        Text("Specialization: $it", style = MaterialTheme.typography.bodySmall)
                     }
-                )
+                    Text("Location: ${user.location ?: "Unknown"}", style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        "Status: ${user.status}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (user.status == "Active") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                    )
+                }
+                if (isAdmin) {
+                    // Toggle Switch to activate/deactivate the agent (Admin only)
+                    Switch(
+                        checked = user.status == "Active",
+                        onCheckedChange = { isChecked ->
+                            viewModel.toggleAgentStatus(user, isChecked)
+                        }
+                    )
+                }
             }
         }
     }
 }
+

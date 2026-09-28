@@ -43,7 +43,8 @@ import javax.inject.Inject
 @HiltViewModel
 class StoreInchargeViewModel @Inject constructor(
     private val apiService: ApiService,
-    private val credentialManager: com.sbr.sms.data.CredentialManager
+    private val credentialManager: com.sbr.sms.data.CredentialManager,
+    private val serviceRequestRepository: com.sbr.sms.data.repositories.ServiceRequestRepository
 ) : ViewModel() {
     val requests = MutableStateFlow<List<ServiceRequest>>(emptyList())
     val agents = MutableStateFlow<List<UserDto>>(emptyList())
@@ -64,24 +65,8 @@ class StoreInchargeViewModel @Inject constructor(
         viewModelScope.launch {
             isLoading.value = true
             try {
-                val reqRes = apiService.getRequests()
-                if (reqRes.isSuccessful && reqRes.body()?.success == true) {
-                    val dtos = reqRes.body()?.data ?: emptyList()
-                    requests.value = dtos.map { dto ->
-                        val agentId = when (val agent = dto.assignedAgentId) {
-                            is String -> agent
-                            is Map<*, *> -> (agent["id"] ?: agent["_id"]) as? String
-                            else -> null
-                        }
-                        ServiceRequest(
-                            id = dto.id,
-                            serviceType = dto.serviceType,
-                            customerAddress = dto.customerAddress,
-                            status = dto.status,
-                            assignedAgentId = agentId
-                        )
-                    }
-                }
+                requests.value = serviceRequestRepository.getAllRequests()
+
 
                 val usersRes = apiService.getAllUsers()
                 if (usersRes.isSuccessful && usersRes.body()?.success == true) {

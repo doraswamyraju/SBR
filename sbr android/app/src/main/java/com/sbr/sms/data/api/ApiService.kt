@@ -14,6 +14,9 @@ interface ApiService {
     @POST("api/auth/login")
     suspend fun login(@Body request: LoginRequest): Response<AuthResponse>
 
+    @POST("api/auth/forgot-password")
+    suspend fun forgotPassword(@Body body: Map<String, String>): Response<ApiResponse<String>>
+
     @POST("api/auth/logout")
     suspend fun logout(@Body body: Map<String, String>): Response<ApiResponse<String>>
 
@@ -38,6 +41,19 @@ interface ApiService {
 
     @DELETE("api/users/{id}")
     suspend fun deleteUser(@Path("id") id: String): Response<ApiResponse<Map<String, Any>>>
+
+    @POST("api/users/fcm-token")
+    suspend fun updateFcmToken(@Body body: Map<String, String>): Response<ApiResponse<List<String>>>
+
+    @POST("api/users/{id}/reset-password-email")
+    suspend fun resetPasswordEmail(@Path("id") id: String): Response<ApiResponse<Map<String, Any>>>
+
+    @POST("api/users/{id}/manual-password")
+    suspend fun manualPasswordReset(
+        @Path("id") id: String,
+        @Body body: Map<String, String>
+    ): Response<ApiResponse<Map<String, Any>>>
+
 
     // Service Request endpoints
     @POST("api/requests")

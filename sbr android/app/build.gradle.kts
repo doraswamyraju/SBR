@@ -98,6 +98,8 @@ dependencies {
     implementation(libs.retrofit.converter.gson)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
+    implementation(libs.socket.io.client)
+
 
     // Security (EncryptedSharedPreferences)
     implementation(libs.androidx.security.crypto)

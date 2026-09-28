@@ -1,10 +1,17 @@
 package com.sbr.sms.ui.customer
 
+import android.content.Intent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.Share
+import com.sbr.sms.utils.InvoicePdfGenerator
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -12,8 +19,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.sbr.sms.data.models.ServiceRequest
@@ -148,36 +158,157 @@ private fun PaymentHistoryItem(
     request: ServiceRequest,
     onViewDetails: () -> Unit
 ) {
-    val dateFormatter = remember { SimpleDateFormat("dd MMM, yyyy", Locale.getDefault()) }
+    val context = LocalContext.current
+    val dateFormatter = remember { SimpleDateFormat("dd MMM, yyyy - hh:mm a", Locale.getDefault()) }
     val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("en", "IN")) }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+    fun shareReceipt() {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "SBR Services - Payment Receipt #${request.id.takeLast(8)}")
+            putExtra(
+                Intent.EXTRA_TEXT,
+                """
+                |━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                |  SBR SERVICES PAYMENT RECEIPT
+                |━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                |Receipt / Request ID: #${request.id.takeLast(8).uppercase()}
+                |Service: ${request.serviceType}
+                |Amount Paid: ${currencyFormat.format(request.paymentAmount ?: 0.0)}
+                |Payment Method: ${request.paymentMethod ?: "Online"}
+                |Date: ${request.paymentTimestamp?.let { dateFormatter.format(it) } ?: "N/A"}
+                |Status: PAID / COMPLETED
+                |━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                |Thank you for choosing SBR Services!
+                |Tirupati, Andhra Pradesh
+                """.trimMargin()
+            )
+        }
+        context.startActivity(Intent.createChooser(shareIntent, "Share Payment Receipt"))
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Icon(Icons.Default.CreditCard, contentDescription = "Payment", tint = MaterialTheme.colorScheme.primary)
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = request.serviceType,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = request.paymentTimestamp?.let { dateFormatter.format(it) } ?: "N/A",
-                    style = MaterialTheme.typography.bodySmall
-                )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.CreditCard,
+                            contentDescription = "Payment",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = request.serviceType,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Ref #${request.id.takeLast(8).uppercase()}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = Color(0xFFE8F5E9),
+                    contentColor = Color(0xFF2E7D32)
+                ) {
+                    Text(
+                        text = "PAID",
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 11.sp,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
             }
-            Column(horizontalAlignment = Alignment.End) {
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Paid via ${request.paymentMethod ?: "Online"}",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = request.paymentTimestamp?.let { dateFormatter.format(it) } ?: "N/A",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.Gray
+                    )
+                }
+
                 Text(
                     text = currencyFormat.format(request.paymentAmount ?: 0.0),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF2E7D32)
                 )
-                Button(onClick = onViewDetails, contentPadding = PaddingValues(horizontal = 12.dp)) {
-                    Text("Details")
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                FilledTonalButton(
+                    onClick = { InvoicePdfGenerator.generateAndOpenInvoice(context, request) },
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("PDF Invoice", fontSize = 11.sp)
+                }
+                Spacer(modifier = Modifier.width(6.dp))
+                OutlinedButton(
+                    onClick = { shareReceipt() },
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Share", fontSize = 11.sp)
+                }
+                Spacer(modifier = Modifier.width(6.dp))
+                Button(
+                    onClick = onViewDetails,
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Details", fontSize = 11.sp)
                 }
             }
         }

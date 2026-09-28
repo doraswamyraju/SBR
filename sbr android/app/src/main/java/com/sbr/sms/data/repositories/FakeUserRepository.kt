@@ -97,4 +97,20 @@ class FakeUserRepository : UserRepository {
     override suspend fun deleteProfile(): Boolean {
         return true
     }
-}
+
+    override suspend fun updateFcmToken(token: String): Boolean {
+        return true
+    }
+
+    override suspend fun resetPasswordEmail(userId: String): Result<String> {
+        return Result.success("Password reset email sent (Mock)")
+    }
+
+    override suspend fun manualPasswordReset(userId: String, newPassword: String): Result<String> {
+        return Result.success("Password reset successfully (Mock)")
+    }
+
+    override suspend fun forgotPassword(email: String): Result<String> {
+        return Result.success("Temporary password sent to $email (Mock)")
+    }
+}

@@ -194,9 +194,8 @@ fun StoreInchargePanelScreen(
                     StoreInchargeSection.LiveMap -> AdminMultiAgentMapScreen(
                         navController = navController
                     )
-                    StoreInchargeSection.Technicians -> AgentManagementScreen(
-                        navController = navController
-                    )
+                    StoreInchargeSection.Technicians -> StoreTechnicianDirectoryScreen()
+
                     StoreInchargeSection.Products -> ProductsCatalogScreen(
                         isAdmin = false
                     )

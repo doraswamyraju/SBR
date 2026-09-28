@@ -166,25 +166,54 @@ fun PendingIndentsTab(
     onDispatch: (String) -> Unit,
     onRejectClick: (AgentIndent) -> Unit
 ) {
-    if (indents.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(Icons.Default.CheckCircleOutline, contentDescription = null, modifier = Modifier.size(48.dp), tint = Color(0xFF16A34A))
-                Text("All parts requisitions are fulfilled!", style = MaterialTheme.typography.bodyLarge, color = Color.Gray)
+    var urgencyFilter by remember { mutableStateOf("All") }
+
+    val filteredIndents = remember(indents, urgencyFilter) {
+        if (urgencyFilter == "All") {
+            indents
+        } else {
+            indents.filter {
+                it.urgency?.contains(urgencyFilter, ignoreCase = true) == true ||
+                (urgencyFilter == "Normal" && (it.urgency.isNullOrBlank() || it.urgency.equals("LOW", ignoreCase = true) || it.urgency.equals("MEDIUM", ignoreCase = true)))
             }
         }
-    } else {
-        LazyColumn(
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(indents, key = { it._id }) { ind ->
-                val urgency = ind.urgency?.uppercase() ?: "MEDIUM"
+            listOf("All", "Emergency", "Urgent", "Normal").forEach { u ->
+                FilterChip(
+                    selected = urgencyFilter == u,
+                    onClick = { urgencyFilter = u },
+                    label = { Text(u) }
+                )
+            }
+        }
+
+        if (filteredIndents.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(Icons.Default.CheckCircleOutline, contentDescription = null, modifier = Modifier.size(48.dp), tint = Color(0xFF16A34A))
+                    Text("No requisitions matching selected urgency filter.", style = MaterialTheme.typography.bodyLarge, color = Color.Gray)
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(filteredIndents, key = { it._id }) { ind ->
+                    val urgency = ind.urgency?.uppercase() ?: "MEDIUM"
                 val (uBg, uFg) = when (urgency) {
                     "HIGH", "CRITICAL" -> Color(0xFFFEE2E2) to Color(0xFFDC2626)
                     "LOW" -> Color(0xFFE0F2FE) to Color(0xFF0284C7)
@@ -285,6 +314,7 @@ fun PendingIndentsTab(
             }
         }
     }
+}
 }
 
 @Composable

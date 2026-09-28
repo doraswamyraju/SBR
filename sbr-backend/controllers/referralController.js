@@ -2,6 +2,8 @@ const Referral = require('../models/Referral');
 const User = require('../models/User');
 const Product = require('../models/Product');
 const ReferralClaim = require('../models/ReferralClaim');
+const { sendPushNotification } = require('../utils/notificationHelper');
+const { sendReferralRewardEmail, sendReferralPayoutEmail } = require('../utils/emailHelper');
 
 // Helper to generate unique referral code
 const generateReferralCode = (name) => {
@@ -181,11 +183,36 @@ exports.updateReferralStatus = async (req, res) => {
 
     await referral.save();
 
-    // If status transitioned to 'Reward Credited', credit user's totalReferralEarnings
+    // If status transitioned to 'Reward Credited', credit user's totalReferralEarnings and notify
     if (status === 'Reward Credited' && prevStatus !== 'Reward Credited') {
-      await User.findByIdAndUpdate(referral.referrerId, {
+      const updatedUser = await User.findByIdAndUpdate(referral.referrerId, {
         $inc: { totalReferralEarnings: referral.rewardAmount }
-      });
+      }, { new: true });
+
+      if (updatedUser) {
+        // Send Push Notification (PN-17)
+        sendPushNotification(
+          updatedUser,
+          'Referral Reward Credited! 🎉',
+          `Your friend ${referral.refereeName} purchased! ₹${referral.rewardAmount} added to your rewards wallet`,
+          {
+            type: 'referral_earned',
+            referralId: String(referral._id),
+            rewardAmount: String(referral.rewardAmount)
+          }
+        ).catch(err => console.error('Error sending referral push:', err.message));
+
+        // Send Email (EM-10)
+        if (updatedUser.email) {
+          sendReferralRewardEmail(
+            updatedUser.email,
+            updatedUser.name,
+            referral.refereeName,
+            referral.rewardAmount,
+            updatedUser.totalReferralEarnings || referral.rewardAmount
+          ).catch(err => console.error('Error sending referral email:', err.message));
+        }
+      }
     }
 
     res.status(200).json({
@@ -240,6 +267,22 @@ exports.requestPayoutClaim = async (req, res) => {
       status: 'Pending'
     });
 
+    // Notify Admins of new payout claim
+    try {
+      const admins = await User.find({ role: 'ADMIN' });
+      for (const admin of admins) {
+        sendPushNotification(
+          admin,
+          'New Referral Payout Claim',
+          `${user.name} requested ₹${numAmount} payout via ${payoutMethod || 'UPI'}`,
+          {
+            type: 'claim_requested',
+            claimId: String(newClaim._id)
+          }
+        ).catch(() => {});
+      }
+    } catch (_err) {}
+
     res.status(201).json({
       success: true,
       message: 'Payout claim request submitted successfully!',
@@ -289,11 +332,36 @@ exports.updateClaimStatus = async (req, res) => {
 
     await claim.save();
 
-    // When status changes to 'Paid', increment user's claimedEarnings
+    // When status changes to 'Paid', increment user's claimedEarnings and notify customer
     if (status === 'Paid' && prevStatus !== 'Paid') {
-      await User.findByIdAndUpdate(claim.userId, {
+      const updatedUser = await User.findByIdAndUpdate(claim.userId, {
         $inc: { claimedEarnings: claim.amount }
-      });
+      }, { new: true });
+
+      if (updatedUser) {
+        // Send Push Notification (PN-18)
+        sendPushNotification(
+          updatedUser,
+          'Reward Payout Transferred 💸',
+          `₹${claim.amount} transferred via ${claim.payoutMethod}. Ref / UTR: ${claim.transactionRef || 'Completed'}`,
+          {
+            type: 'claim_paid',
+            claimId: String(claim._id),
+            amount: String(claim.amount)
+          }
+        ).catch(err => console.error('Error sending claim push:', err.message));
+
+        // Send Email (EM-11)
+        if (updatedUser.email) {
+          sendReferralPayoutEmail(
+            updatedUser.email,
+            updatedUser.name,
+            claim.amount,
+            claim.payoutMethod,
+            claim.transactionRef
+          ).catch(err => console.error('Error sending claim payout email:', err.message));
+        }
+      }
     }
 
     res.status(200).json({

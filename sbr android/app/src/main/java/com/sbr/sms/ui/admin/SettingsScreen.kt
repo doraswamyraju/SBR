@@ -48,6 +48,8 @@ class AdminSettingsViewModel @Inject constructor(
                 if (res.isSuccessful && res.body()?.data != null) {
                     val settings = res.body()!!.data!!
                     settings["reviewUrl"]?.let { reviewUrl.value = it }
+                    settings["supportPhone"]?.let { supportPhone.value = it }
+                    settings["supportEmail"]?.let { supportEmail.value = it }
                 }
             } catch (e: Exception) {
                 // Keep default
@@ -61,17 +63,15 @@ class AdminSettingsViewModel @Inject constructor(
         viewModelScope.launch {
             isLoading.value = true
             try {
-                val body = mapOf("key" to "reviewUrl", "value" to url)
-                val res = apiService.updateSettings(body)
-                if (res.isSuccessful) {
-                    reviewUrl.value = url
-                    supportPhone.value = phone
-                    supportEmail.value = email
-                    saveMessage.value = "Settings saved successfully!"
-                    onComplete(true, "Settings saved successfully!")
-                } else {
-                    onComplete(false, "Failed to save settings.")
-                }
+                apiService.updateSettings(mapOf("key" to "reviewUrl", "value" to url))
+                apiService.updateSettings(mapOf("key" to "supportPhone", "value" to phone))
+                apiService.updateSettings(mapOf("key" to "supportEmail", "value" to email))
+
+                reviewUrl.value = url
+                supportPhone.value = phone
+                supportEmail.value = email
+                saveMessage.value = "Settings saved successfully!"
+                onComplete(true, "Settings saved successfully!")
             } catch (e: Exception) {
                 saveMessage.value = e.localizedMessage
                 onComplete(false, e.localizedMessage ?: "Failed to save settings")
@@ -81,6 +81,7 @@ class AdminSettingsViewModel @Inject constructor(
         }
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

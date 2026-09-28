@@ -14,11 +14,11 @@ import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 sealed interface RequestDetailUiState {
     object Loading : RequestDetailUiState
-    // NEW: The Success state now includes the role of the person viewing the screen.
     data class Success(
         val request: ServiceRequest,
         val agent: Agent?,
@@ -31,14 +31,17 @@ sealed interface RequestDetailUiState {
 @HiltViewModel
 @OptIn(ExperimentalCoroutinesApi::class)
 class RequestDetailViewModel @Inject constructor(
-    serviceRequestRepository: ServiceRequestRepository,
+    private val serviceRequestRepository: ServiceRequestRepository,
     private val userRepository: UserRepository,
-    // NEW: Inject FirebaseAuth to get the current user's ID.
     private val auth: FirebaseAuth,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val requestId: String = checkNotNull(savedStateHandle["requestId"])
+    val requestId: String = checkNotNull(savedStateHandle["requestId"])
+
+    val availableAgents: StateFlow<List<Agent>> = userRepository.getAllUsersFlow()
+        .map { users -> users.filterIsInstance<Agent>() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val uiState: StateFlow<RequestDetailUiState> =
         serviceRequestRepository.getRequestStreamById(requestId)
@@ -46,15 +49,12 @@ class RequestDetailViewModel @Inject constructor(
                 if (request == null) {
                     flowOf(RequestDetailUiState.Error("Request not found or has been deleted."))
                 } else {
-                    // Get the ID of the currently logged-in user.
                     val viewerId = auth.currentUser?.uid
 
-                    // Create flows to fetch the agent, customer, and viewer's role data.
                     val agentFlow = flow { emit(userRepository.getUser(request.assignedAgentId ?: "") as? Agent) }
                     val customerFlow = flow { emit(userRepository.getUser(request.customerId)) }
                     val viewerFlow = flow { emit(userRepository.getUser(viewerId ?: "")?.role) }
 
-                    // Combine all data streams into one final UI state.
                     combine(agentFlow, customerFlow, viewerFlow) { agent, customer, viewerRole ->
                         RequestDetailUiState.Success(request, agent, customer, viewerRole) as RequestDetailUiState
                     }
@@ -67,4 +67,15 @@ class RequestDetailViewModel @Inject constructor(
                 started = SharingStarted.WhileSubscribed(5000),
                 initialValue = RequestDetailUiState.Loading
             )
+
+    fun reassignTechnician(agentId: String, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                serviceRequestRepository.assignRequest(requestId, agentId)
+                onSuccess()
+            } catch (e: Exception) {
+                Log.e("RequestDetailVM", "Failed to assign technician", e)
+            }
+        }
+    }
 }

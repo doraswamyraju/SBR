@@ -18,4 +18,8 @@ interface UserRepository {
     suspend fun signup(name: String, email: String, password: String, role: String): User?
     suspend fun logout()
     suspend fun deleteProfile(): Boolean
-}
+    suspend fun updateFcmToken(token: String): Boolean
+    suspend fun resetPasswordEmail(userId: String): Result<String>
+    suspend fun manualPasswordReset(userId: String, newPassword: String): Result<String>
+    suspend fun forgotPassword(email: String): Result<String>
+}

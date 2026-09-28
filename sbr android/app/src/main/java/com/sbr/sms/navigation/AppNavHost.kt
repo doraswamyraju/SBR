@@ -68,9 +68,22 @@ sealed class AppRoutes(val route: String) {
 }
 
 @Composable
-fun AppNavHost(viewModel: AuthViewModel = hiltViewModel()) {
+fun AppNavHost(
+    viewModel: AuthViewModel = hiltViewModel(),
+    deepLinkRoute: String? = null,
+    onDeepLinkHandled: () -> Unit = {}
+) {
     val navController = rememberNavController()
     val authState by viewModel.authState.collectAsState()
+
+    LaunchedEffect(authState, deepLinkRoute) {
+        if (authState is AuthState.Authenticated && !deepLinkRoute.isNullOrBlank()) {
+            try {
+                navController.navigate(deepLinkRoute)
+                onDeepLinkHandled()
+            } catch (_: Exception) {}
+        }
+    }
 
     LaunchedEffect(authState) {
         if (authState is AuthState.Unauthenticated) {

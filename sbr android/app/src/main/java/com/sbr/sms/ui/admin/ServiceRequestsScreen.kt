@@ -32,7 +32,11 @@ fun ServiceRequestsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
+    var selectedStatusFilter by remember { mutableStateOf("All") }
     var requestToDelete by remember { mutableStateOf<UiRequest?>(null) }
+
+    val statusFilters = listOf("All", "Pending", "Assigned", "In Progress", "Completed", "Cancelled")
+
 
     if (requestToDelete != null) {
         AlertDialog(
@@ -77,11 +81,25 @@ fun ServiceRequestsScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                label = { Text("Search by service, agent, or status") },
+                label = { Text("Search by service, agent, address, ID...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(10.dp))
+
+            androidx.compose.foundation.lazy.LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(statusFilters) { filter ->
+                    FilterChip(
+                        selected = selectedStatusFilter == filter,
+                        onClick = { selectedStatusFilter = filter },
+                        label = { Text(filter, fontWeight = FontWeight.SemiBold) }
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
 
             when (val state = uiState) {
                 is ServiceRequestUiState.Loading -> {
@@ -95,11 +113,21 @@ fun ServiceRequestsScreen(
                     }
                 }
                 is ServiceRequestUiState.Success -> {
-                    val filteredRequests = state.uiRequests.filter {
-                        it.request.serviceType.contains(searchQuery, ignoreCase = true) ||
-                                it.agentName.contains(searchQuery, ignoreCase = true) ||
-                                it.request.status.contains(searchQuery, ignoreCase = true)
+                    val filteredRequests = state.uiRequests.filter { uiReq ->
+                        val matchesStatus = when (selectedStatusFilter) {
+                            "All" -> true
+                            "Pending" -> uiReq.request.status.equals("Pending", ignoreCase = true) || uiReq.request.assignedAgentId.isNullOrBlank()
+                            else -> uiReq.request.status.equals(selectedStatusFilter, ignoreCase = true)
+                        }
+                        val matchesSearch = searchQuery.isBlank() ||
+                                uiReq.request.serviceType.contains(searchQuery, ignoreCase = true) ||
+                                uiReq.agentName.contains(searchQuery, ignoreCase = true) ||
+                                uiReq.request.customerAddress.contains(searchQuery, ignoreCase = true) ||
+                                uiReq.request.id.contains(searchQuery, ignoreCase = true)
+
+                        matchesStatus && matchesSearch
                     }
+
 
                     if (filteredRequests.isEmpty()) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

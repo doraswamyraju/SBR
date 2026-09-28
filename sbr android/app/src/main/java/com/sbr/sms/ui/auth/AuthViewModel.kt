@@ -107,7 +107,24 @@ class AuthViewModel @Inject constructor(
     }
 
     fun sendPasswordReset(email: String) {
-        snackbarMessage = "Password reset feature is not configured for email on the self-hosted backend. Please contact Sri Balaji Renewables Admin."
+        if (email.isBlank()) {
+            snackbarMessage = "Please enter your registered email address."
+            return
+        }
+        isLoading = true
+        viewModelScope.launch {
+            try {
+                val result = userRepository.forgotPassword(email.trim())
+                result.fold(
+                    onSuccess = { msg -> snackbarMessage = msg },
+                    onFailure = { err -> snackbarMessage = err.message ?: "Failed to send reset email." }
+                )
+            } catch (e: Exception) {
+                snackbarMessage = e.message ?: "Failed to send reset email."
+            } finally {
+                isLoading = false
+            }
+        }
     }
 
     fun logout() {

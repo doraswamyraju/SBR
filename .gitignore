@@ -24,8 +24,9 @@ captures/
 .externalNativeBuild/
 .cxx/
 *.apk
-*.aar
 *.jar
+!gradle-wrapper.jar
+!**/gradle-wrapper.jar
 
 # Logs and system generated
 *.log

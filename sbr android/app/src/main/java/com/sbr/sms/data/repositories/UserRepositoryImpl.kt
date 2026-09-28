@@ -314,6 +314,14 @@ class UserRepositoryImpl @Inject constructor(
                         email = user.email ?: email,
                         phone = authBody.user.phone ?: ""
                     )
+                    try {
+                        val fcmToken = com.google.firebase.messaging.FirebaseMessaging.getInstance().token.await()
+                        if (!fcmToken.isNullOrBlank()) {
+                            updateFcmToken(fcmToken)
+                        }
+                    } catch (e: Exception) {
+                        Log.w(tag, "FCM token registration skipped on signup", e)
+                    }
                     return user
                 }
             }
@@ -353,4 +361,62 @@ class UserRepositoryImpl @Inject constructor(
             false
         }
     }
-}
+
+    override suspend fun updateFcmToken(token: String): Boolean {
+        return try {
+            val response = apiService.updateFcmToken(mapOf("fcmToken" to token))
+            if (response.isSuccessful && response.body()?.success == true) {
+                Log.d(tag, "FCM token updated successfully on server")
+                true
+            } else {
+                Log.e(tag, "Failed to update FCM token: ${response.errorBody()?.string()}")
+                false
+            }
+        } catch (e: Exception) {
+            Log.e(tag, "Exception updating FCM token", e)
+            false
+        }
+    }
+
+    override suspend fun resetPasswordEmail(userId: String): Result<String> {
+        return try {
+            val response = apiService.resetPasswordEmail(userId)
+            if (response.isSuccessful && response.body()?.success == true) {
+                Result.success("Password reset email sent successfully.")
+            } else {
+                val err = response.errorBody()?.string() ?: "Failed to send reset email"
+                Result.failure(Exception(err))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun manualPasswordReset(userId: String, newPassword: String): Result<String> {
+        return try {
+            val response = apiService.manualPasswordReset(userId, mapOf("newPassword" to newPassword))
+            if (response.isSuccessful && response.body()?.success == true) {
+                Result.success("Password updated successfully.")
+            } else {
+                val err = response.errorBody()?.string() ?: "Failed to reset password"
+                Result.failure(Exception(err))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun forgotPassword(email: String): Result<String> {
+        return try {
+            val response = apiService.forgotPassword(mapOf("email" to email))
+            if (response.isSuccessful && response.body()?.success == true) {
+                Result.success("Temporary password sent to your email address.")
+            } else {
+                val err = response.errorBody()?.string() ?: "Failed to process forgot password"
+                Result.failure(Exception(err))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+}

@@ -2,7 +2,14 @@ const ServiceRequest = require('../models/ServiceRequest');
 const User = require('../models/User');
 const Referral = require('../models/Referral');
 const Product = require('../models/Product');
-const { sendNotificationToUser } = require('../utils/notificationHelper');
+const { sendNotificationToUser, sendNotificationToRole } = require('../utils/notificationHelper');
+const { emitSocketEvent } = require('../utils/socketHelper');
+const {
+  sendReviewEmail,
+  sendTicketConfirmationEmail,
+  sendAgentAssignedEmail,
+  sendServiceCompletedInvoiceEmail
+} = require('../utils/emailHelper');
 
 
 // @desc    Create a new service request
@@ -31,20 +38,31 @@ exports.createRequest = async (req, res) => {
       .populate('customerId', 'name email role phone address photoUrl isRecurring nextServiceDate')
       .populate('assignedAgentId', 'name email role phone specialization location status rating completedJobs');
 
-    // Notify Admins about new request
-    const admins = await User.find({ role: 'ADMIN' });
-    admins.forEach(admin => {
-      sendNotificationToUser(admin._id, {
-        title: 'New Service Request',
-        body: `A new request for ${serviceType} has been submitted.`
-      });
+    // Notify Admins and Store In-Charges about new request
+    await sendNotificationToRole(['ADMIN', 'STORE_INCHARGE'], {
+      title: 'New Service Request',
+      body: `A new request for ${serviceType} at ${customerAddress} has been submitted.`,
+      data: {
+        requestId: String(request._id),
+        type: 'REQUEST_CREATED'
+      }
     });
+
+    // Send confirmation email to Customer
+    if (request.customerId && request.customerId.email) {
+      sendTicketConfirmationEmail(request.customerId.email, request.customerId.name, request);
+    }
+
+    // Broadcast real-time Socket.IO events to Admin and Store In-Charge
+    emitSocketEvent('role:ADMIN', 'request:created', request);
+    emitSocketEvent('role:STORE_INCHARGE', 'request:created', request);
 
     res.status(201).json({ success: true, data: request });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 };
+
 
 // @desc    Get list of service requests (Filtered by User Role)
 // @route   GET /api/requests
@@ -174,16 +192,50 @@ exports.assignRequest = async (req, res) => {
     // Notify Agent
     sendNotificationToUser(agentId, {
       title: 'New Service Request Assigned',
-      body: `You have been assigned to service request #${request._id}`
+      body: `You have been assigned to service request #${String(request._id).slice(-6).toUpperCase()}`,
+      data: {
+        requestId: String(request._id),
+        type: 'REQUEST_ASSIGNED'
+      }
     });
 
     // Notify Customer
-    sendNotificationToUser(request.customerId, {
-      title: 'Agent Assigned to Your Request',
-      body: `${agent.name} has been assigned to your request.`
+    if (request.customerId) {
+      const customerUserId = request.customerId._id || request.customerId;
+      sendNotificationToUser(customerUserId, {
+        title: 'Technician Assigned',
+        body: `${agent.name} has been assigned to your service request #${String(request._id).slice(-6).toUpperCase()}.`,
+        data: {
+          requestId: String(request._id),
+          type: 'REQUEST_ASSIGNED'
+        }
+      });
+
+      // Send email to customer
+      if (request.customerId.email) {
+        sendAgentAssignedEmail(
+          request.customerId.email,
+          request.customerId.name,
+          agent.name,
+          agent.phone,
+          request
+        );
+      }
+    }
+
+    // Broadcast real-time Socket.IO events
+    emitSocketEvent(`request:${request._id}`, 'request:status:update', {
+      requestId: String(request._id),
+      status: 'Assigned',
+      assignedAgentId: agentId,
+      agentName: agent.name
     });
+    emitSocketEvent(`agent:${agentId}`, 'request:assigned', request);
+    emitSocketEvent('role:ADMIN', 'request:assigned', request);
+    emitSocketEvent('role:STORE_INCHARGE', 'request:assigned', request);
 
     res.status(200).json({ success: true, data: request });
+
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -313,28 +365,66 @@ exports.updateRequestStatus = async (req, res) => {
       .populate('customerId', 'name email role phone address photoUrl isRecurring nextServiceDate')
       .populate('assignedAgentId', 'name email role phone specialization location status rating completedJobs');
 
-    // Notify Customer of status update
-    sendNotificationToUser(request.customerId, {
-      title: 'Service Request Status Updated',
-      body: `Your service request is now: ${status}`
-    });
+    // Resolve role-tailored push notification for Customer
+    let customerNotifTitle = 'Service Request Update';
+    let customerNotifBody = `Your service request #${String(request._id).slice(-6).toUpperCase()} is now: ${status}`;
 
-    // Notify Admins when request is Completed
-    if (status === 'Completed') {
-      const admins = await User.find({ role: 'ADMIN' });
-      admins.forEach(admin => {
-        sendNotificationToUser(admin._id, {
-          title: 'Service Request Completed',
-          body: `Service request #${request._id} has been completed by ${request.assignedAgentId?.name || 'Agent'} and is awaiting review.`
-        });
+    if (status === 'Accepted') {
+      customerNotifTitle = 'Technician En Route';
+      customerNotifBody = `${request.assignedAgentId?.name || 'Your technician'} has accepted the request and is heading to your location.`;
+    } else if (status === 'In Progress') {
+      customerNotifTitle = 'Service In Progress';
+      customerNotifBody = `Work has begun on your service request #${String(request._id).slice(-6).toUpperCase()}.`;
+    } else if (status === 'Completed') {
+      customerNotifTitle = 'Service Completed';
+      customerNotifBody = `Your service request #${String(request._id).slice(-6).toUpperCase()} has been successfully completed!`;
+    }
+
+    const customerUserId = request.customerId?._id || request.customerId;
+    if (customerUserId) {
+      sendNotificationToUser(customerUserId, {
+        title: customerNotifTitle,
+        body: customerNotifBody,
+        data: {
+          requestId: String(request._id),
+          type: `STATUS_${status.toUpperCase().replace(/\s+/g, '_')}`
+        }
       });
     }
 
-    // If completed and requestReview is chosen, send review mail + push notification
-    if (status === 'Completed' && (requestReview === true || requestReview === 'true')) {
-      const customer = await User.findById(request.customerId);
+    // Broadcast real-time Socket.IO event
+    emitSocketEvent(`request:${request._id}`, 'request:status:update', {
+      requestId: String(request._id),
+      status,
+      timestamp: Date.now()
+    });
+    emitSocketEvent('role:ADMIN', 'request:status:update', {
+      requestId: String(request._id),
+      status,
+      agentId: request.assignedAgentId?._id
+    });
+    emitSocketEvent('role:STORE_INCHARGE', 'request:status:update', {
+      requestId: String(request._id),
+      status,
+      agentId: request.assignedAgentId?._id
+    });
+
+    // Notify Admins and Store In-Charge when request is Completed
+    if (status === 'Completed') {
+      await sendNotificationToRole(['ADMIN', 'STORE_INCHARGE'], {
+        title: 'Service Request Completed',
+        body: `Ticket #${String(request._id).slice(-6).toUpperCase()} completed by ${request.assignedAgentId?.name || 'Agent'}.`,
+        data: {
+          requestId: String(request._id),
+          type: 'REQUEST_COMPLETED'
+        }
+      });
+    }
+
+    // If completed, send invoice receipt & Google review email to Customer
+    if (status === 'Completed') {
+      const customer = await User.findById(customerUserId);
       if (customer) {
-        // Query custom review URL from settings
         let reviewUrl = 'https://g.page/r/CbdJS-IzWTe2EBE/review';
         try {
           const Settings = require('../models/Settings');
@@ -346,22 +436,12 @@ exports.updateRequestStatus = async (req, res) => {
           console.error('Error fetching review URL from settings:', err.message);
         }
 
-        // Send email
         if (customer.email) {
-          const { sendReviewEmail } = require('../utils/emailHelper');
-          await sendReviewEmail(customer.email, customer.name, request.serviceType, reviewUrl);
+          await sendServiceCompletedInvoiceEmail(customer.email, customer.name, request, reviewUrl);
         }
-        // Send review request notification
-        sendNotificationToUser(request.customerId, {
-          title: 'Share Your Feedback',
-          body: 'Thank you for choosing Sri Balaji Renewables! Tap to review us on Google.',
-          data: {
-            type: 'review_request',
-            url: reviewUrl
-          }
-        });
       }
     }
+
 
     res.status(200).json({ success: true, data: request });
   } catch (error) {

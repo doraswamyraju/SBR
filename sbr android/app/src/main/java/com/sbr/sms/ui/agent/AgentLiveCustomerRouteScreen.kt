@@ -40,9 +40,14 @@ import com.google.maps.android.compose.*
 import com.sbr.sms.data.models.ServiceRequest
 import com.sbr.sms.data.repositories.ServiceRequestRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 import kotlinx.coroutines.launch
 import java.util.Locale
 import javax.inject.Inject
@@ -50,6 +55,8 @@ import javax.inject.Inject
 @HiltViewModel
 class AgentLiveRouteViewModel @Inject constructor(
     private val repository: ServiceRequestRepository,
+    private val socketManager: com.sbr.sms.data.socket.SocketManager,
+    private val credentialManager: com.sbr.sms.data.CredentialManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     val requestId: String = savedStateHandle.get<String>("requestId") ?: ""
@@ -61,6 +68,31 @@ class AgentLiveRouteViewModel @Inject constructor(
         } else {
             kotlinx.coroutines.flow.MutableStateFlow(null)
         }
+
+    init {
+        if (requestId.isNotBlank()) {
+            socketManager.connect()
+            socketManager.joinRequestRoom(requestId)
+        }
+    }
+
+    fun emitAgentLocation(latitude: Double, longitude: Double, heading: Float = 0f, speed: Float = 0f) {
+        if (requestId.isBlank()) return
+        viewModelScope.launch {
+            try {
+                val agentId = credentialManager.getUserId()
+                socketManager.sendAgentLocation(requestId, agentId, latitude, longitude, heading, speed)
+                repository.updateAgentLocation(
+                    requestId,
+                    com.sbr.sms.data.models.AgentLocation(
+                        latitude = latitude,
+                        longitude = longitude,
+                        timestamp = java.util.Date()
+                    )
+                )
+            } catch (_: Exception) {}
+        }
+    }
 
     fun markArrived(onSuccess: () -> Unit) {
         if (requestId.isBlank()) return
@@ -74,6 +106,7 @@ class AgentLiveRouteViewModel @Inject constructor(
         }
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,12 +124,22 @@ fun AgentLiveCustomerRouteScreen(
     var distanceKm by remember { mutableStateOf<Double?>(null) }
     var etaMinutes by remember { mutableStateOf<Int?>(null) }
 
-    val customerLatLng = remember(request) {
-        val req = request
-        if (req?.latitude != null && req.longitude != null && req.latitude != 0.0 && req.longitude != 0.0) {
-            LatLng(req.latitude, req.longitude)
-        } else {
-            LatLng(12.9716, 77.5946)
+    var customerLatLng by remember { mutableStateOf(LatLng(13.6288, 79.4192)) } // Default Tirupati, AP Headquarters
+
+    LaunchedEffect(request) {
+        val req = request ?: return@LaunchedEffect
+        if (req.latitude != null && req.longitude != null && req.latitude != 0.0 && req.longitude != 0.0) {
+            customerLatLng = LatLng(req.latitude, req.longitude)
+        } else if (!req.customerAddress.isNullOrBlank()) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    val geocoder = android.location.Geocoder(context, Locale.getDefault())
+                    val list = geocoder.getFromLocationName(req.customerAddress, 1)
+                    if (!list.isNullOrEmpty()) {
+                        customerLatLng = LatLng(list[0].latitude, list[0].longitude)
+                    }
+                } catch (_: Exception) {}
+            }
         }
     }
 
@@ -107,41 +150,135 @@ fun AgentLiveCustomerRouteScreen(
     val agentMarkerState = rememberMarkerState()
     val customerMarkerState = rememberMarkerState(position = customerLatLng)
 
+    var routePoints by remember { mutableStateOf<List<LatLng>>(emptyList()) }
+    var nextManeuverInstruction by remember { mutableStateOf("Head towards customer location") }
+    var nextManeuverModifier by remember { mutableStateOf("straight") }
+    var lastRouteFetchTime by remember { mutableStateOf(0L) }
+
+    fun fetchRoadRoute(from: LatLng, to: LatLng) {
+        val now = System.currentTimeMillis()
+        if (now - lastRouteFetchTime < 10000 && routePoints.isNotEmpty()) return
+        lastRouteFetchTime = now
+
+        coroutineScope.launch(Dispatchers.IO) {
+            try {
+                val urlStr = "https://router.project-osrm.org/route/v1/driving/${from.longitude},${from.latitude};${to.longitude},${to.latitude}?overview=full&geometries=geojson&steps=true"
+                val url = URL(urlStr)
+                val conn = url.openConnection() as HttpURLConnection
+                conn.connectTimeout = 4000
+                conn.readTimeout = 4000
+                conn.requestMethod = "GET"
+                if (conn.responseCode == 200) {
+                    val responseText = conn.inputStream.bufferedReader().use { it.readText() }
+                    val json = JSONObject(responseText)
+                    val routes = json.optJSONArray("routes")
+                    if (routes != null && routes.length() > 0) {
+                        val firstRoute = routes.getJSONObject(0)
+                        val distM = firstRoute.optDouble("distance", 0.0)
+                        val durS = firstRoute.optDouble("duration", 0.0)
+
+                        val geom = firstRoute.optJSONObject("geometry")
+                        val coords = geom?.optJSONArray("coordinates")
+                        val pts = mutableListOf<LatLng>()
+                        if (coords != null) {
+                            for (i in 0 until coords.length()) {
+                                val c = coords.getJSONArray(i)
+                                pts.add(LatLng(c.getDouble(1), c.getDouble(0)))
+                            }
+                        }
+
+                        val legs = firstRoute.optJSONArray("legs")
+                        var stepText = "Proceed on route to customer site"
+                        var stepMod = "straight"
+                        if (legs != null && legs.length() > 0) {
+                            val steps = legs.getJSONObject(0).optJSONArray("steps")
+                            if (steps != null && steps.length() > 0) {
+                                val step = steps.getJSONObject(0)
+                                val man = step.optJSONObject("maneuver")
+                                stepMod = man?.optString("modifier") ?: "straight"
+                                val roadName = step.optString("name")
+                                val stepDist = step.optDouble("distance", 0.0).toInt()
+                                stepText = if (roadName.isNotBlank()) {
+                                    "${stepMod.replaceFirstChar { it.uppercase() }} onto $roadName ($stepDist m)"
+                                } else {
+                                    "${stepMod.replaceFirstChar { it.uppercase() }} ($stepDist m)"
+                                }
+                            }
+                        }
+
+                        withContext(Dispatchers.Main) {
+                            if (pts.isNotEmpty()) routePoints = pts
+                            distanceKm = distM / 1000.0
+                            etaMinutes = (durS / 60.0).toInt().coerceAtLeast(1)
+                            nextManeuverInstruction = stepText
+                            nextManeuverModifier = stepMod
+                        }
+                        return@launch
+                    }
+                }
+            } catch (_: Exception) {}
+
+            withContext(Dispatchers.Main) {
+                if (routePoints.isEmpty()) {
+                    routePoints = listOf(from, to)
+                }
+            }
+        }
+    }
+
     fun calculateRouteMetrics(from: LatLng, to: LatLng) {
         val results = FloatArray(1)
         Location.distanceBetween(from.latitude, from.longitude, to.latitude, to.longitude, results)
         val distMeters = results[0]
         val distKm = distMeters / 1000.0
-        distanceKm = distKm
-        etaMinutes = ((distKm / 25.0) * 60.0).toInt().coerceAtLeast(1)
+        if (distanceKm == null) distanceKm = distKm
+        if (etaMinutes == null) etaMinutes = ((distKm / 25.0) * 60.0).toInt().coerceAtLeast(1)
+        fetchRoadRoute(from, to)
     }
 
-    // Fetch initial device location safely with permission check
-    LaunchedEffect(Unit) {
+    // Continuous location tracking with sub-second WebSocket updates
+    DisposableEffect(customerLatLng) {
+        val locationRequest = com.google.android.gms.location.LocationRequest.Builder(
+            com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY,
+            4000
+        ).setMinUpdateIntervalMillis(2000).build()
+
+        val locationCallback = object : com.google.android.gms.location.LocationCallback() {
+            override fun onLocationResult(result: com.google.android.gms.location.LocationResult) {
+                val loc = result.lastLocation ?: return
+                val pos = LatLng(loc.latitude, loc.longitude)
+                agentLatLng = pos
+                agentMarkerState.position = pos
+                calculateRouteMetrics(pos, customerLatLng)
+                viewModel.emitAgentLocation(loc.latitude, loc.longitude, loc.bearing, loc.speed)
+            }
+        }
+
         try {
             val hasFine = androidx.core.content.ContextCompat.checkSelfPermission(
                 context, android.Manifest.permission.ACCESS_FINE_LOCATION
             ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-            val hasCoarse = androidx.core.content.ContextCompat.checkSelfPermission(
-                context, android.Manifest.permission.ACCESS_COARSE_LOCATION
-            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-
-            if (hasFine || hasCoarse) {
+            if (hasFine) {
+                fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, android.os.Looper.getMainLooper())
                 fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
                     if (loc != null) {
                         val pos = LatLng(loc.latitude, loc.longitude)
                         agentLatLng = pos
                         agentMarkerState.position = pos
                         calculateRouteMetrics(pos, customerLatLng)
+                        viewModel.emitAgentLocation(loc.latitude, loc.longitude, loc.bearing, loc.speed)
                     }
-                }.addOnFailureListener {
-                    // Ignore failure
                 }
             }
-        } catch (e: Exception) {
-            // Permission or location fetch issue
+        } catch (_: Exception) {}
+
+        onDispose {
+            try {
+                fusedLocationClient.removeLocationUpdates(locationCallback)
+            } catch (_: Exception) {}
         }
     }
+
 
     // Animate camera only AFTER map is loaded
     LaunchedEffect(isMapLoaded, agentLatLng, customerLatLng) {
@@ -256,9 +393,9 @@ fun AgentLiveCustomerRouteScreen(
                         icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)
                     )
 
-                    // Route Polyline
+                    // Route Polyline (Turn-by-turn road route)
                     Polyline(
-                        points = listOf(pos, customerLatLng),
+                        points = if (routePoints.isNotEmpty()) routePoints else listOf(pos, customerLatLng),
                         color = Color(0xFF1976D2),
                         width = 12f
                     )
@@ -295,14 +432,20 @@ fun AgentLiveCustomerRouteScreen(
                                     .background(Color(0xFF2E7D32)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.Navigation, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+                                val icon = when {
+                                    nextManeuverModifier.contains("left", ignoreCase = true) -> Icons.Default.TurnLeft
+                                    nextManeuverModifier.contains("right", ignoreCase = true) -> Icons.Default.TurnRight
+                                    nextManeuverModifier.contains("u-turn", ignoreCase = true) -> Icons.Default.UTurnLeft
+                                    else -> Icons.Default.Straight
+                                }
+                                Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
                             }
 
                             Spacer(modifier = Modifier.width(12.dp))
 
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Head towards ${req.customerAddress.ifBlank { "Customer Location" }.take(30)}...",
+                                    text = nextManeuverInstruction,
                                     color = Color.White,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 14.sp,

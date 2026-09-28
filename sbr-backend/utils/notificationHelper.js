@@ -91,4 +91,27 @@ const sendNotificationToUser = async (userId, payload) => {
   }
 };
 
-module.exports = { sendNotificationToUser };
+/**
+ * Send FCM push notification to all users with specific roles (e.g. ['ADMIN', 'STORE_INCHARGE'])
+ * @param {string|string[]} roles 
+ * @param {object} payload 
+ */
+const sendNotificationToRole = async (roles, payload) => {
+  try {
+    const roleList = Array.isArray(roles) ? roles : [roles];
+    const regexList = roleList.map(r => new RegExp('^' + r + '$', 'i'));
+    const users = await User.find({
+      role: { $in: regexList },
+      fcmTokens: { $exists: true, $not: { $size: 0 } }
+    });
+
+    for (const u of users) {
+      await sendNotificationToUser(u._id, payload);
+    }
+  } catch (error) {
+    console.error('Error sending role push notifications:', error.message);
+  }
+};
+
+module.exports = { sendNotificationToUser, sendNotificationToRole };
+

@@ -2,6 +2,9 @@ const AgentInventory = require('../models/AgentInventory');
 const AgentIndent = require('../models/AgentIndent');
 const Product = require('../models/Product');
 const User = require('../models/User');
+const { sendNotificationToUser, sendNotificationToRole } = require('../utils/notificationHelper');
+const { emitSocketEvent } = require('../utils/socketHelper');
+
 
 // ==========================================
 // 1. AGENT INVENTORY (VAN / KIT STOCK)
@@ -163,11 +166,25 @@ exports.createIndent = async (req, res) => {
       requestedAt: new Date()
     });
 
+    // Notify Store In-Charge & Admin
+    await sendNotificationToRole(['STORE_INCHARGE', 'ADMIN'], {
+      title: 'New Stock Indent',
+      body: `Agent ${req.user.name || 'Technician'} requested ${formattedItems.length} spare parts item(s).`,
+      data: {
+        indentId: String(newIndent._id),
+        type: 'INDENT_CREATED'
+      }
+    });
+
+    emitSocketEvent('role:STORE_INCHARGE', 'indent:created', newIndent);
+    emitSocketEvent('role:ADMIN', 'indent:created', newIndent);
+
     res.status(201).json({
       success: true,
       message: 'Indent request submitted to Store In-Charge.',
       data: newIndent
     });
+
   } catch (error) {
     console.error('createIndent Error:', error);
     res.status(500).json({ success: false, error: error.message });
@@ -313,6 +330,20 @@ exports.dispatchIndent = async (req, res) => {
 
     await indent.save();
 
+    // Notify Agent about dispatch
+    if (indent.agentId) {
+      const agentUserId = indent.agentId._id || indent.agentId;
+      sendNotificationToUser(agentUserId, {
+        title: 'Stock Indent Dispatched',
+        body: 'Your spare parts requisition has been dispatched by Store In-Charge. Please verify your kit inventory.',
+        data: {
+          indentId: String(indent._id),
+          type: 'INDENT_DISPATCHED'
+        }
+      });
+      emitSocketEvent(`agent:${agentUserId}`, 'indent:dispatched', indent);
+    }
+
     res.status(200).json({
       success: true,
       message: `Indent dispatched and agent's kit inventory updated successfully.`,
@@ -342,11 +373,26 @@ exports.rejectIndent = async (req, res) => {
     indent.inchargeRemarks = inchargeRemarks || 'Rejected by Store In-Charge';
     await indent.save();
 
+    // Notify Agent about rejection
+    if (indent.agentId) {
+      const agentUserId = indent.agentId._id || indent.agentId;
+      sendNotificationToUser(agentUserId, {
+        title: 'Stock Indent Rejected',
+        body: inchargeRemarks || 'Your spare parts requisition was rejected by Store In-Charge.',
+        data: {
+          indentId: String(indent._id),
+          type: 'INDENT_REJECTED'
+        }
+      });
+      emitSocketEvent(`agent:${agentUserId}`, 'indent:rejected', indent);
+    }
+
     res.status(200).json({
       success: true,
       message: 'Indent request rejected.',
       data: indent
     });
+
   } catch (error) {
     console.error('rejectIndent Error:', error);
     res.status(500).json({ success: false, error: error.message });
