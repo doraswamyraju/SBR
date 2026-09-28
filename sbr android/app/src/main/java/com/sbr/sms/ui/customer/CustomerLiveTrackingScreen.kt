@@ -72,16 +72,24 @@ fun CustomerLiveTrackingScreen(
             }
 
             if (agentLoc != null && custLat != null && custLng != null && custLat != 0.0 && custLng != 0.0) {
-                val bounds = LatLngBounds.builder()
-                    .include(LatLng(agentLoc.latitude, agentLoc.longitude))
-                    .include(LatLng(custLat, custLng))
-                    .build()
-                cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(bounds, 120), 1000)
+                try {
+                    val bounds = LatLngBounds.builder()
+                        .include(LatLng(agentLoc.latitude, agentLoc.longitude))
+                        .include(LatLng(custLat, custLng))
+                        .build()
+                    cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(bounds, 120), 1000)
+                } catch (_: Exception) {
+                    try {
+                        cameraPositionState.position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(LatLng(agentLoc.latitude, agentLoc.longitude), 15f)
+                    } catch (_: Exception) {}
+                }
             } else if (agentLoc != null) {
-                cameraPositionState.animate(
-                    CameraUpdateFactory.newLatLngZoom(LatLng(agentLoc.latitude, agentLoc.longitude), 16f),
-                    1000
-                )
+                try {
+                    cameraPositionState.animate(
+                        CameraUpdateFactory.newLatLngZoom(LatLng(agentLoc.latitude, agentLoc.longitude), 16f),
+                        1000
+                    )
+                } catch (_: Exception) {}
             }
         }
     }

@@ -59,23 +59,31 @@ fun AdminMultiAgentMapScreen(
                 if (lat != null && lng != null) LatLng(lat, lng) else null
             }
             if (validPositions.isNotEmpty()) {
-                if (validPositions.size == 1) {
-                    cameraPositionState.animate(
-                        CameraUpdateFactory.newLatLngZoom(validPositions.first(), 15f),
-                        1000
-                    )
-                } else {
-                    val boundsBuilder = LatLngBounds.builder()
-                    validPositions.forEach { boundsBuilder.include(it) }
-                    agents.forEach { agentInfo ->
-                        agentInfo.request.locationPath.forEach { location ->
-                            boundsBuilder.include(LatLng(location.latitude, location.longitude))
+                try {
+                    if (validPositions.size == 1) {
+                        cameraPositionState.animate(
+                            CameraUpdateFactory.newLatLngZoom(validPositions.first(), 15f),
+                            1000
+                        )
+                    } else {
+                        val boundsBuilder = LatLngBounds.builder()
+                        validPositions.forEach { boundsBuilder.include(it) }
+                        agents.forEach { agentInfo ->
+                            agentInfo.request.locationPath.forEach { location ->
+                                boundsBuilder.include(LatLng(location.latitude, location.longitude))
+                            }
                         }
+                        cameraPositionState.animate(
+                            CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 150),
+                            1000
+                        )
                     }
-                    cameraPositionState.animate(
-                        CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 150),
-                        1000
-                    )
+                } catch (_: Exception) {
+                    validPositions.firstOrNull()?.let { pos ->
+                        try {
+                            cameraPositionState.position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(pos, 14f)
+                        } catch (_: Exception) {}
+                    }
                 }
             }
         }
