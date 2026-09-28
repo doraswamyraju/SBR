@@ -140,6 +140,15 @@ exports.updateRequest = async (req, res) => {
       return res.status(403).json({ success: false, error: 'Not authorized to modify this request' });
     }
 
+    // Auto-populate timestamps and payment amount if paying or completing
+    if (req.body.paymentStatus === 'Paid' || req.body.status === 'Completed') {
+      if (!req.body.paymentTimestamp) req.body.paymentTimestamp = new Date();
+      if (!req.body.completedAt) req.body.completedAt = new Date();
+      if ((req.body.finalAmount !== undefined && req.body.finalAmount !== null) && (!req.body.paymentAmount || req.body.paymentAmount === 0)) {
+        req.body.paymentAmount = req.body.finalAmount;
+      }
+    }
+
     request = await ServiceRequest.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true

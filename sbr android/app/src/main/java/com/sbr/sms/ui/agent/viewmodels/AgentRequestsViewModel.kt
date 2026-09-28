@@ -123,7 +123,10 @@ class AgentRequestsViewModel @Inject constructor(
 
                         val newAssigned = allRequestsWithDetails.filter { it.request.status == "Assigned" }
                         val activeRequestDetails = allRequestsWithDetails.find {
-                            it.request.status == "Accepted" || it.request.status == "In Progress" || it.request.status == "Completed" || it.request.status == "Paid"
+                            val isPendingPayment = !it.request.paymentStatus.equals("Paid", ignoreCase = true) &&
+                                ((it.request.finalAmount ?: it.request.paymentAmount ?: 0.0) <= 0.0)
+                            (it.request.status == "Accepted" || it.request.status == "In Progress") ||
+                            (it.request.status == "Completed" && isPendingPayment)
                         }
 
                         val stats = AgentDashboardStats(
@@ -131,7 +134,7 @@ class AgentRequestsViewModel @Inject constructor(
                             activeRequestTitle = activeRequestDetails?.request?.serviceType ?: "No Active Job",
                             newAssignedRequests = newAssigned.size,
                             completedToday = collections.size,
-                            todaysEarnings = collections.sumOf { it.paymentAmount ?: 0.0 }
+                            todaysEarnings = collections.sumOf { it.finalAmount ?: it.paymentAmount ?: 0.0 }
                         )
                         AgentDashboardUiState.Success(stats, newAssigned, activeRequestDetails)
                     }
@@ -146,6 +149,7 @@ class AgentRequestsViewModel @Inject constructor(
     }
 
     fun refresh() {
+        serviceRequestRepository.triggerRefresh()
         refreshTrigger.value++
     }
 

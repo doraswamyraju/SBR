@@ -25,7 +25,7 @@ class ServiceRequestRepositoryImpl @Inject constructor(
 
     private val refreshTrigger = MutableSharedFlow<Unit>(replay = 1).apply { tryEmit(Unit) }
 
-    fun triggerRefresh() {
+    override fun triggerRefresh() {
         refreshTrigger.tryEmit(Unit)
     }
 
@@ -262,9 +262,14 @@ class ServiceRequestRepositoryImpl @Inject constructor(
         
         getAllRequests().filter {
             it.assignedAgentId == agentId &&
-            it.paymentStatus == "Paid" &&
-            it.paymentTimestamp != null &&
-            it.paymentTimestamp.after(startOfToday)
+            (it.paymentStatus.equals("Paid", ignoreCase = true) || it.status.equals("Completed", ignoreCase = true) || it.status.equals("Paid", ignoreCase = true)) &&
+            ((it.finalAmount ?: it.paymentAmount ?: 0.0) > 0.0) &&
+            (
+                (it.paymentTimestamp != null && it.paymentTimestamp.after(startOfToday)) ||
+                (it.completedAt != null && it.completedAt.after(startOfToday)) ||
+                (it.updatedAt != null && it.updatedAt.after(startOfToday)) ||
+                (it.createdAt != null && it.createdAt.after(startOfToday))
+            )
         }
     }
 

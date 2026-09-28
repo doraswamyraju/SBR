@@ -6,6 +6,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.navigation.NavHostController
@@ -13,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -347,8 +349,27 @@ fun ActiveRequestCard(
                     }
                 }
                 "Completed" -> {
-                    Button(onClick = onCollectPayment, modifier = Modifier.fillMaxWidth()) {
-                        Text("Settle Payment Breakdown & Collect")
+                    val isPaid = request.paymentStatus.equals("Paid", ignoreCase = true) ||
+                        ((request.finalAmount ?: request.paymentAmount ?: 0.0) > 0.0)
+                    if (isPaid) {
+                        Surface(
+                            color = Color(0xFFDCFCE7),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                        ) {
+                            Text(
+                                "✓ Payment Settled & Service Completed",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF15803D),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                modifier = Modifier.padding(12.dp)
+                            )
+                        }
+                    } else {
+                        Button(onClick = onCollectPayment, modifier = Modifier.fillMaxWidth()) {
+                            Text("Settle Payment Breakdown & Collect")
+                        }
                     }
                 }
                 "Paid" -> {

@@ -7,15 +7,12 @@ const { emitSocketEvent } = require('../utils/socketHelper');
 
 // Helper to get formatted date string YYYY-MM-DD in local/IST time
 const getTodayString = (dateObj = new Date()) => {
-  const d = new Date(dateObj);
-  // Account for IST (UTC+5:30) offset or local date
-  const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
-  const istOffset = 5.5 * 3600000;
-  const istDate = new Date(utc + istOffset);
-  const year = istDate.getFullYear();
-  const month = String(istDate.getMonth() + 1).padStart(2, '0');
-  const day = String(istDate.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  try {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date(dateObj));
+  } catch (_e) {
+    const d = new Date(dateObj);
+    return d.toISOString().slice(0, 10);
+  }
 };
 
 // @desc    Get agent's daily cash collection summary
@@ -28,28 +25,46 @@ exports.getAgentDailySummary = async (req, res) => {
 
     // Fetch all cash payment requests for this agent that are either Completed or Paid
     const cashRequests = await ServiceRequest.find({
-      assignedAgentId: agentId,
-      $or: [
-        { status: { $in: ['Completed', 'completed', 'Paid', 'paid'] } },
-        { paymentStatus: { $in: ['Paid', 'paid'] } }
-      ],
-      paymentMethod: { $regex: /^cash$/i }
-    }).select('_id serviceType customerAddress paymentAmount paymentMethod completedAt paymentTimestamp updatedAt');
+      $and: [
+        {
+          $or: [
+            { assignedAgentId: agentId },
+            { assignedAgentId: agentId.toString() }
+          ]
+        },
+        {
+          $or: [
+            { status: { $in: ['Completed', 'completed', 'Paid', 'paid'] } },
+            { paymentStatus: { $in: ['Paid', 'paid'] } }
+          ]
+        },
+        {
+          $or: [
+            { paymentMethod: { $regex: /cash/i } },
+            { paymentMethod: null },
+            { paymentMethod: '' }
+          ]
+        }
+      ]
+    }).select('_id serviceType customerAddress paymentAmount finalAmount paymentMethod completedAt paymentTimestamp updatedAt createdAt');
 
     const isSameDate = (dateVal) => {
       if (!dateVal) return false;
       const d = new Date(dateVal);
       if (isNaN(d.getTime())) return false;
-      const utcStr = d.toISOString().slice(0, 10);
       const istStr = getTodayString(d);
-      return utcStr === targetDateStr || istStr === targetDateStr;
+      const utcStr = d.toISOString().slice(0, 10);
+      return istStr === targetDateStr || utcStr === targetDateStr;
     };
 
     const completedRequests = cashRequests.filter(req => {
-      return isSameDate(req.completedAt) || isSameDate(req.paymentTimestamp) || isSameDate(req.updatedAt);
+      return isSameDate(req.paymentTimestamp) || isSameDate(req.completedAt) || isSameDate(req.updatedAt) || isSameDate(req.createdAt);
     });
 
-    const totalCash = completedRequests.reduce((sum, req) => sum + (Number(req.paymentAmount) || 0), 0);
+    const totalCash = completedRequests.reduce((sum, req) => {
+      const amt = Number(req.finalAmount !== undefined && req.finalAmount !== null && req.finalAmount > 0 ? req.finalAmount : req.paymentAmount) || 0;
+      return sum + amt;
+    }, 0);
 
     // Check if an existing handover has already been submitted for this date
     const existingHandover = await CashHandover.findOne({

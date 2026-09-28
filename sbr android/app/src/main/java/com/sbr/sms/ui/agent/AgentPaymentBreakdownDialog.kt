@@ -572,11 +572,17 @@ private fun completeJob(
                 )
             }
 
+            val nowIso = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).apply {
+                timeZone = java.util.TimeZone.getTimeZone("UTC")
+            }.format(java.util.Date())
+
             val payload = mutableMapOf<String, Any?>(
                 "status" to "Completed",
                 "paymentAmount" to finalAmount,
                 "paymentStatus" to "Paid",
                 "paymentMethod" to paymentMethod,
+                "paymentTimestamp" to nowIso,
+                "completedAt" to nowIso,
                 "inventoryTotal" to partsSubtotal,
                 "serviceCharge" to serviceCharge,
                 "discount" to discount,

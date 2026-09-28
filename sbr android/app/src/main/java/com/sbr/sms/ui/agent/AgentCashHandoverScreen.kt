@@ -93,6 +93,10 @@ fun AgentCashHandoverScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val isSubmitting by viewModel.isSubmitting.collectAsState()
 
+    LaunchedEffect(Unit) {
+        viewModel.loadSummary()
+    }
+
     var notesText by remember { mutableStateOf("") }
 
     if (isLoading) {

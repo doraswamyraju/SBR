@@ -26,4 +26,5 @@ interface ServiceRequestRepository {
     fun getPaidRequestsStream(): Flow<List<ServiceRequest>>
     suspend fun getPaidRequestsInDateRange(startDate: Date, endDate: Date): List<ServiceRequest>
     fun getCustomerPaymentHistoryStream(customerId: String): Flow<List<ServiceRequest>>
+    fun triggerRefresh()
 }

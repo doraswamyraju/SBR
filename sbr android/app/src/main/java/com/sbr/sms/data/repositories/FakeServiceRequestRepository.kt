@@ -152,4 +152,6 @@ class FakeServiceRequestRepository : ServiceRequestRepository {
                 .sortedByDescending { it.paymentTimestamp }
         }
     }
+
+    override fun triggerRefresh() {}
 }
