@@ -31,6 +31,22 @@ exports.getAgentDailySummary = async (req, res) => {
       ]
     }).select('_id serviceType customerAddress paymentAmount finalAmount paymentStatus status paymentMethod completedAt paymentTimestamp updatedAt createdAt');
 
+    // Fetch all ACKNOWLEDGED handovers to find request IDs that are already settled
+    const acknowledgedHandovers = await CashHandover.find({
+      $or: [
+        { agentId: req.user._id },
+        { agentId: agentId }
+      ],
+      status: 'ACKNOWLEDGED'
+    });
+
+    const settledRequestIds = new Set();
+    acknowledgedHandovers.forEach(h => {
+      (h.completedRequests || []).forEach(rId => {
+        if (rId) settledRequestIds.add(rId.toString());
+      });
+    });
+
     const isTodayJob = (req) => {
       const dates = [req.paymentTimestamp, req.completedAt, req.updatedAt, req.createdAt].filter(Boolean);
       return dates.some(d => {
@@ -57,7 +73,8 @@ exports.getAgentDailySummary = async (req, res) => {
 
     const completedRequests = requests.filter(req => {
       const amt = Number(req.finalAmount !== undefined && req.finalAmount !== null && req.finalAmount > 0 ? req.finalAmount : req.paymentAmount) || 0;
-      return isPaidOrCompleted(req) && isCashPayment(req) && isTodayJob(req) && amt > 0;
+      const isSettled = settledRequestIds.has(req._id.toString());
+      return isPaidOrCompleted(req) && isCashPayment(req) && !isSettled && amt > 0;
     });
 
     const totalCash = completedRequests.reduce((sum, req) => {

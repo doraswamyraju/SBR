@@ -54,31 +54,32 @@ class AgentCashHandoverViewModel @Inject constructor(
                 if (summary == null || summary.totalCollectedCash <= 0.0) {
                     val agentId = credentialManager.getUserId()
                     val allReqs = serviceRequestRepository.getAllRequests()
-                    val startOfToday = java.util.Calendar.getInstance().apply {
-                        set(java.util.Calendar.HOUR_OF_DAY, 0)
-                        set(java.util.Calendar.MINUTE, 0)
-                        set(java.util.Calendar.SECOND, 0)
-                        set(java.util.Calendar.MILLISECOND, 0)
-                    }.time
+                    val handRes = try { apiService.getAllHandovers() } catch (e: Exception) { null }
+                    val handovers = handRes?.body()?.data ?: emptyList()
+                    val acknowledgedReqIds = handovers
+                        .filter { it.status.equals("ACKNOWLEDGED", ignoreCase = true) }
+                        .flatMap { it.completedRequests }
+                        .map { item ->
+                            if (item is Map<*, *>) (item["id"] ?: item["_id"] ?: "").toString() else item.toString()
+                        }.toSet()
 
-                    val todaysCashJobs = allReqs.filter { req ->
+                    val pendingCashJobs = allReqs.filter { req ->
                         val isMyJob = req.assignedAgentId.isNullOrBlank() || req.assignedAgentId == agentId
                         val isPaidOrCompleted = req.paymentStatus.equals("Paid", ignoreCase = true) || req.status.equals("Completed", ignoreCase = true)
                         val isCash = req.paymentMethod.isNullOrBlank() || req.paymentMethod.contains("cash", ignoreCase = true)
-                        val effectiveDate = req.paymentTimestamp ?: req.completedAt ?: req.updatedAt ?: req.createdAt
-                        val isToday = effectiveDate == null || effectiveDate.after(startOfToday)
                         val amt = (req.finalAmount?.takeIf { it > 0 } ?: req.paymentAmount ?: 0.0)
-                        isMyJob && isPaidOrCompleted && isCash && isToday && amt > 0
+                        val isNotSettled = !acknowledgedReqIds.contains(req.id)
+                        isMyJob && isPaidOrCompleted && isCash && amt > 0 && isNotSettled
                     }
 
-                    if (todaysCashJobs.isNotEmpty()) {
-                        val computedCash = todaysCashJobs.sumOf { (it.finalAmount?.takeIf { a -> a > 0 } ?: it.paymentAmount ?: 0.0) }
+                    if (pendingCashJobs.isNotEmpty()) {
+                        val computedCash = pendingCashJobs.sumOf { (it.finalAmount?.takeIf { a -> a > 0 } ?: it.paymentAmount ?: 0.0) }
                         summary = AgentDailySummary(
                             agentId = agentId,
                             date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date()),
                             totalCollectedCash = computedCash,
-                            completedJobsCount = todaysCashJobs.size,
-                            completedRequestIds = todaysCashJobs.map { it.id },
+                            completedJobsCount = pendingCashJobs.size,
+                            completedRequestIds = pendingCashJobs.map { it.id },
                             hasSubmittedHandover = summary?.hasSubmittedHandover ?: false,
                             latestHandover = summary?.latestHandover
                         )

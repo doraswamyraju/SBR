@@ -130,6 +130,13 @@ class AgentPaymentsViewModel @Inject constructor(
         val cal = Calendar.getInstance()
         val now = cal.time
 
+        val startOfToday = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.time
+
         fun isSameDay(d1: Date?, d2: Date): Boolean {
             if (d1 == null) return false
             val c1 = Calendar.getInstance().apply { time = d1 }
@@ -138,8 +145,10 @@ class AgentPaymentsViewModel @Inject constructor(
                     c1.get(Calendar.DAY_OF_YEAR) == c2.get(Calendar.DAY_OF_YEAR)
         }
 
-        fun getEffectiveDate(req: ServiceRequest): Date {
-            return req.paymentTimestamp ?: req.completedAt ?: req.updatedAt ?: req.createdAt ?: now
+        fun isRequestToday(req: ServiceRequest): Boolean {
+            val dates = listOfNotNull(req.paymentTimestamp, req.completedAt, req.updatedAt, req.createdAt)
+            if (dates.isEmpty()) return true
+            return dates.any { isSameDay(it, now) || it.after(startOfToday) }
         }
 
         fun getReqAmount(r: ServiceRequest): Double {
@@ -147,21 +156,25 @@ class AgentPaymentsViewModel @Inject constructor(
         }
 
         val filteredRequests = allHistoryRequests.filter { req ->
-            val timestamp = getEffectiveDate(req)
             when (_selectedFilter.value) {
-                PaymentDateFilter.TODAY -> isSameDay(timestamp, now)
+                PaymentDateFilter.TODAY -> isRequestToday(req)
                 PaymentDateFilter.YESTERDAY -> {
                     val yest = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }.time
-                    isSameDay(timestamp, yest)
+                    val dates = listOfNotNull(req.paymentTimestamp, req.completedAt, req.updatedAt, req.createdAt)
+                    dates.any { isSameDay(it, yest) }
                 }
                 PaymentDateFilter.THIS_WEEK -> {
                     val weekAgo = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -7) }.time
-                    timestamp != null && timestamp.after(weekAgo)
+                    val dates = listOfNotNull(req.paymentTimestamp, req.completedAt, req.updatedAt, req.createdAt)
+                    dates.any { it.after(weekAgo) }
                 }
                 PaymentDateFilter.THIS_MONTH -> {
-                    val cReq = Calendar.getInstance().apply { if (timestamp != null) time = timestamp }
                     val cNow = Calendar.getInstance()
-                    timestamp != null && cReq.get(Calendar.YEAR) == cNow.get(Calendar.YEAR) && cReq.get(Calendar.MONTH) == cNow.get(Calendar.MONTH)
+                    val dates = listOfNotNull(req.paymentTimestamp, req.completedAt, req.updatedAt, req.createdAt)
+                    dates.any { d ->
+                        val cReq = Calendar.getInstance().apply { time = d }
+                        cReq.get(Calendar.YEAR) == cNow.get(Calendar.YEAR) && cReq.get(Calendar.MONTH) == cNow.get(Calendar.MONTH)
+                    }
                 }
                 PaymentDateFilter.ALL -> true
             }
@@ -170,7 +183,7 @@ class AgentPaymentsViewModel @Inject constructor(
         val totalCollections = allHistoryRequests.sumOf { getReqAmount(it) }
         val filteredCollections = filteredRequests.sumOf { getReqAmount(it) }
 
-        val todaysCollections = allHistoryRequests.filter { isSameDay(getEffectiveDate(it), now) }.sumOf { getReqAmount(it) }
+        val todaysCollections = allHistoryRequests.filter { isRequestToday(it) }.sumOf { getReqAmount(it) }
         val cashCollections = allHistoryRequests.filter {
             it.paymentMethod?.uppercase()?.contains("CASH") == true || it.paymentMethod.isNullOrBlank()
         }.sumOf { getReqAmount(it) }
