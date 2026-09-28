@@ -50,13 +50,14 @@ class UserRepositoryImpl @Inject constructor(
 
     // Helper mapper from DTO to domain model
     private fun UserDto.toDomain(): User {
-        return when (this.role) {
+        val r = this.role?.uppercase() ?: "CUSTOMER"
+        return when (r) {
             "ADMIN" -> Admin(
                 id = this.id,
                 name = this.name,
                 email = this.email
             )
-            "AGENT" -> Agent(
+            "AGENT", "TECHNICIAN", "STORE_INCHARGE" -> Agent(
                 id = this.id,
                 name = this.name,
                 email = this.email,

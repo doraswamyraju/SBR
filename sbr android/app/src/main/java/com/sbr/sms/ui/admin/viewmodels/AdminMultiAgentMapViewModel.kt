@@ -42,14 +42,18 @@ class AdminMultiAgentMapViewModel @Inject constructor(
 
                 userRepository.getUsersByIds(userIds).map { users ->
                     val usersMap = users.associateBy { it.id }
-                    val trackedAgentInfoList = activeRequests.mapNotNull { request ->
-                        val agent = usersMap[request.assignedAgentId] as? Agent
-                        val customer = usersMap[request.customerId] as? Customer
-                        if (agent != null && customer != null) {
-                            TrackedAgentInfo(request, agent, customer)
-                        } else {
-                            null
-                        }
+                    val trackedAgentInfoList = activeRequests.map { request ->
+                        val agentObj = (usersMap[request.assignedAgentId] as? Agent) ?: Agent(
+                            id = request.assignedAgentId ?: "",
+                            name = request.assignedAgentName ?: "Technician",
+                            phone = request.assignedAgentPhone
+                        )
+                        val customerObj = (usersMap[request.customerId] as? Customer) ?: Customer(
+                            id = request.customerId,
+                            name = request.customerName ?: "Customer",
+                            phone = request.customerPhone
+                        )
+                        TrackedAgentInfo(request, agentObj, customerObj)
                     }
                     MultiAgentUiState.Success(trackedAgentInfoList) as MultiAgentUiState
                 }

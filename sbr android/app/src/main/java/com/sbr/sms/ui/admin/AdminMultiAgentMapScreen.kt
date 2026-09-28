@@ -112,6 +112,7 @@ fun AdminMultiAgentMapScreen(
     }
 
     BottomSheetScaffold(
+        modifier = Modifier.fillMaxSize(),
         scaffoldState = scaffoldState,
         sheetPeekHeight = 110.dp,
         sheetContent = {

@@ -144,7 +144,7 @@ fun AdminPanelScreen(
                 }
             }
         ) { padding ->
-            Column(modifier = Modifier.padding(padding)) {
+            Box(modifier = Modifier.padding(padding).fillMaxSize()) {
                 val onCardClick: (AdminSection) -> Unit = { section ->
                     selectedSection = section
                 }
