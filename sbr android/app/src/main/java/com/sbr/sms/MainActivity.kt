@@ -17,10 +17,16 @@ import androidx.core.content.ContextCompat
 import com.sbr.sms.navigation.AppNavHost
 import com.sbr.sms.navigation.AppRoutes
 import com.sbr.sms.ui.theme.SBRTheme
+import com.sbr.sms.data.repositories.UserRepository
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var userRepository: UserRepository
 
     private var pendingDeepLink = mutableStateOf<String?>(null)
 
@@ -51,6 +57,16 @@ class MainActivity : ComponentActivity() {
                                 permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                             }
                         }
+                    }
+
+                    // Synchronize FCM token with backend if authenticated
+                    try {
+                        val token = com.google.firebase.messaging.FirebaseMessaging.getInstance().token.await()
+                        if (!token.isNullOrBlank()) {
+                            userRepository.updateFcmToken(token)
+                        }
+                    } catch (_: Exception) {
+                        // Suppressed if user is not authenticated or offline
                     }
                 }
 

@@ -1,6 +1,36 @@
 const nodemailer = require('nodemailer');
 
 /**
+ * Shared transporter factory that handles standard SMTP and SSL (port 465) configurations
+ */
+const getTransporter = () => {
+  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    const port = parseInt(process.env.SMTP_PORT || '587');
+    const isSecure = process.env.SMTP_SECURE === 'true' || port === 465;
+    return nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: port,
+      secure: isSecure,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+      tls: {
+        rejectUnauthorized: process.env.SMTP_TLS_REJECT_UNAUTHORIZED !== 'false',
+      }
+    });
+  }
+  return null;
+};
+
+const getFromAddress = () => {
+  if (process.env.SMTP_FROM) return process.env.SMTP_FROM;
+  const name = process.env.SMTP_FROM_NAME || 'Sri Balaji Renewables';
+  const email = process.env.SMTP_USER || 'no-reply@sribalajirenewables.com';
+  return `"${name}" <${email}>`;
+};
+
+/**
  * Send a review request email to the customer
  * @param {string} toEmail - Customer email address
  * @param {string} customerName - Customer name
@@ -9,21 +39,10 @@ const nodemailer = require('nodemailer');
  */
 const sendReviewEmail = async (toEmail, customerName, serviceType, reviewUrl) => {
   try {
-    let transporter;
+    const transporter = getTransporter();
     const finalReviewUrl = reviewUrl || 'https://g.page/r/CbdJS-IzWTe2EBE/review';
 
-    // Check if SMTP details are defined in .env
-    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-      transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT || '587'),
-        secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-      });
-    } else {
+    if (!transporter) {
       console.log('Notice: SMTP credentials not set in .env. Logging email request details in console fallback mode.');
       console.log(`[Email Fallback] To: ${toEmail}`);
       console.log(`[Email Fallback] Subject: Please leave a review for Sri Balaji Renewables`);
@@ -32,7 +51,7 @@ const sendReviewEmail = async (toEmail, customerName, serviceType, reviewUrl) =>
     }
 
     const mailOptions = {
-      from: process.env.SMTP_FROM || '"Sri Balaji Renewables" <no-reply@sribalajirenewables.com>',
+      from: getFromAddress(),
       to: toEmail,
       subject: 'Please rate your service with Sri Balaji Renewables',
       text: `Hello ${customerName},
@@ -54,7 +73,7 @@ Sri Balaji Renewables Team`,
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log('Email sent successfully: %s', info.messageId);
+    console.log('Review email sent successfully: %s', info.messageId);
   } catch (error) {
     console.error('Error sending review email:', error.message);
   }
@@ -69,19 +88,9 @@ Sri Balaji Renewables Team`,
  */
 const sendPasswordResetEmail = async (toEmail, userName, tempPassword, role = 'User') => {
   try {
-    let transporter;
+    const transporter = getTransporter();
 
-    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-      transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT || '587'),
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-      });
-    } else {
+    if (!transporter) {
       console.log('Notice: SMTP credentials not set in .env. Logging password reset email details in console fallback mode.');
       console.log(`[Email Fallback - Password Reset] To: ${toEmail}`);
       console.log(`[Email Fallback - Password Reset] Name: ${userName}, Role: ${role}`);
@@ -90,7 +99,7 @@ const sendPasswordResetEmail = async (toEmail, userName, tempPassword, role = 'U
     }
 
     const mailOptions = {
-      from: process.env.SMTP_FROM || '"Sri Balaji Renewables" <no-reply@sribalajirenewables.com>',
+      from: getFromAddress(),
       to: toEmail,
       subject: 'Your Password has been Reset - Sri Balaji Renewables',
       text: `Hello ${userName},
@@ -153,16 +162,10 @@ const sendTicketConfirmationEmail = async (toEmail, customerName, request) => {
   `;
 
   try {
-    let transporter;
-    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-      transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT || '587'),
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-      });
+    const transporter = getTransporter();
+    if (transporter) {
       await transporter.sendMail({
-        from: process.env.SMTP_FROM || '"Sri Balaji Renewables" <no-reply@sribalajirenewables.com>',
+        from: getFromAddress(),
         to: toEmail,
         subject: `Service Request Received #${String(requestId).slice(-6).toUpperCase()} - Sri Balaji Renewables`,
         html
@@ -201,15 +204,10 @@ const sendAgentAssignedEmail = async (toEmail, customerName, agentName, agentPho
   `;
 
   try {
-    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT || '587'),
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-      });
+    const transporter = getTransporter();
+    if (transporter) {
       await transporter.sendMail({
-        from: process.env.SMTP_FROM || '"Sri Balaji Renewables" <no-reply@sribalajirenewables.com>',
+        from: getFromAddress(),
         to: toEmail,
         subject: `Technician Assigned to Ticket #${String(requestId).slice(-6).toUpperCase()} - Sri Balaji Renewables`,
         html
@@ -258,15 +256,10 @@ const sendServiceCompletedInvoiceEmail = async (toEmail, customerName, request, 
   `;
 
   try {
-    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT || '587'),
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-      });
+    const transporter = getTransporter();
+    if (transporter) {
       await transporter.sendMail({
-        from: process.env.SMTP_FROM || '"Sri Balaji Renewables" <no-reply@sribalajirenewables.com>',
+        from: getFromAddress(),
         to: toEmail,
         subject: `Service Completed & Receipt #${String(requestId).slice(-6).toUpperCase()} - Sri Balaji Renewables`,
         html
@@ -295,15 +288,10 @@ const sendReferralRewardEmail = async (toEmail, customerName, refereeName, rewar
   `;
 
   try {
-    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT || '587'),
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-      });
+    const transporter = getTransporter();
+    if (transporter) {
       await transporter.sendMail({
-        from: process.env.SMTP_FROM || '"Sri Balaji Renewables" <no-reply@sribalajirenewables.com>',
+        from: getFromAddress(),
         to: toEmail,
         subject: `Referral Reward Credited: ₹${rewardAmount} - Sri Balaji Renewables`,
         html
@@ -333,15 +321,10 @@ const sendReferralPayoutEmail = async (toEmail, customerName, amount, payoutMeth
   `;
 
   try {
-    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT || '587'),
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-      });
+    const transporter = getTransporter();
+    if (transporter) {
       await transporter.sendMail({
-        from: process.env.SMTP_FROM || '"Sri Balaji Renewables" <no-reply@sribalajirenewables.com>',
+        from: getFromAddress(),
         to: toEmail,
         subject: `SBR Referral Payout Processed - ₹${amount}`,
         html
@@ -363,5 +346,3 @@ module.exports = {
   sendReferralRewardEmail,
   sendReferralPayoutEmail
 };
-
-

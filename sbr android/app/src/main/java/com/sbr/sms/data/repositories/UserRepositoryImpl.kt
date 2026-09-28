@@ -283,6 +283,14 @@ class UserRepositoryImpl @Inject constructor(
                         email = user.email ?: email,
                         phone = authBody.user.phone ?: ""
                     )
+                    try {
+                        val tokenToSync = fcmToken ?: com.google.firebase.messaging.FirebaseMessaging.getInstance().token.await()
+                        if (!tokenToSync.isNullOrBlank()) {
+                            updateFcmToken(tokenToSync)
+                        }
+                    } catch (e: Exception) {
+                        Log.w(tag, "FCM token registration deferred/skipped on login", e)
+                    }
                     return user
                 }
             }
