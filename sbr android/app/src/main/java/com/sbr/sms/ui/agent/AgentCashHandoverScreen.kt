@@ -51,7 +51,7 @@ class AgentCashHandoverViewModel @Inject constructor(
                     summary = res.body()?.data
                 }
 
-                if (summary == null || summary.totalCollectedCash <= 0.0) {
+                if (summary == null || (summary.totalCollectedCash <= 0.0 && summary.hasSubmittedHandover != true)) {
                     val agentId = credentialManager.getUserId()
                     val allReqs = serviceRequestRepository.getAllRequests()
                     val handRes = try { apiService.getAllHandovers() } catch (e: Exception) { null }
