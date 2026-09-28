@@ -138,8 +138,8 @@ class AgentPaymentsViewModel @Inject constructor(
                     c1.get(Calendar.DAY_OF_YEAR) == c2.get(Calendar.DAY_OF_YEAR)
         }
 
-        fun getEffectiveDate(req: ServiceRequest): Date? {
-            return req.paymentTimestamp ?: req.completedAt ?: req.updatedAt ?: req.createdAt
+        fun getEffectiveDate(req: ServiceRequest): Date {
+            return req.paymentTimestamp ?: req.completedAt ?: req.updatedAt ?: req.createdAt ?: now
         }
 
         fun getReqAmount(r: ServiceRequest): Double {

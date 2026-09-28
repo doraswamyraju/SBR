@@ -44,17 +44,38 @@ class ServiceRequestRepositoryImpl @Inject constructor(
 
     private fun parseDate(dateStr: String?): Date? {
         if (dateStr.isNullOrBlank()) return null
-        return try {
-            isoDateFormat.parse(dateStr)
-        } catch (e: Exception) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             try {
-                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
-                    timeZone = TimeZone.getTimeZone("UTC")
-                }.parse(dateStr)
-            } catch (ex: Exception) {
-                null
-            }
+                return Date.from(java.time.Instant.parse(dateStr))
+            } catch (_e: Exception) {}
+            try {
+                return Date.from(java.time.ZonedDateTime.parse(dateStr).toInstant())
+            } catch (_e: Exception) {}
+            try {
+                return Date.from(java.time.LocalDateTime.parse(dateStr).atZone(java.time.ZoneId.systemDefault()).toInstant())
+            } catch (_e: Exception) {}
         }
+        val patterns = arrayOf(
+            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSX",
+            "yyyy-MM-dd'T'HH:mm:ss.SSS",
+            "yyyy-MM-dd'T'HH:mm:ss'Z'",
+            "yyyy-MM-dd'T'HH:mm:ssX",
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd HH:mm:ss",
+            "yyyy-MM-dd"
+        )
+        for (p in patterns) {
+            try {
+                val sdf = SimpleDateFormat(p, Locale.US)
+                if (p.contains("'Z'") || p.contains("X")) {
+                    sdf.timeZone = TimeZone.getTimeZone("UTC")
+                }
+                val d = sdf.parse(dateStr)
+                if (d != null) return d
+            } catch (_e: Exception) {}
+        }
+        return null
     }
 
     // Safely extract string ID from nested populated DTO field or flat string field

@@ -66,7 +66,7 @@ class AgentCashHandoverViewModel @Inject constructor(
                         val isPaidOrCompleted = req.paymentStatus.equals("Paid", ignoreCase = true) || req.status.equals("Completed", ignoreCase = true)
                         val isCash = req.paymentMethod.isNullOrBlank() || req.paymentMethod.contains("cash", ignoreCase = true)
                         val effectiveDate = req.paymentTimestamp ?: req.completedAt ?: req.updatedAt ?: req.createdAt
-                        val isToday = effectiveDate != null && effectiveDate.after(startOfToday)
+                        val isToday = effectiveDate == null || effectiveDate.after(startOfToday)
                         val amt = (req.finalAmount?.takeIf { it > 0 } ?: req.paymentAmount ?: 0.0)
                         isMyJob && isPaidOrCompleted && isCash && isToday && amt > 0
                     }
