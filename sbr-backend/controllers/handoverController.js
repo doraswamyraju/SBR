@@ -20,45 +20,44 @@ const getTodayString = (dateObj = new Date()) => {
 // @access  Private (Agent)
 exports.getAgentDailySummary = async (req, res) => {
   try {
-    const agentId = req.user._id;
+    const agentId = req.user._id ? req.user._id.toString() : req.user.id;
     const targetDateStr = req.query.date || getTodayString();
 
-    // Fetch all cash payment requests for this agent that are either Completed or Paid
-    const cashRequests = await ServiceRequest.find({
-      $and: [
-        {
-          $or: [
-            { assignedAgentId: agentId },
-            { assignedAgentId: agentId.toString() }
-          ]
-        },
-        {
-          $or: [
-            { status: { $in: ['Completed', 'completed', 'Paid', 'paid'] } },
-            { paymentStatus: { $in: ['Paid', 'paid'] } }
-          ]
-        },
-        {
-          $or: [
-            { paymentMethod: { $regex: /cash/i } },
-            { paymentMethod: null },
-            { paymentMethod: '' }
-          ]
-        }
+    // Fetch all requests for this agent
+    const requests = await ServiceRequest.find({
+      $or: [
+        { assignedAgentId: req.user._id },
+        { assignedAgentId: agentId }
       ]
-    }).select('_id serviceType customerAddress paymentAmount finalAmount paymentMethod completedAt paymentTimestamp updatedAt createdAt');
+    }).select('_id serviceType customerAddress paymentAmount finalAmount paymentStatus status paymentMethod completedAt paymentTimestamp updatedAt createdAt');
 
-    const isSameDate = (dateVal) => {
-      if (!dateVal) return false;
-      const d = new Date(dateVal);
-      if (isNaN(d.getTime())) return false;
-      const istStr = getTodayString(d);
-      const utcStr = d.toISOString().slice(0, 10);
-      return istStr === targetDateStr || utcStr === targetDateStr;
+    const isTodayJob = (req) => {
+      const dates = [req.paymentTimestamp, req.completedAt, req.updatedAt, req.createdAt].filter(Boolean);
+      return dates.some(d => {
+        try {
+          const istStr = getTodayString(d);
+          const utcStr = new Date(d).toISOString().slice(0, 10);
+          return istStr === targetDateStr || utcStr === targetDateStr;
+        } catch (_e) {
+          return false;
+        }
+      });
     };
 
-    const completedRequests = cashRequests.filter(req => {
-      return isSameDate(req.paymentTimestamp) || isSameDate(req.completedAt) || isSameDate(req.updatedAt) || isSameDate(req.createdAt);
+    const isPaidOrCompleted = (req) => {
+      const status = (req.status || '').toLowerCase();
+      const paymentStatus = (req.paymentStatus || '').toLowerCase();
+      return status === 'completed' || paymentStatus === 'paid';
+    };
+
+    const isCashPayment = (req) => {
+      if (!req.paymentMethod) return true; // Default to cash if unspecified
+      return /cash/i.test(String(req.paymentMethod));
+    };
+
+    const completedRequests = requests.filter(req => {
+      const amt = Number(req.finalAmount !== undefined && req.finalAmount !== null && req.finalAmount > 0 ? req.finalAmount : req.paymentAmount) || 0;
+      return isPaidOrCompleted(req) && isCashPayment(req) && isTodayJob(req) && amt > 0;
     });
 
     const totalCash = completedRequests.reduce((sum, req) => {
@@ -68,7 +67,10 @@ exports.getAgentDailySummary = async (req, res) => {
 
     // Check if an existing handover has already been submitted for this date
     const existingHandover = await CashHandover.findOne({
-      agentId,
+      $or: [
+        { agentId: req.user._id },
+        { agentId: agentId }
+      ],
       date: targetDateStr
     }).populate('storeInchargeId', 'name phone email');
 
@@ -77,7 +79,7 @@ exports.getAgentDailySummary = async (req, res) => {
     res.status(200).json({
       success: true,
       data: {
-        agentId: agentId.toString(),
+        agentId: agentId,
         date: targetDateStr,
         totalCash,
         totalCollectedCash: totalCash,

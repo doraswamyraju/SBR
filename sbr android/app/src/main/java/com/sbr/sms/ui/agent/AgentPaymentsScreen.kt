@@ -230,18 +230,18 @@ private fun PaymentHistoryItem(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "vs ${paymentInfo.customer?.name ?: "N/A"}",
+                    text = "vs ${paymentInfo.request.customerName ?: paymentInfo.customer?.name ?: "Customer"}",
                     style = MaterialTheme.typography.bodySmall
                 )
                 Text(
-                    text = paymentInfo.request.paymentTimestamp?.let { dateFormatter.format(it) } ?: "N/A",
+                    text = (paymentInfo.request.paymentTimestamp ?: paymentInfo.request.completedAt ?: paymentInfo.request.updatedAt)?.let { dateFormatter.format(it) } ?: "Today",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = currencyFormat.format(paymentInfo.request.paymentAmount ?: 0.0),
+                    text = currencyFormat.format(paymentInfo.request.finalAmount?.takeIf { it > 0 } ?: paymentInfo.request.paymentAmount ?: 0.0),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary

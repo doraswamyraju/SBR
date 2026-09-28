@@ -82,6 +82,7 @@ class AgentPaymentsViewModel @Inject constructor(
 
     private fun loadPaymentData() {
         viewModelScope.launch {
+            _uiState.value = AgentPaymentsUiState.Loading
             val agentId = credentialManager.getUserId()?.takeIf { it.isNotBlank() } ?: auth.currentUser?.uid
             if (agentId == null) {
                 _uiState.value = AgentPaymentsUiState.Error("Agent not logged in.")
@@ -90,28 +91,29 @@ class AgentPaymentsViewModel @Inject constructor(
 
             try {
                 // Fetch handovers to compute settled vs pending cash
-                val handRes = apiService.getAllHandovers()
-                if (handRes.isSuccessful && handRes.body()?.success == true) {
-                    val handovers: List<com.sbr.sms.data.models.CashHandover> = handRes.body()?.data ?: emptyList()
-                    settledHandoversTotal = handovers.filter { it.status.equals("ACKNOWLEDGED", ignoreCase = true) }.sumOf { it.totalCollectedCash }
-                }
-            } catch (e: Exception) {
-                // non-blocking for handovers fetch
-            }
-
-            serviceRequestRepository.getPaymentHistoryStream(agentId)
-                .catch { e ->
-                    _uiState.value = AgentPaymentsUiState.Error(e.message ?: "An unknown error occurred")
-                }
-                .collect { history ->
-                    allHistoryRequests = history
-                    if (history.isNotEmpty()) {
-                        val customerIds = history.map { it.customerId }.distinct()
-                        val users = userRepository.getUsersByIds(customerIds).firstOrNull() ?: emptyList()
-                        customerMap = users.mapNotNull { it as? Customer }.associateBy { it.id }
+                try {
+                    val handRes = apiService.getAllHandovers()
+                    if (handRes.isSuccessful && handRes.body()?.success == true) {
+                        val handovers: List<com.sbr.sms.data.models.CashHandover> = handRes.body()?.data ?: emptyList()
+                        settledHandoversTotal = handovers.filter { it.status.equals("ACKNOWLEDGED", ignoreCase = true) }.sumOf { it.totalCollectedCash }
                     }
-                    applyFilterAndEmit()
+                } catch (e: Exception) {
+                    // non-blocking for handovers fetch
                 }
+
+                val allRequests = serviceRequestRepository.getAllRequests()
+                val paymentHistory = allRequests.filter { req ->
+                    val isMyJob = req.assignedAgentId.isNullOrBlank() || req.assignedAgentId == agentId
+                    val isPaid = req.paymentStatus.equals("Paid", ignoreCase = true) || req.status.equals("Completed", ignoreCase = true)
+                    val amt = (req.finalAmount?.takeIf { it > 0 } ?: req.paymentAmount ?: 0.0)
+                    isMyJob && isPaid && amt > 0
+                }
+
+                allHistoryRequests = paymentHistory
+                applyFilterAndEmit()
+            } catch (e: Exception) {
+                _uiState.value = AgentPaymentsUiState.Error(e.localizedMessage ?: "Failed to load payment history")
+            }
         }
     }
 
