@@ -103,7 +103,7 @@ class AgentPaymentsViewModel @Inject constructor(
 
                 val allRequests = serviceRequestRepository.getAllRequests()
                 val paymentHistory = allRequests.filter { req ->
-                    val isMyJob = req.assignedAgentId.isNullOrBlank() || req.assignedAgentId == agentId
+                    val isMyJob = req.assignedAgentId.isNullOrBlank() || req.assignedAgentId == agentId || (auth.currentUser?.uid != null && req.assignedAgentId == auth.currentUser?.uid) || agentId.isBlank()
                     val isPaid = req.paymentStatus.equals("Paid", ignoreCase = true) || req.status.equals("Completed", ignoreCase = true)
                     val amt = (req.finalAmount?.takeIf { it > 0 } ?: req.paymentAmount ?: 0.0)
                     isMyJob && isPaid && amt > 0

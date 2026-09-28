@@ -23,6 +23,7 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.Priority
 import com.google.firebase.auth.FirebaseAuth
 import com.sbr.sms.data.api.ApiService
+import com.sbr.sms.data.CredentialManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
@@ -55,6 +56,7 @@ class AgentRequestsViewModel @Inject constructor(
     private val storageRepository: StorageRepository,
     val apiService: ApiService,
     private val auth: FirebaseAuth,
+    private val credentialManager: CredentialManager,
     private val application: Application,
     private val fusedLocationProviderClient: FusedLocationProviderClient
 ) : ViewModel() {
@@ -87,9 +89,11 @@ class AgentRequestsViewModel @Inject constructor(
                 if (user == null) {
                     flowOf(AgentDashboardUiState.Error("Agent not logged in."))
                 } else {
-                    val agentNameFlow = flow { emit(userRepository.getUser(user.uid)?.name ?: "Agent") }
-                    val allRequestsFlow = serviceRequestRepository.getRequestsStreamForAgent(user.uid)
-                    val todaysCollectionsFlow = serviceRequestRepository.getTodaysCollectionsStream(user.uid)
+                    val storedId = credentialManager.getUserId()
+                    val effectiveAgentId = storedId.ifBlank { user.uid }
+                    val agentNameFlow = flow { emit(userRepository.getUser(effectiveAgentId)?.name ?: userRepository.getUser(user.uid)?.name ?: "Agent") }
+                    val allRequestsFlow = serviceRequestRepository.getRequestsStreamForAgent(effectiveAgentId)
+                    val todaysCollectionsFlow = serviceRequestRepository.getTodaysCollectionsStream(effectiveAgentId)
                         .catch { e ->
                             Log.e("AGENT_DEBUG", "Error fetching today's collections.", e)
                             emit(emptyList())

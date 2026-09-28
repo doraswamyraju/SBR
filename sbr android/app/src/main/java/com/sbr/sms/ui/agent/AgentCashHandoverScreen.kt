@@ -64,9 +64,9 @@ class AgentCashHandoverViewModel @Inject constructor(
                         }.toSet()
 
                     val pendingCashJobs = allReqs.filter { req ->
-                        val isMyJob = req.assignedAgentId.isNullOrBlank() || req.assignedAgentId == agentId
-                        val isPaidOrCompleted = req.paymentStatus.equals("Paid", ignoreCase = true) || req.status.equals("Completed", ignoreCase = true)
-                        val isCash = req.paymentMethod.isNullOrBlank() || req.paymentMethod.contains("cash", ignoreCase = true)
+                        val isMyJob = req.assignedAgentId.isNullOrBlank() || req.assignedAgentId == agentId || agentId.isBlank()
+                        val isPaidOrCompleted = req.paymentStatus.equals("Paid", ignoreCase = true) || req.status.equals("Completed", ignoreCase = true) || req.status.equals("Paid", ignoreCase = true)
+                        val isCash = req.paymentMethod.isNullOrBlank() || req.paymentMethod.contains("cash", ignoreCase = true) || req.paymentMethod.contains("Cash", ignoreCase = true)
                         val amt = (req.finalAmount?.takeIf { it > 0 } ?: req.paymentAmount ?: 0.0)
                         val isNotSettled = !acknowledgedReqIds.contains(req.id)
                         isMyJob && isPaidOrCompleted && isCash && amt > 0 && isNotSettled
@@ -177,12 +177,14 @@ fun AgentCashHandoverScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Column {
+                                val displayCash = if ((summary?.totalCollectedCash ?: 0.0) > 0.0) summary?.totalCollectedCash else (summary?.latestHandover?.totalCollectedCash ?: summary?.totalCollectedCash ?: 0.0)
                                 Text("TODAY'S CASH", color = Color.White.copy(alpha = 0.7f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                Text("₹${String.format("%.2f", summary?.totalCollectedCash ?: 0.0)}", color = Color.White, fontWeight = FontWeight.Black, fontSize = 22.sp)
+                                Text("₹${String.format("%.2f", displayCash ?: 0.0)}", color = Color.White, fontWeight = FontWeight.Black, fontSize = 22.sp)
                             }
                             Column(horizontalAlignment = Alignment.End) {
+                                val displayJobs = if ((summary?.completedJobsCount ?: 0) > 0) summary?.completedJobsCount else (summary?.latestHandover?.completedRequests?.size ?: summary?.completedJobsCount ?: 0)
                                 Text("JOBS COMPLETED", color = Color.White.copy(alpha = 0.7f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                Text("${summary?.completedJobsCount ?: 0}", color = Color.White, fontWeight = FontWeight.Black, fontSize = 22.sp)
+                                Text("${displayJobs ?: 0}", color = Color.White, fontWeight = FontWeight.Black, fontSize = 22.sp)
                             }
                         }
                     }

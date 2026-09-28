@@ -269,7 +269,7 @@ class ServiceRequestRepositoryImpl @Inject constructor(
     }
 
     override fun getRequestsStreamForAgent(agentId: String): Flow<List<ServiceRequest>> = requestsUpdatesFlow.map {
-        getAllRequests().filter { it.assignedAgentId == agentId }
+        getAllRequests().filter { it.assignedAgentId.isNullOrBlank() || it.assignedAgentId == agentId }
     }
 
     override fun getRequestsStreamForCustomer(customerId: String): Flow<List<ServiceRequest>> = requestsUpdatesFlow.map {
@@ -281,23 +281,25 @@ class ServiceRequestRepositoryImpl @Inject constructor(
         calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(Calendar.MINUTE, 0); calendar.set(Calendar.SECOND, 0)
         val startOfToday = calendar.time
         
-        getAllRequests().filter {
-            it.assignedAgentId == agentId &&
-            (it.paymentStatus.equals("Paid", ignoreCase = true) || it.status.equals("Completed", ignoreCase = true) || it.status.equals("Paid", ignoreCase = true)) &&
-            ((it.finalAmount ?: it.paymentAmount ?: 0.0) > 0.0) &&
-            (
-                (it.paymentTimestamp != null && it.paymentTimestamp.after(startOfToday)) ||
-                (it.completedAt != null && it.completedAt.after(startOfToday)) ||
-                (it.updatedAt != null && it.updatedAt.after(startOfToday)) ||
-                (it.createdAt != null && it.createdAt.after(startOfToday))
+        getAllRequests().filter { req ->
+            val isMyJob = req.assignedAgentId.isNullOrBlank() || req.assignedAgentId == agentId
+            val isPaidOrCompleted = req.paymentStatus.equals("Paid", ignoreCase = true) || req.status.equals("Completed", ignoreCase = true) || req.status.equals("Paid", ignoreCase = true)
+            val hasAmount = ((req.finalAmount ?: req.paymentAmount ?: 0.0) > 0.0)
+            val isToday = (
+                (req.paymentTimestamp != null && req.paymentTimestamp.after(startOfToday)) ||
+                (req.completedAt != null && req.completedAt.after(startOfToday)) ||
+                (req.updatedAt != null && req.updatedAt.after(startOfToday)) ||
+                (req.createdAt != null && req.createdAt.after(startOfToday))
             )
+            isMyJob && isPaidOrCompleted && hasAmount && isToday
         }
     }
 
     override fun getPaymentHistoryStream(agentId: String): Flow<List<ServiceRequest>> = requestsUpdatesFlow.map {
-        getAllRequests().filter {
-            it.assignedAgentId == agentId &&
-            it.paymentStatus == "Paid"
+        getAllRequests().filter { req ->
+            val isMyJob = req.assignedAgentId.isNullOrBlank() || req.assignedAgentId == agentId
+            val isPaid = req.paymentStatus.equals("Paid", ignoreCase = true) || req.status.equals("Completed", ignoreCase = true)
+            isMyJob && isPaid
         }
     }
 
