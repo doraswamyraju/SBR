@@ -33,8 +33,8 @@ class AuthViewModel @Inject constructor(
     // UI State for the form fields
     var fullName by mutableStateOf("")
     var email by mutableStateOf("")
+    var phone by mutableStateOf("")
     var password by mutableStateOf("")
-    // FIXED: Corrected the typo from "mutableState of" to "mutableStateOf"
     var confirmPassword by mutableStateOf("")
     var role by mutableStateOf("Customer")
 
@@ -87,6 +87,14 @@ class AuthViewModel @Inject constructor(
     }
 
     fun signupUser() {
+        if (fullName.isBlank() || email.isBlank() || password.isBlank()) {
+            snackbarMessage = "Please fill in all required fields."
+            return
+        }
+        if (phone.isBlank()) {
+            snackbarMessage = "Phone number is required."
+            return
+        }
         if (password != confirmPassword) {
             snackbarMessage = "Passwords do not match."
             return
@@ -94,7 +102,7 @@ class AuthViewModel @Inject constructor(
         isLoading = true
         viewModelScope.launch {
             try {
-                val user = userRepository.signup(fullName, email, password, role.uppercase())
+                val user = userRepository.signup(fullName, email, password, role.uppercase(), phone)
                 if (user == null) {
                     snackbarMessage = "Sign up failed."
                 }

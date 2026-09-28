@@ -58,10 +58,11 @@ class FakeUserRepository : UserRepository {
         return users.find { it.email == email }
     }
 
-    override suspend fun signup(name: String, email: String, password: String, role: String): User? {
+    override suspend fun signup(name: String, email: String, password: String, role: String, phone: String?): User? {
         val userRole = when (role.uppercase()) {
             "ADMIN" -> UserRole.ADMIN
             "AGENT" -> UserRole.AGENT
+            "STORE_INCHARGE" -> UserRole.STORE_INCHARGE
             else -> UserRole.CUSTOMER
         }
         val newUser = when (userRole) {
@@ -73,17 +74,20 @@ class FakeUserRepository : UserRepository {
             UserRole.AGENT -> Agent(
                 id = UUID.randomUUID().toString(),
                 name = name,
-                email = email
+                email = email,
+                phone = phone
             )
             UserRole.CUSTOMER -> Customer(
                 id = UUID.randomUUID().toString(),
                 name = name,
-                email = email
+                email = email,
+                phone = phone
             )
             UserRole.STORE_INCHARGE -> com.sbr.sms.data.models.StoreIncharge(
                 id = UUID.randomUUID().toString(),
                 name = name,
-                email = email
+                email = email,
+                phone = phone
             )
         }
         createUser(newUser)

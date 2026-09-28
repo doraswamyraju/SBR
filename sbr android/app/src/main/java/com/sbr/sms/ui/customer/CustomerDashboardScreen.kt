@@ -81,6 +81,22 @@ fun CustomerDashboardScreen(
         )
     }
 
+    val profile = customerProfile
+    if (profile != null && profile.address.isNullOrBlank() && profile.addresses.isEmpty()) {
+        AddEditAddressDialog(
+            addressToEdit = null,
+            onDismiss = { /* Address registration is required on first login */ },
+            onSave = { newAddress ->
+                viewModel.saveInitialCustomerAddress(
+                    addressTitle = newAddress.title,
+                    addressLine = newAddress.addressLine,
+                    latitude = newAddress.latitude,
+                    longitude = newAddress.longitude
+                )
+            }
+        )
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
             is CustomerDashboardUiState.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))

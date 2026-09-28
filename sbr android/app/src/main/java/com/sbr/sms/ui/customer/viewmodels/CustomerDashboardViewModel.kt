@@ -182,4 +182,37 @@ class CustomerDashboardViewModel @Inject constructor(
     fun resetSubmissionStatus() {
         _submissionStatus.value = UiState.Idle
     }
+
+    fun saveInitialCustomerAddress(
+        addressTitle: String,
+        addressLine: String,
+        latitude: Double? = null,
+        longitude: Double? = null,
+        phone: String? = null
+    ) {
+        viewModelScope.launch {
+            val current = _customerProfile.value ?: return@launch
+            val newAddress = com.sbr.sms.data.models.UserAddress(
+                id = java.util.UUID.randomUUID().toString(),
+                title = if (addressTitle.isNotBlank()) addressTitle else "Home",
+                addressLine = addressLine,
+                latitude = latitude,
+                longitude = longitude
+            )
+            val updatedAddresses = current.addresses + newAddress
+            val updatedCustomer = current.copy(
+                address = if (current.address.isNullOrBlank()) addressLine else current.address,
+                latitude = if (current.latitude == null || current.latitude == 0.0) latitude else current.latitude,
+                longitude = if (current.longitude == null || current.longitude == 0.0) longitude else current.longitude,
+                phone = if (!phone.isNullOrBlank()) phone else current.phone,
+                addresses = updatedAddresses
+            )
+            try {
+                userRepository.updateCustomer(updatedCustomer)
+                _customerProfile.value = updatedCustomer
+            } catch (e: Exception) {
+                _error.value = "Failed to save address: ${e.message}"
+            }
+        }
+    }
 }

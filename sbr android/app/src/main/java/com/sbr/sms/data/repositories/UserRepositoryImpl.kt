@@ -78,11 +78,11 @@ class UserRepositoryImpl @Inject constructor(
                 address = this.address,
                 latitude = this.latitude,
                 longitude = this.longitude,
-                addresses = this.addresses.map {
+                addresses = (this.addresses ?: emptyList()).map {
                     UserAddress(
                         id = it.id ?: UUID.randomUUID().toString(),
-                        title = it.title,
-                        addressLine = it.addressLine,
+                        title = it.title ?: "Home",
+                        addressLine = it.addressLine ?: "",
                         latitude = it.latitude,
                         longitude = it.longitude
                     )
@@ -300,14 +300,15 @@ class UserRepositoryImpl @Inject constructor(
         return null
     }
 
-    override suspend fun signup(name: String, email: String, password: String, role: String): User? {
+    override suspend fun signup(name: String, email: String, password: String, role: String, phone: String?): User? {
         try {
             val response = apiService.register(
                 RegisterRequest(
                     name = name,
                     email = email,
                     password = password,
-                    role = role
+                    role = role,
+                    phone = phone
                 )
             )
             if (response.isSuccessful) {

@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -170,8 +171,16 @@ private fun SignUpFields(viewModel: AuthViewModel) {
         onValueChange = { viewModel.email = it },
         label = { Text("Email") },
         leadingIcon = { Icon(Icons.Default.MailOutline, contentDescription = null) },
-        // THE FIX: Using the full path to the class
         keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Email),
+        modifier = Modifier.fillMaxWidth()
+    )
+    Spacer(modifier = Modifier.height(8.dp))
+    OutlinedTextField(
+        value = viewModel.phone,
+        onValueChange = { viewModel.phone = it },
+        label = { Text("Phone Number") },
+        leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
+        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone),
         modifier = Modifier.fillMaxWidth()
     )
     Spacer(modifier = Modifier.height(8.dp))

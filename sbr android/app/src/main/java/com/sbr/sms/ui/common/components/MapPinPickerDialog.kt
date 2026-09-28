@@ -36,8 +36,12 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.MapsInitializer
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
@@ -73,6 +77,30 @@ fun MapPinPickerDialog(
     var detectedAddress by remember { mutableStateOf("") }
     var isLocating by remember { mutableStateOf(false) }
     var isSearching by remember { mutableStateOf(false) }
+    var searchSuggestions by remember { mutableStateOf<List<Address>>(emptyList()) }
+    var showSuggestions by remember { mutableStateOf(false) }
+
+    LaunchedEffect(searchText, showSuggestions) {
+        if (showSuggestions && searchText.trim().length >= 2) {
+            kotlinx.coroutines.delay(300)
+            withContext(Dispatchers.IO) {
+                try {
+                    val geocoder = Geocoder(context, Locale.getDefault())
+                    @Suppress("DEPRECATION")
+                    val results = geocoder.getFromLocationName(searchText.trim(), 6)
+                    withContext(Dispatchers.Main) {
+                        searchSuggestions = results ?: emptyList()
+                    }
+                } catch (_: Exception) {
+                    withContext(Dispatchers.Main) {
+                        searchSuggestions = emptyList()
+                    }
+                }
+            }
+        } else if (!showSuggestions || searchText.trim().length < 2) {
+            searchSuggestions = emptyList()
+        }
+    }
 
     fun reverseGeocode(lat: Double, lng: Double) {
         coroutineScope.launch(Dispatchers.IO) {
@@ -194,6 +222,9 @@ fun MapPinPickerDialog(
     }
 
     LaunchedEffect(Unit) {
+        try {
+            MapsInitializer.initialize(context)
+        } catch (_: Exception) {}
         if (initialLatitude != null && initialLongitude != null && initialLatitude != 0.0 && initialLongitude != 0.0) {
             reverseGeocode(initialLatitude, initialLongitude)
         } else if (initialAddress.isNotBlank()) {
@@ -276,7 +307,10 @@ fun MapPinPickerDialog(
                             Spacer(modifier = Modifier.width(8.dp))
                             TextField(
                                 value = searchText,
-                                onValueChange = { searchText = it },
+                                onValueChange = { 
+                                    searchText = it 
+                                    showSuggestions = true
+                                },
                                 placeholder = { Text("Search address, area or landmark", fontSize = 14.sp) },
                                 singleLine = true,
                                 modifier = Modifier.weight(1f),
@@ -288,13 +322,73 @@ fun MapPinPickerDialog(
                                     unfocusedIndicatorColor = Color.Transparent
                                 ),
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                                keyboardActions = KeyboardActions(onSearch = { searchAddress(searchText) })
+                                keyboardActions = KeyboardActions(onSearch = { 
+                                    showSuggestions = false
+                                    searchAddress(searchText) 
+                                })
                             )
                             if (isSearching) {
                                 CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                             } else if (searchText.isNotBlank()) {
-                                IconButton(onClick = { searchAddress(searchText) }) {
+                                IconButton(onClick = { 
+                                    showSuggestions = false
+                                    searchAddress(searchText) 
+                                }) {
                                     Icon(Icons.Default.ArrowForward, contentDescription = "Search Go", tint = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                        }
+                    }
+
+                    if (showSuggestions && searchSuggestions.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Card(
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 240.dp)
+                        ) {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentPadding = PaddingValues(vertical = 4.dp)
+                            ) {
+                                items(searchSuggestions) { addr ->
+                                    val fullText = listOfNotNull(
+                                        addr.featureName,
+                                        addr.subLocality,
+                                        addr.locality,
+                                        addr.adminArea
+                                    ).distinct().joinToString(", ")
+
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                showSuggestions = false
+                                                keyboardController?.hide()
+                                                searchText = fullText
+                                                detectedAddress = fullText
+                                                val latLng = LatLng(addr.latitude, addr.longitude)
+                                                coroutineScope.launch {
+                                                    cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(latLng, 16f), 600)
+                                                }
+                                            }
+                                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Default.Place, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Text(
+                                            text = fullText,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f))
                                 }
                             }
                         }

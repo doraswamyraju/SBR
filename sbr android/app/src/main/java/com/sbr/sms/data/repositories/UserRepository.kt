@@ -15,7 +15,7 @@ interface UserRepository {
     fun getUsersByIds(userIds: List<String>): Flow<List<User>>
     suspend fun deleteUser(userId: String)
     suspend fun login(email: String, password: String): User?
-    suspend fun signup(name: String, email: String, password: String, role: String): User?
+    suspend fun signup(name: String, email: String, password: String, role: String, phone: String? = null): User?
     suspend fun logout()
     suspend fun deleteProfile(): Boolean
     suspend fun updateFcmToken(token: String): Boolean
