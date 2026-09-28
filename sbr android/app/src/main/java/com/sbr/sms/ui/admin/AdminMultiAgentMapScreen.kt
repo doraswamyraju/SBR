@@ -33,7 +33,7 @@ import com.google.android.gms.maps.MapsInitializer
 
 private const val mapStyleJson = """
 [
-  {"elementType":"geometry","stylers":[{"color":"#242f3e"}]},{"elementType":"labels.text.fill","stylers":[{"color":"#746855"}]},{"elementType":"labels.text.stroke","stylers":[{"color":"#242f3e"}]},{"featureType":"administrative.locality","elementType":"labels.text.fill","stylers":[{"color":"#d59563"}]},{"featureType":"poi","elementType":"labels.text.fill","stylers":[{"color":"#d59563"}]},{"featureType":"poi.park","elementType":"geometry","stylers":[{"color":"#263c3f"}]},{"featureType":"poi.park","elementType":"labels.text.fill","stylers":[{"color":"#6b9a76"}]},{"featureType":"road","elementType":"geometry","stylers":[{"color":"#38414e"}]},{"featureType":"road","elementType":"geometry.stroke","stylers":[{"color":"#212a37"}]},{"featureType":"road","elementType":"labels.text.fill","stylers":[{"color":"#9ca5b3"}]},{"featureType":"road.highway","elementType":"geometry","stylers":[{"color":"#746855"}]},{"featureType":"road.highway","elementType":"geometry.stroke","stylers":[{"color":"#1f2835"}]},{"featureType":"road.highway","elementType":"labels.text.fill","stylers":[{"color":"#f3d19c"}]},{"featureType":"transit","elementType":"geometry","stylers":[{"color":"#2f3948"}]},{"featureType":"transit.station","elementType":"labels.text.fill","stylers":[{"color":"#d59563"}]},{"featureType":"water","elementType":"geometry","stylers":[{"color":"#17263c"}]},{"featureType":"water","elementType":"labels.text.fill","stylers":[{"color":"#515c6d"}]},{"featureType":"water","elementType":"labels.text.stroke","stylers":[{"color":"#17263c"}]}
+  {"elementType":"geometry","stylers":[{"color":"#242f3e"}]},{"elementType":"labels.text.fill","stylers":[{"color":"#746855"}]},{"elementType":"labels.text.stroke","stylers":[{"color":"#242f3e"}]},{"featureType":"administrative.locality","elementType":"labels.text.fill","stylers":[{"color":"#d59563"}]},{"featureType":"poi","elementType":"labels.text.fill","stylers":[{"color":"#d59563"}]},{"featureType":"poi.park","elementType":"geometry","stylers":[{"color":"#263c3f"}]},{"featureType":"poi.park","elementType":"labels.text.fill","stylers":[{"color":"#6b9a76"}]},{"featureType":"road","elementType":"geometry","stylers":[{"color":"#38414e"}]},{"featureType":"road","elementType":"geometry.stroke","stylers":[{"color":"#212a37"}]},{"featureType":"road","elementType":"labels.text.fill","stylers":[{"color":"#9ca5b3"}]},{"featureType":"road.highway","elementType":"geometry","stylers":[{"color":"#746855"}]},{"featureType":"road.highway","elementType":"geometry.stroke","stylers":[{"color":"#1f2835"}]},{"featureType":"road.highway","elementType":"labels.text.fill","stylers":[{"color":"#f3d19c"}]},{"featureType":"transit","elementType":"geometry","stylers":[{"color":"#2f3948"}]},{"featureType":"transit.station","elementType":"labels.text.fill","stylers":[{"color":"#d59563"}]},{"featureType":"water","elementType":"geometry","stylers":[{"color":"#17263c"}]},{"featureType":"water","elementType":"labels.text.fill","stylers":[{"color":"#515c6d"}]},{"featureType":"water","elementType":"labels.stroke","stylers":[{"color":"#17263c"}]}
 ]
 """
 
@@ -50,7 +50,6 @@ fun AdminMultiAgentMapScreen(
     }
     val coroutineScope = rememberCoroutineScope()
 
-    // State for the Bottom Sheet
     val scaffoldState = rememberBottomSheetScaffoldState()
 
     val mapStyleOptions = remember {
@@ -67,7 +66,6 @@ fun AdminMultiAgentMapScreen(
         } catch (_: Exception) {}
     }
 
-    // NEW: Improved camera logic with agent coordinate fallbacks
     LaunchedEffect(uiState) {
         if (uiState is MultiAgentUiState.Success) {
             val agents = (uiState as MultiAgentUiState.Success).trackedAgents
@@ -75,27 +73,32 @@ fun AdminMultiAgentMapScreen(
                 val path = agentInfo.request.locationPath
                 val lat = path.lastOrNull()?.latitude ?: agentInfo.agent.currentLat
                 val lng = path.lastOrNull()?.longitude ?: agentInfo.agent.currentLng
-                if (lat != null && lng != null) LatLng(lat, lng) else null
+                if (lat != null && lng != null && lat != 0.0 && lng != 0.0) LatLng(lat, lng) else null
             }
             if (validPositions.isNotEmpty()) {
                 try {
                     if (validPositions.size == 1) {
                         cameraPositionState.animate(
-                            CameraUpdateFactory.newLatLngZoom(validPositions.first(), 15f),
-                            1000
+                            CameraUpdateFactory.newLatLngZoom(validPositions.first(), 14f),
+                            800
                         )
                     } else {
-                        val boundsBuilder = LatLngBounds.builder()
-                        validPositions.forEach { boundsBuilder.include(it) }
-                        agents.forEach { agentInfo ->
-                            agentInfo.request.locationPath.forEach { location ->
-                                boundsBuilder.include(LatLng(location.latitude, location.longitude))
-                            }
+                        val minLat = validPositions.minOf { it.latitude }
+                        val maxLat = validPositions.maxOf { it.latitude }
+                        val minLng = validPositions.minOf { it.longitude }
+                        val maxLng = validPositions.maxOf { it.longitude }
+                        if (maxLat - minLat > 0.0001 || maxLng - minLng > 0.0001) {
+                            val bounds = LatLngBounds(LatLng(minLat, minLng), LatLng(maxLat, maxLng))
+                            cameraPositionState.animate(
+                                CameraUpdateFactory.newLatLngBounds(bounds, 120),
+                                800
+                            )
+                        } else {
+                            cameraPositionState.animate(
+                                CameraUpdateFactory.newLatLngZoom(validPositions.first(), 14f),
+                                800
+                            )
                         }
-                        cameraPositionState.animate(
-                            CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 150),
-                            1000
-                        )
                     }
                 } catch (_: Exception) {
                     validPositions.firstOrNull()?.let { pos ->
@@ -108,24 +111,25 @@ fun AdminMultiAgentMapScreen(
         }
     }
 
-    // NEW: Main layout using BottomSheetScaffold
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
-        sheetPeekHeight = 110.dp, // Shows the title and a bit of the first item
+        sheetPeekHeight = 110.dp,
         sheetContent = {
-            // This is the content of the floating panel
             ActiveAgentsSheetContent(
                 uiState = uiState,
                 onAgentClick = { agentInfo ->
                     val lat = agentInfo.request.locationPath.lastOrNull()?.latitude ?: agentInfo.agent.currentLat
                     val lng = agentInfo.request.locationPath.lastOrNull()?.longitude ?: agentInfo.agent.currentLng
-                    if (lat != null && lng != null) {
+                    if (lat != null && lng != null && lat != 0.0 && lng != 0.0) {
                         coroutineScope.launch {
                             try {
                                 cameraPositionState.animate(
-                                    CameraUpdateFactory.newLatLngZoom(LatLng(lat, lng), 16f)
+                                    CameraUpdateFactory.newLatLngZoom(LatLng(lat, lng), 15f),
+                                    600
                                 )
-                                scaffoldState.bottomSheetState.partialExpand()
+                                try {
+                                    scaffoldState.bottomSheetState.partialExpand()
+                                } catch (_: Exception) {}
                             } catch (_: Exception) {}
                         }
                     }
@@ -133,7 +137,6 @@ fun AdminMultiAgentMapScreen(
             )
         }
     ) { padding ->
-        // This is the main screen content (the map)
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             when (val state = uiState) {
                 is MultiAgentUiState.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
@@ -148,7 +151,7 @@ fun AdminMultiAgentMapScreen(
                             val path = agentInfo.request.locationPath
                             val lat = path.lastOrNull()?.latitude ?: agentInfo.agent.currentLat
                             val lng = path.lastOrNull()?.longitude ?: agentInfo.agent.currentLng
-                            if (lat != null && lng != null) {
+                            if (lat != null && lng != null && lat != 0.0 && lng != 0.0) {
                                 val validPath = path.filter { it.latitude != 0.0 && it.longitude != 0.0 }
                                 if (validPath.size >= 2) {
                                     Polyline(
@@ -159,7 +162,7 @@ fun AdminMultiAgentMapScreen(
                                 }
                                 Marker(
                                     state = MarkerState(position = LatLng(lat, lng)),
-                                    title = agentInfo.agent.name,
+                                    title = agentInfo.agent.name.ifBlank { "Technician" },
                                     icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE),
                                 )
                             }
@@ -186,7 +189,6 @@ private fun ActiveAgentsSheetContent(
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
     ) {
-        // Draggable handle for the bottom sheet
         Box(
             modifier = Modifier
                 .padding(vertical = 8.dp)
@@ -208,18 +210,22 @@ private fun ActiveAgentsSheetContent(
                     Text("No active agents found.", modifier = Modifier.padding(vertical = 16.dp))
                 } else {
                     LazyColumn(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 350.dp),
                         contentPadding = PaddingValues(bottom = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(uiState.trackedAgents, key = { it.agent.id }) { agentInfo ->
+                        items(
+                            uiState.trackedAgents,
+                            key = { it.agent.id.ifBlank { it.request.id } }
+                        ) { agentInfo ->
                             AgentInfoRow(agentInfo = agentInfo, onClick = { onAgentClick(agentInfo) })
                         }
                     }
                 }
             }
             else -> {
-                // Show a simple loading/error text inside the sheet
                 Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
                     Text("Loading agent data...")
                 }
@@ -253,12 +259,12 @@ private fun AgentInfoRow(
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = agentInfo.agent.name,
+                    text = agentInfo.agent.name.ifBlank { "Technician" },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "On duty for: ${agentInfo.request.serviceType}",
+                    text = "On duty for: ${agentInfo.request.serviceType.ifBlank { "Service Job" }}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
