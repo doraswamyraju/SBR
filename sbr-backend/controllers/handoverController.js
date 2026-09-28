@@ -202,15 +202,20 @@ exports.getPendingHandovers = async (req, res) => {
 
 // @desc    Get all handovers with filter options
 // @route   GET /api/handovers/all
-// @access  Private (STORE_INCHARGE, ADMIN)
+// @access  Private (STORE_INCHARGE, ADMIN, AGENT)
 exports.getAllHandovers = async (req, res) => {
   try {
     const { status, date, agentId } = req.query;
     let query = {};
 
+    if (req.user && req.user.role === 'AGENT') {
+      query.agentId = req.user._id;
+    } else if (agentId) {
+      query.agentId = agentId;
+    }
+
     if (status) query.status = status;
     if (date) query.date = date;
-    if (agentId) query.agentId = agentId;
 
     const handovers = await CashHandover.find(query)
       .populate('agentId', 'name email phone')

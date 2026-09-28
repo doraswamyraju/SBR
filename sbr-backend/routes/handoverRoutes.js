@@ -16,9 +16,9 @@ router.get('/agent-daily-summary', protect, authorize('AGENT', 'ADMIN', 'admin')
 router.post('/submit', protect, authorize('AGENT', 'ADMIN', 'admin'), submitHandover);
 router.get('/my-submissions', protect, authorize('AGENT', 'ADMIN', 'admin'), getMySubmissions);
 
-// Store In-Charge & Admin routes
+// Store In-Charge & Admin routes (and Agents viewing own handover history)
 router.get('/pending', protect, authorize('STORE_INCHARGE', 'ADMIN', 'admin'), getPendingHandovers);
-router.get('/all', protect, authorize('STORE_INCHARGE', 'ADMIN', 'admin'), getAllHandovers);
+router.get('/all', protect, authorize('STORE_INCHARGE', 'ADMIN', 'admin', 'AGENT'), getAllHandovers);
 router.post('/:id/acknowledge', protect, authorize('STORE_INCHARGE', 'ADMIN', 'admin'), acknowledgeHandover);
 
 module.exports = router;

@@ -214,15 +214,47 @@ fun StoreInchargeDashboardScreen(
     val requests by viewModel.requests.collectAsState()
     val agents by viewModel.agents.collectAsState()
     val handovers by viewModel.pendingHandovers.collectAsState()
+    val allHandovers by viewModel.allHandovers.collectAsState()
     val indents by viewModel.pendingIndents.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
     val pendingDispatchesCount = remember(requests) {
         requests.count { it.status.equals("Pending", ignoreCase = true) || it.assignedAgentId.isNullOrBlank() }
     }
-    val totalPendingCash = remember(handovers) {
+
+    val handledRequestIds = remember(handovers, allHandovers) {
+        (handovers + allHandovers).flatMap { h ->
+            h.completedRequests.mapNotNull { item ->
+                when (item) {
+                    is String -> item
+                    is Map<*, *> -> (item["id"] ?: item["_id"])?.toString()
+                    else -> null
+                }
+            }
+        }.toSet()
+    }
+
+    val unsubmittedCashRequests = remember(requests, handledRequestIds) {
+        requests.filter { req ->
+            val isPaid = req.paymentStatus.equals("Paid", ignoreCase = true) || req.status.equals("Completed", ignoreCase = true)
+            val isCash = req.paymentMethod.isNullOrBlank() || req.paymentMethod?.contains("cash", ignoreCase = true) == true
+            val amt = (req.finalAmount?.takeIf { it > 0 } ?: req.paymentAmount ?: 0.0)
+            isPaid && isCash && amt > 0 && !handledRequestIds.contains(req.id)
+        }
+    }
+
+    val unsubmittedFieldCash = remember(unsubmittedCashRequests) {
+        unsubmittedCashRequests.sumOf { (it.finalAmount?.takeIf { a -> a > 0 } ?: it.paymentAmount ?: 0.0) }
+    }
+
+    val submittedPendingCash = remember(handovers) {
         handovers.sumOf { it.totalCollectedCash }
     }
+
+    val totalUnsettledCash = remember(submittedPendingCash, unsubmittedFieldCash) {
+        submittedPendingCash + unsubmittedFieldCash
+    }
+
     val recentRequests = remember(requests) {
         requests.take(3)
     }
@@ -314,8 +346,13 @@ fun StoreInchargeDashboardScreen(
                 ) {
                     KpiSummaryCard(
                         title = "Unsettled Cash",
-                        count = "₹${String.format("%.0f", totalPendingCash)}",
-                        subtitle = "${handovers.size} pending handovers",
+                        count = "₹${String.format("%.0f", totalUnsettledCash)}",
+                        subtitle = when {
+                            handovers.isNotEmpty() && unsubmittedFieldCash > 0 -> "${handovers.size} submitted + ₹${String.format("%.0f", unsubmittedFieldCash)} field"
+                            handovers.isNotEmpty() -> "${handovers.size} pending handovers"
+                            unsubmittedFieldCash > 0 -> "Field cash with techs (${unsubmittedCashRequests.size} jobs)"
+                            else -> "All collections settled"
+                        },
                         icon = Icons.Default.AccountBalanceWallet,
                         iconBg = Color(0xFFDCFCE7),
                         iconTint = Color(0xFF16A34A),
@@ -393,7 +430,7 @@ fun StoreInchargeDashboardScreen(
         }
 
         // Urgent Actions Feed: Pending Indents & Dispatches
-        if (indents.isNotEmpty() || handovers.isNotEmpty()) {
+        if (indents.isNotEmpty() || handovers.isNotEmpty() || unsubmittedFieldCash > 0) {
             item {
                 Text(
                     "Urgent Actions Required",
@@ -428,7 +465,7 @@ fun StoreInchargeDashboardScreen(
                 }
             }
 
-            if (handovers.isNotEmpty()) {
+            if (handovers.isNotEmpty() || unsubmittedFieldCash > 0) {
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth().clickable { onNavigateToSection(StoreInchargeSection.CashHandovers) },
@@ -443,8 +480,13 @@ fun StoreInchargeDashboardScreen(
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Icon(Icons.Default.Payments, contentDescription = null, tint = Color(0xFF16A34A))
                                 Column {
-                                    Text("₹${String.format("%.2f", totalPendingCash)} EOD Cash Awaiting Settle", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                    Text("${handovers.size} field agent cash handovers to count", fontSize = 11.sp, color = Color.Gray)
+                                    if (handovers.isNotEmpty()) {
+                                        Text("₹${String.format("%.2f", submittedPendingCash)} EOD Cash Awaiting Settle", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                        Text("${handovers.size} field agent cash handovers to count" + if (unsubmittedFieldCash > 0) " (+₹${String.format("%.0f", unsubmittedFieldCash)} field cash)" else "", fontSize = 11.sp, color = Color.Gray)
+                                    } else {
+                                        Text("₹${String.format("%.2f", unsubmittedFieldCash)} Field Cash In Circulation", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                        Text("${unsubmittedCashRequests.size} cash jobs awaiting technician EOD handover", fontSize = 11.sp, color = Color.Gray)
+                                    }
                                 }
                             }
                             Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = Color(0xFF16A34A))

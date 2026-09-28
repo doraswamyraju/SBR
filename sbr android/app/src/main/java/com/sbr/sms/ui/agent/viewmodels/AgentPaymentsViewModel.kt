@@ -2,6 +2,7 @@ package com.sbr.sms.ui.agent.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sbr.sms.data.CredentialManager
 import com.sbr.sms.data.api.ApiService
 import com.sbr.sms.data.models.Customer
 import com.sbr.sms.data.models.ServiceRequest
@@ -52,7 +53,8 @@ class AgentPaymentsViewModel @Inject constructor(
     private val serviceRequestRepository: ServiceRequestRepository,
     private val userRepository: UserRepository,
     private val apiService: ApiService,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val credentialManager: CredentialManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<AgentPaymentsUiState>(AgentPaymentsUiState.Loading)
@@ -74,9 +76,13 @@ class AgentPaymentsViewModel @Inject constructor(
         applyFilterAndEmit()
     }
 
+    fun reload() {
+        loadPaymentData()
+    }
+
     private fun loadPaymentData() {
         viewModelScope.launch {
-            val agentId = auth.currentUser?.uid
+            val agentId = credentialManager.getUserId()?.takeIf { it.isNotBlank() } ?: auth.currentUser?.uid
             if (agentId == null) {
                 _uiState.value = AgentPaymentsUiState.Error("Agent not logged in.")
                 return@launch
@@ -87,7 +93,7 @@ class AgentPaymentsViewModel @Inject constructor(
                 val handRes = apiService.getAllHandovers()
                 if (handRes.isSuccessful && handRes.body()?.success == true) {
                     val handovers: List<com.sbr.sms.data.models.CashHandover> = handRes.body()?.data ?: emptyList()
-                    settledHandoversTotal = handovers.filter { it.status == "ACKNOWLEDGED" }.sumOf { it.totalCollectedCash }
+                    settledHandoversTotal = handovers.filter { it.status.equals("ACKNOWLEDGED", ignoreCase = true) }.sumOf { it.totalCollectedCash }
                 }
             } catch (e: Exception) {
                 // non-blocking for handovers fetch
@@ -130,8 +136,16 @@ class AgentPaymentsViewModel @Inject constructor(
                     c1.get(Calendar.DAY_OF_YEAR) == c2.get(Calendar.DAY_OF_YEAR)
         }
 
+        fun getEffectiveDate(req: ServiceRequest): Date? {
+            return req.paymentTimestamp ?: req.completedAt ?: req.updatedAt ?: req.createdAt
+        }
+
+        fun getReqAmount(r: ServiceRequest): Double {
+            return (r.finalAmount?.takeIf { it > 0 } ?: r.paymentAmount ?: 0.0)
+        }
+
         val filteredRequests = allHistoryRequests.filter { req ->
-            val timestamp = req.paymentTimestamp
+            val timestamp = getEffectiveDate(req)
             when (_selectedFilter.value) {
                 PaymentDateFilter.TODAY -> isSameDay(timestamp, now)
                 PaymentDateFilter.YESTERDAY -> {
@@ -151,12 +165,16 @@ class AgentPaymentsViewModel @Inject constructor(
             }
         }
 
-        val totalCollections = allHistoryRequests.sumOf { it.paymentAmount ?: 0.0 }
-        val filteredCollections = filteredRequests.sumOf { it.paymentAmount ?: 0.0 }
+        val totalCollections = allHistoryRequests.sumOf { getReqAmount(it) }
+        val filteredCollections = filteredRequests.sumOf { getReqAmount(it) }
 
-        val todaysCollections = allHistoryRequests.filter { isSameDay(it.paymentTimestamp, now) }.sumOf { it.paymentAmount ?: 0.0 }
-        val cashCollections = allHistoryRequests.filter { it.paymentMethod?.uppercase() == "CASH" || it.paymentMethod.isNullOrBlank() }.sumOf { it.paymentAmount ?: 0.0 }
-        val onlineCollections = allHistoryRequests.filter { it.paymentMethod?.uppercase()?.contains("ONLINE") == true || it.paymentMethod?.uppercase()?.contains("UPI") == true }.sumOf { it.paymentAmount ?: 0.0 }
+        val todaysCollections = allHistoryRequests.filter { isSameDay(getEffectiveDate(it), now) }.sumOf { getReqAmount(it) }
+        val cashCollections = allHistoryRequests.filter {
+            it.paymentMethod?.uppercase()?.contains("CASH") == true || it.paymentMethod.isNullOrBlank()
+        }.sumOf { getReqAmount(it) }
+        val onlineCollections = allHistoryRequests.filter {
+            it.paymentMethod?.uppercase()?.contains("ONLINE") == true || it.paymentMethod?.uppercase()?.contains("UPI") == true
+        }.sumOf { getReqAmount(it) }
 
         val pendingEodCash = (cashCollections - settledHandoversTotal).coerceAtLeast(0.0)
 
