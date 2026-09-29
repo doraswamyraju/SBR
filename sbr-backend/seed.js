@@ -46,16 +46,29 @@ const seedUsers = async () => {
     console.log('MongoDB Connected.');
 
     for (const u of users) {
-      const userExists = await User.findOne({ email: u.email });
-      if (userExists) {
-        console.log(`User with email ${u.email} already exists.`);
+      const user = await User.findOne({ email: u.email });
+      if (user) {
+        user.password = u.password;
+        user.role = u.role;
+        user.name = u.name;
+        if (u.phone) user.phone = u.phone;
+        if (u.specialization) user.specialization = u.specialization;
+        if (u.address) user.address = u.address;
+        await user.save();
+        console.log(`Updated user & reset password for: ${u.email} (${u.role}) -> password: ${u.password}`);
       } else {
         await User.create(u);
-        console.log(`User created: ${u.email} (${u.role})`);
+        console.log(`User created: ${u.email} (${u.role}) -> password: ${u.password}`);
       }
     }
 
-    console.log('Database seeding completed successfully.');
+    console.log('\nAll users seeded / updated successfully:');
+    console.log('----------------------------------------------------');
+    console.log('Admin:          admin@sbr.com    / admin123');
+    console.log('Store Incharge: store@sbr.com    / store123');
+    console.log('Agent:          agent2@sbr.com   / agent123');
+    console.log('Customer:       customer1@sbr.com / customer123');
+    console.log('----------------------------------------------------');
     process.exit(0);
   } catch (error) {
     console.error(`Seeding error: ${error.message}`);
