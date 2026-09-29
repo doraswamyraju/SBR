@@ -18,7 +18,7 @@ data class CashHandover(
     @SerializedName("totalCollectedCash", alternate = ["totalCash", "amount", "collectedCash"]) val totalCollectedCash: Double = 0.0,
     val completedRequests: List<Any> = emptyList(),
     val status: String = "SUBMITTED", // SUBMITTED, ACKNOWLEDGED, DISCREPANCY, NOT_SUBMITTED
-    @SerializedName("acknowledgedBy", alternate = ["storeInchargeId"]) val acknowledgedBy: Any? = null,
+    val acknowledgedBy: Any? = null,
     val storeInchargeId: Any? = null,
     val acknowledgedAmount: Double? = null,
     val discrepancyAmount: Double? = null,
