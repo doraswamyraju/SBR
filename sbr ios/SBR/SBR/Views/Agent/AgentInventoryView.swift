@@ -1,5 +1,14 @@
 import SwiftUI
 
+struct IndentDraftItem: Identifiable, Equatable {
+    let id = UUID()
+    let productId: String
+    var name: String
+    var sku: String
+    var requestedQuantity: Int
+    var stockLevel: Int
+}
+
 struct AgentInventoryView: View {
     @State private var items: [AgentInventoryItem] = []
     @State private var indents: [AgentIndent] = []
@@ -8,9 +17,10 @@ struct AgentInventoryView: View {
     @State private var isLoading = false
     @State private var showIndentSheet = false
     
-    // Indent Form State
+    // Multi-Item Indent Form State
+    @State private var draftItems: [IndentDraftItem] = []
     @State private var selectedProductId = ""
-    @State private var indentQuantity = 1
+    @State private var itemQuantity = 1
     @State private var urgency = "MEDIUM"
     @State private var agentRemarks = ""
     @State private var isSubmittingIndent = false
@@ -28,7 +38,14 @@ struct AgentInventoryView: View {
                 }
                 .pickerStyle(SegmentedPickerStyle())
                 
-                Button(action: { showIndentSheet = true }) {
+                Button(action: {
+                    draftItems.removeAll()
+                    selectedProductId = ""
+                    itemQuantity = 1
+                    agentRemarks = ""
+                    urgency = "MEDIUM"
+                    showIndentSheet = true
+                }) {
                     HStack(spacing: 4) {
                         Image(systemName: "plus.circle.fill")
                         Text("Raise Indent")
@@ -79,6 +96,7 @@ struct AgentInventoryView: View {
                     Text("No parts currently assigned to your van kit.")
                         .foregroundColor(.secondary)
                     Button("Raise Indent to Store") {
+                        draftItems.removeAll()
                         showIndentSheet = true
                     }
                     .padding(.top, 8)
@@ -152,7 +170,7 @@ struct AgentInventoryView: View {
                 List(indents) { indent in
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            Text("Indent #\(String(indent.id.suffix(6)))")
+                            Text("Indent #\(String(indent.id.suffix(6)).uppercased())")
                                 .font(.subheadline)
                                 .fontWeight(.bold)
                             Spacer()
@@ -163,12 +181,13 @@ struct AgentInventoryView: View {
                         
                         ForEach(indent.items) { reqItem in
                             HStack {
-                                Text(reqItem.name)
+                                Text("• \(reqItem.name)")
                                     .font(.subheadline)
                                 Spacer()
                                 Text("x\(reqItem.requestedQuantity)")
                                     .font(.subheadline)
                                     .fontWeight(.semibold)
+                                    .foregroundColor(.blue)
                             }
                         }
                         
@@ -177,11 +196,17 @@ struct AgentInventoryView: View {
                                 Text("Urgency:")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
-                                Text(urgency)
+                                Text(urgency.uppercased())
                                     .font(.caption)
                                     .fontWeight(.bold)
-                                    .foregroundColor(urgency == "HIGH" ? .red : .orange)
+                                    .foregroundColor(urgency.uppercased() == "HIGH" || urgency.uppercased() == "EMERGENCY" ? .red : .orange)
                             }
+                        }
+                        
+                        if let remarks = indent.agentRemarks, !remarks.isEmpty {
+                            Text("Agent Note: \(remarks)")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
                         }
                         
                         if let inchargeRemarks = indent.inchargeRemarks, !inchargeRemarks.isEmpty {
@@ -203,37 +228,84 @@ struct AgentInventoryView: View {
         }
     }
     
-    // Raise Indent Modal
+    // Raise Multi-Item Indent Modal
     private var raiseIndentSheet: some View {
         NavigationView {
             Form {
-                Section(header: Text("Select Spare Part / Component")) {
+                // Section 1: Add Item
+                Section(header: Text("1. Select & Add Spare Part")) {
                     if products.isEmpty {
                         Text("Loading product catalog...")
                             .foregroundColor(.gray)
                     } else {
                         Picker("Product", selection: $selectedProductId) {
-                            Text("Select a Product").tag("")
+                            Text("Choose a product...").tag("")
                             ForEach(products) { prod in
-                                Text("\(prod.name) (Central: \(prod.basePrice != nil ? "₹\(Int(prod.basePrice!))" : "In Stock"))").tag(prod.id)
+                                Text("\(prod.name) (Stock: \(prod.stockLevel ?? 0))").tag(prod.id)
                             }
                         }
                     }
                     
-                    Stepper("Quantity: \(indentQuantity)", value: $indentQuantity, in: 1...50)
+                    Stepper("Quantity to Add: \(itemQuantity)", value: $itemQuantity, in: 1...50)
+                    
+                    Button(action: addProductToDraft) {
+                        HStack {
+                            Spacer()
+                            Image(systemName: "plus.circle")
+                            Text("Add to Requisition")
+                                .fontWeight(.semibold)
+                            Spacer()
+                        }
+                    }
+                    .disabled(selectedProductId.isEmpty)
                 }
                 
-                Section(header: Text("Priority & Notes")) {
+                // Section 2: Items in Requisition Basket
+                Section(header: Text("2. Requisition Items (\(draftItems.count))")) {
+                    if draftItems.isEmpty {
+                        Text("No items added yet. Select a product above and tap 'Add to Requisition'.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else {
+                        ForEach($draftItems) { $item in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(item.name)
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                    if !item.sku.isEmpty {
+                                        Text("SKU: \(item.sku)")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                Spacer()
+                                Stepper("Qty: \(item.requestedQuantity)", value: $item.requestedQuantity, in: 1...99)
+                                    .labelsHidden()
+                                Text("x\(item.requestedQuantity)")
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.blue)
+                                    .frame(minWidth: 32)
+                            }
+                        }
+                        .onDelete(perform: removeDraftItem)
+                    }
+                }
+                
+                // Section 3: Urgency & Remarks
+                Section(header: Text("3. Priority & Notes")) {
                     Picker("Urgency", selection: $urgency) {
                         Text("Low").tag("LOW")
                         Text("Medium").tag("MEDIUM")
-                        Text("High / Urgent").tag("HIGH")
+                        Text("Urgent").tag("HIGH")
+                        Text("Emergency").tag("EMERGENCY")
                     }
                     .pickerStyle(SegmentedPickerStyle())
                     
                     TextField("Reason / Notes for Store In-Charge", text: $agentRemarks)
                 }
                 
+                // Section 4: Submit Button
                 Section {
                     Button(action: submitIndent) {
                         HStack {
@@ -241,16 +313,16 @@ struct AgentInventoryView: View {
                             if isSubmittingIndent {
                                 ProgressView().tint(.white)
                             } else {
-                                Text("Submit Requisition to Store")
+                                Text("Submit Requisition (\(draftItems.count) Items)")
                                     .fontWeight(.bold)
                             }
                             Spacer()
                         }
                     }
-                    .disabled(selectedProductId.isEmpty || isSubmittingIndent)
+                    .disabled(draftItems.isEmpty || isSubmittingIndent)
                 }
             }
-            .navigationTitle("New Indent Request")
+            .navigationTitle("New Requisition Indent")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
@@ -259,6 +331,31 @@ struct AgentInventoryView: View {
                 }
             }
         }
+    }
+    
+    private func addProductToDraft() {
+        guard let prod = products.first(where: { $0.id == selectedProductId }) else { return }
+        
+        if let existingIndex = draftItems.firstIndex(where: { $0.productId == prod.id }) {
+            draftItems[existingIndex].requestedQuantity += itemQuantity
+        } else {
+            draftItems.append(
+                IndentDraftItem(
+                    productId: prod.id,
+                    name: prod.name,
+                    sku: prod.sku ?? prod.slug ?? "",
+                    requestedQuantity: itemQuantity,
+                    stockLevel: prod.stockLevel ?? 0
+                )
+            )
+        }
+        
+        selectedProductId = ""
+        itemQuantity = 1
+    }
+    
+    private func removeDraftItem(at offsets: IndexSet) {
+        draftItems.remove(atOffsets: offsets)
     }
     
     private func loadData() {
@@ -297,10 +394,8 @@ struct AgentInventoryView: View {
     }
     
     private func submitIndent() {
-        guard !selectedProductId.isEmpty else { return }
+        guard !draftItems.isEmpty else { return }
         isSubmittingIndent = true
-        
-        let selectedProduct = products.first(where: { $0.id == selectedProductId })
         
         struct IndentItemReq: Encodable {
             let productId: String
@@ -316,14 +411,14 @@ struct AgentInventoryView: View {
         }
         
         let req = CreateIndentReq(
-            items: [
+            items: draftItems.map {
                 IndentItemReq(
-                    productId: selectedProductId,
-                    name: selectedProduct?.name ?? "Spare Part",
-                    sku: selectedProduct?.slug ?? "",
-                    requestedQuantity: indentQuantity
+                    productId: $0.productId,
+                    name: $0.name,
+                    sku: $0.sku,
+                    requestedQuantity: $0.requestedQuantity
                 )
-            ],
+            },
             urgency: urgency,
             agentRemarks: agentRemarks
         )
@@ -339,9 +434,10 @@ struct AgentInventoryView: View {
                     self.isSubmittingIndent = false
                     if res.success {
                         self.showIndentSheet = false
+                        self.draftItems.removeAll()
                         self.selectedProductId = ""
                         self.agentRemarks = ""
-                        self.indentQuantity = 1
+                        self.selectedTab = 1
                         self.loadData()
                     }
                 }
