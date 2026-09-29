@@ -24,12 +24,15 @@ import kotlinx.coroutines.launch
 import com.sbr.sms.ui.common.OurCustomersScreen
 import com.sbr.sms.ui.common.ProductsCatalogScreen
 import com.sbr.sms.ui.admin.AdminReferralsScreen
+import com.sbr.sms.ui.storeincharge.StoreInchargeIndentsScreen
+import com.sbr.sms.ui.storeincharge.StoreInchargeViewModel
 
 enum class AdminSection(val title: String, val icon: ImageVector) {
     Dashboard("Dashboard", Icons.Default.Dashboard),
     Agents("Agents", Icons.Default.Group),
     Customers("Customers", Icons.Default.People),
     Products("Products & Services", Icons.Default.ShoppingCart),
+    Indents("Agent Indents & Van Kits", Icons.Default.Inventory2),
     Referrals("Referrals & Claims", Icons.Default.CardGiftcard),
     OurCustomers("Our Customers List", Icons.Default.PeopleOutline),
     Requests("Requests", Icons.AutoMirrored.Filled.List),
@@ -158,6 +161,10 @@ fun AdminPanelScreen(
                     AdminSection.Agents -> AgentManagementScreen(navController)
                     AdminSection.Customers -> CustomerManagementScreen(navController)
                     AdminSection.Products -> ProductsCatalogScreen(isAdmin = true)
+                    AdminSection.Indents -> {
+                        val storeInchargeViewModel: StoreInchargeViewModel = hiltViewModel()
+                        StoreInchargeIndentsScreen(viewModel = storeInchargeViewModel)
+                    }
                     AdminSection.Referrals -> AdminReferralsScreen()
                     AdminSection.OurCustomers -> OurCustomersScreen(isAdmin = true)
                     AdminSection.Requests -> ServiceRequestsScreen(navController)

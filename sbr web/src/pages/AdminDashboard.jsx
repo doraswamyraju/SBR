@@ -33,12 +33,14 @@ import {
   Mail,
   ShieldAlert,
   Eye,
-  EyeOff
+  EyeOff,
+  Package
 } from 'lucide-react';
 import OurCustomersTab from '../components/OurCustomersTab';
 import AdminProductsTab from '../components/AdminProductsTab';
 import AdminReferralsTab from '../components/AdminReferralsTab';
 import AdminPaymentsTab from '../components/AdminPaymentsTab';
+import AdminIndentsTab from '../components/AdminIndentsTab';
 import './Dashboard.css';
 
 
@@ -468,6 +470,12 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
             onClick={() => switchTab('products')}
           >
             <Layers size={18} /> Products & Services
+          </button>
+          <button 
+            className={`menu-item ${activeTab === 'indents' ? 'active' : ''}`}
+            onClick={() => switchTab('indents')}
+          >
+            <Package size={18} /> Agent Indents & Van Kits
           </button>
           <button 
             className={`menu-item ${activeTab === 'referrals' ? 'active' : ''}`}
@@ -981,6 +989,10 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
 
         {activeTab === 'products' && (
           <AdminProductsTab />
+        )}
+
+        {activeTab === 'indents' && (
+          <AdminIndentsTab />
         )}
 
         {activeTab === 'referrals' && (
