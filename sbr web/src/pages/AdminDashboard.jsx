@@ -41,6 +41,7 @@ import AdminProductsTab from '../components/AdminProductsTab';
 import AdminReferralsTab from '../components/AdminReferralsTab';
 import AdminPaymentsTab from '../components/AdminPaymentsTab';
 import AdminIndentsTab from '../components/AdminIndentsTab';
+import AdminSettingsTab from '../components/AdminSettingsTab';
 import './Dashboard.css';
 
 
@@ -488,6 +489,12 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
             onClick={() => switchTab('payments')}
           >
             <CreditCard size={18} /> Payments Report
+          </button>
+          <button 
+            className={`menu-item ${activeTab === 'settings' ? 'active' : ''}`}
+            onClick={() => switchTab('settings')}
+          >
+            <Sliders size={18} /> Settings & Profile
           </button>
 
 
@@ -1001,6 +1008,10 @@ const AdminDashboard = ({ initialTab, handleNavigation }) => {
 
         {activeTab === 'payments' && (
           <AdminPaymentsTab users={users} />
+        )}
+
+        {activeTab === 'settings' && (
+          <AdminSettingsTab />
         )}
       </main>
 
