@@ -33,7 +33,8 @@ import java.util.*
 @Composable
 fun AgentPaymentsScreen(
     navController: NavHostController,
-    viewModel: AgentPaymentsViewModel = hiltViewModel()
+    viewModel: AgentPaymentsViewModel = hiltViewModel(),
+    onSettleCashClick: (() -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -58,7 +59,8 @@ fun AgentPaymentsScreen(
                     onFilterSelect = { viewModel.setDateFilter(it) },
                     onViewDetails = { requestId ->
                         navController.navigate(AppRoutes.RequestDetail.createRoute(requestId))
-                    }
+                    },
+                    onSettleCashClick = onSettleCashClick
                 )
             }
         }
@@ -71,7 +73,8 @@ private fun PaymentsContent(
     transactions: List<AgentPaymentInfo>,
     activeFilter: com.sbr.sms.ui.agent.viewmodels.PaymentDateFilter,
     onFilterSelect: (com.sbr.sms.ui.agent.viewmodels.PaymentDateFilter) -> Unit,
-    onViewDetails: (String) -> Unit
+    onViewDetails: (String) -> Unit,
+    onSettleCashClick: (() -> Unit)? = null
 ) {
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
@@ -95,7 +98,7 @@ private fun PaymentsContent(
 
         // Executive KPI Summary 2x2 Cards
         item {
-            SummaryCards(stats = stats)
+            SummaryCards(stats = stats, onSettleCashClick = onSettleCashClick)
         }
 
         item {
@@ -136,7 +139,10 @@ private fun PaymentsContent(
 }
 
 @Composable
-private fun SummaryCards(stats: AgentPaymentStats) {
+private fun SummaryCards(
+    stats: AgentPaymentStats,
+    onSettleCashClick: (() -> Unit)? = null
+) {
     val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("en", "IN")) }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
@@ -174,6 +180,19 @@ private fun SummaryCards(stats: AgentPaymentStats) {
                 iconTint = androidx.compose.ui.graphics.Color(0xFFEA580C),
                 modifier = Modifier.weight(1f)
             )
+        }
+
+        if (stats.pendingEodCash > 0 && onSettleCashClick != null) {
+            Button(
+                onClick = onSettleCashClick,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = androidx.compose.ui.graphics.Color(0xFFEA580C)),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
+            ) {
+                Icon(Icons.Default.CreditCard, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Settle Cash / Submit EOD Handover (${currencyFormat.format(stats.pendingEodCash)})", fontWeight = FontWeight.Bold)
+            }
         }
     }
 }

@@ -136,7 +136,10 @@ fun AgentPanelScreen(
                         AgentSection.VanInventory -> AgentInventoryScreen()
                         AgentSection.CashHandover -> AgentCashHandoverScreen()
                         AgentSection.OurCustomers -> OurCustomersScreen(isAdmin = false)
-                        AgentSection.Payments -> AgentPaymentsScreen(navController = navController)
+                        AgentSection.Payments -> AgentPaymentsScreen(
+                            navController = navController,
+                            onSettleCashClick = { selectedSection = AgentSection.CashHandover }
+                        )
                         AgentSection.Profile -> AgentProfileScreen(navController = navController)
                     }
                 }

@@ -15,7 +15,7 @@ data class CashHandover(
     @SerializedName("id", alternate = ["_id"]) val id: String = "",
     val agentId: Any? = null,
     val date: String = "",
-    @SerializedName("totalCollectedCash", alternate = ["totalCash"]) val totalCollectedCash: Double = 0.0,
+    @SerializedName("totalCollectedCash", alternate = ["totalCash", "amount", "collectedCash"]) val totalCollectedCash: Double = 0.0,
     val completedRequests: List<Any> = emptyList(),
     val status: String = "SUBMITTED", // SUBMITTED, ACKNOWLEDGED, DISCREPANCY, NOT_SUBMITTED
     @SerializedName("acknowledgedBy", alternate = ["storeInchargeId"]) val acknowledgedBy: Any? = null,
@@ -59,9 +59,9 @@ data class CashHandover(
 data class AgentDailySummary(
     val agentId: Any? = null,
     val date: String = "",
-    @SerializedName("totalCollectedCash", alternate = ["totalCash"]) val totalCollectedCash: Double = 0.0,
-    @SerializedName("completedJobsCount", alternate = ["requestCount"]) val completedJobsCount: Int = 0,
+    @SerializedName("totalCollectedCash", alternate = ["totalCash", "amount", "collectedCash"]) val totalCollectedCash: Double = 0.0,
+    @SerializedName("completedJobsCount", alternate = ["requestCount", "jobsCount"]) val completedJobsCount: Int = 0,
     @SerializedName("completedRequestIds", alternate = ["completedRequests"]) val completedRequestIds: List<Any> = emptyList(),
-    @SerializedName("hasSubmittedHandover", alternate = ["alreadySubmitted"]) val hasSubmittedHandover: Boolean = false,
-    @SerializedName("latestHandover", alternate = ["existingHandover"]) val latestHandover: CashHandover? = null
+    @SerializedName("hasSubmittedHandover", alternate = ["alreadySubmitted", "submitted"]) val hasSubmittedHandover: Boolean = false,
+    @SerializedName("latestHandover", alternate = ["existingHandover", "handover"]) val latestHandover: CashHandover? = null
 )
