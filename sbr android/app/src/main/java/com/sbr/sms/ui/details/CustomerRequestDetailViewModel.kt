@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sbr.sms.data.api.ApiService
 import com.sbr.sms.data.models.Agent
 import com.sbr.sms.data.models.ServiceRequest
 import com.sbr.sms.data.repositories.ServiceRequestRepository
@@ -26,6 +27,7 @@ sealed interface CustomerRequestDetailUiState {
 class CustomerRequestDetailViewModel @Inject constructor(
     private val serviceRequestRepository: ServiceRequestRepository,
     private val userRepository: UserRepository,
+    private val apiService: ApiService,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -35,8 +37,26 @@ class CustomerRequestDetailViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<CustomerRequestDetailUiState>(CustomerRequestDetailUiState.Loading)
     val uiState: StateFlow<CustomerRequestDetailUiState> = _uiState.asStateFlow()
 
+    private val _reviewUrl = MutableStateFlow("")
+    val reviewUrl: StateFlow<String> = _reviewUrl.asStateFlow()
+
     init {
         loadDetails()
+        fetchSettings()
+    }
+
+    private fun fetchSettings() {
+        viewModelScope.launch {
+            try {
+                val res = apiService.getSettings()
+                if (res.isSuccessful && res.body()?.data != null) {
+                    val url = res.body()!!.data!!["reviewUrl"]
+                    if (!url.isNullOrBlank()) {
+                        _reviewUrl.value = url
+                    }
+                }
+            } catch (_: Exception) {}
+        }
     }
 
     private fun loadDetails() {

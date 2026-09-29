@@ -97,6 +97,8 @@ fun CustomerDashboardScreen(
         )
     }
 
+    val reviewUrl by viewModel.reviewUrl.collectAsState()
+
     Box(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
             is CustomerDashboardUiState.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
@@ -106,6 +108,7 @@ fun CustomerDashboardScreen(
                     stats = state.stats,
                     nextServiceDate = state.nextServiceDate,
                     activeTrackableJob = state.activeTrackableJob,
+                    reviewUrl = reviewUrl,
                     onNavigateToSection = onNavigateToSection,
                     onNavigate = onNavigate
                 )
@@ -119,6 +122,7 @@ private fun DashboardContent(
     stats: CustomerDashboardStats,
     nextServiceDate: Date?,
     activeTrackableJob: ServiceRequest?,
+    reviewUrl: String,
     onNavigateToSection: (CustomerSection) -> Unit,
     onNavigate: (String) -> Unit
 ) {
@@ -126,7 +130,8 @@ private fun DashboardContent(
 
     fun openGoogleReview() {
         try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://g.page/r/CbdJS-IzWTe2EBE/review"))
+            val targetUrl = if (reviewUrl.isNotBlank()) reviewUrl else "https://g.page/r/CbdJS-IzWTe2EBE/review"
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl))
             context.startActivity(intent)
         } catch (e: Exception) {
             Toast.makeText(context, "Unable to open browser", Toast.LENGTH_SHORT).show()

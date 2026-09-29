@@ -2,6 +2,7 @@ package com.sbr.sms.ui.customer.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sbr.sms.data.api.ApiService
 import com.sbr.sms.data.CredentialManager
 import com.sbr.sms.data.models.Customer
 import com.sbr.sms.data.models.CustomerDashboardStats
@@ -34,7 +35,8 @@ class CustomerDashboardViewModel @Inject constructor(
     private val serviceRequestRepository: ServiceRequestRepository,
     private val userRepository: UserRepository,
     private val credentialManager: CredentialManager,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val apiService: ApiService
 ) : ViewModel() {
 
     private val _requests = MutableStateFlow<List<ServiceRequest>>(emptyList())
@@ -43,6 +45,9 @@ class CustomerDashboardViewModel @Inject constructor(
     private val _nextServiceDate = MutableStateFlow<Date?>(null)
     private val _customerProfile = MutableStateFlow<Customer?>(null)
     val customerProfile: StateFlow<Customer?> = _customerProfile.asStateFlow()
+
+    private val _reviewUrl = MutableStateFlow("")
+    val reviewUrl: StateFlow<String> = _reviewUrl.asStateFlow()
 
     val uiState: StateFlow<CustomerDashboardUiState> = combine(
         _requests, _userName, _error, _nextServiceDate
@@ -76,6 +81,21 @@ class CustomerDashboardViewModel @Inject constructor(
 
     init {
         observeAuthenticationState()
+        fetchSettings()
+    }
+
+    private fun fetchSettings() {
+        viewModelScope.launch {
+            try {
+                val res = apiService.getSettings()
+                if (res.isSuccessful && res.body()?.data != null) {
+                    val url = res.body()!!.data!!["reviewUrl"]
+                    if (!url.isNullOrBlank()) {
+                        _reviewUrl.value = url
+                    }
+                }
+            } catch (_: Exception) {}
+        }
     }
 
     private fun observeAuthenticationState() {

@@ -52,6 +52,8 @@ fun CustomerRequestDetailScreen(
         )
     }
 
+    val reviewUrl by viewModel.reviewUrl.collectAsState()
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -80,6 +82,7 @@ fun CustomerRequestDetailScreen(
                     CustomerRequestDetailsContent(
                         request = state.request,
                         agent = state.agent,
+                        reviewUrl = reviewUrl,
                         onTrackAgent = {
                             navController.navigate(AppRoutes.CustomerLiveTracking.createRoute(state.request.id))
                         },
@@ -100,6 +103,7 @@ fun CustomerRequestDetailScreen(
 fun CustomerRequestDetailsContent(
     request: ServiceRequest,
     agent: Agent?,
+    reviewUrl: String = "",
     onTrackAgent: () -> Unit,
     onViewBeforeImage: () -> Unit,
     onViewAfterImage: () -> Unit
@@ -110,7 +114,8 @@ fun CustomerRequestDetailsContent(
 
     fun openGoogleReview() {
         try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://g.page/r/CbdJS-IzWTe2EBE/review"))
+            val targetUrl = if (reviewUrl.isNotBlank()) reviewUrl else "https://g.page/r/CbdJS-IzWTe2EBE/review"
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl))
             context.startActivity(intent)
         } catch (e: Exception) {
             Toast.makeText(context, "Unable to open browser", Toast.LENGTH_SHORT).show()
