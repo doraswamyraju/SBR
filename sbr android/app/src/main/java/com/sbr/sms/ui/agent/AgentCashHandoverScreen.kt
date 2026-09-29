@@ -130,7 +130,7 @@ class AgentCashHandoverViewModel @Inject constructor(
 
                 // 3. Determine Latest Handover & Submitted status
                 val latestHandover = backendSummary?.latestHandover ?: handovers.firstOrNull {
-                    val hAgentId = it.agentId?.id ?: ""
+                    val hAgentId = it.agentUser?.id ?: ""
                     agentId.isBlank() || hAgentId == agentId || hAgentId.isBlank()
                 }
 
@@ -202,7 +202,7 @@ class AgentCashHandoverViewModel @Inject constructor(
                     _uiState.update { 
                         it.copy(
                             isSubmitting = false,
-                            errorMessage = res.body()?.message ?: "Failed to submit cash handover."
+                            errorMessage = res.body()?.error ?: "Failed to submit cash handover."
                         ) 
                     }
                 }
