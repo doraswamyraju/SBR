@@ -104,7 +104,7 @@ class AgentInventoryViewModel @Inject constructor(
                     loadData()
                     onSuccess()
                 } else {
-                    message.value = res.body()?.message ?: "Failed to submit requisition indent."
+                    message.value = res.body()?.error ?: "Failed to submit requisition indent."
                 }
             } catch (e: Exception) {
                 message.value = e.localizedMessage ?: "Network error submitting indent."
