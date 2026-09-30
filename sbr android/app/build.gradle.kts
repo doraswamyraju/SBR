@@ -24,8 +24,8 @@ android {
         applicationId = "com.sbr.sms"
         minSdk = 24
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.2"
+        versionCode = 7
+        versionName = "1.4"
     }
 
     buildTypes {
