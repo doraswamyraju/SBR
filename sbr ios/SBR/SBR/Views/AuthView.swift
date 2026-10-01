@@ -75,9 +75,8 @@ struct AuthView: View {
                             CustomTextField(icon: "person.fill", placeholder: "Full Name", text: $name)
                         }
                         
-                        CustomTextField(icon: "envelope.fill", placeholder: "Email Address", text: $email)
+                        CustomTextField(icon: "envelope.fill", placeholder: "Email Address", text: $email, isEmail: true)
                             .keyboardType(.emailAddress)
-                            .autocapitalization(.none)
                         
                         CustomSecureField(placeholder: "Password", text: $password)
                         
@@ -207,6 +206,7 @@ struct CustomTextField: View {
     let icon: String
     let placeholder: String
     @Binding var text: String
+    var isEmail: Bool = false
     
     var body: some View {
         HStack(spacing: 12) {
@@ -221,6 +221,9 @@ struct CustomTextField: View {
                 }
                 TextField("", text: $text)
                     .foregroundColor(.black)
+                    .textInputAutocapitalization(isEmail ? .never : .words)
+                    .autocapitalization(isEmail ? .none : .words)
+                    .disableAutocorrection(isEmail)
             }
         }
         .padding(.vertical, 12)

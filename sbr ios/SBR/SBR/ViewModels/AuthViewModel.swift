@@ -60,9 +60,12 @@ class AuthViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         
+        let cleanedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let cleanedPassword = password.trimmingCharacters(in: .newlines)
+        
         let body: [String: String] = [
-            "email": email,
-            "password": password,
+            "email": cleanedEmail,
+            "password": cleanedPassword,
             "fcmToken": fcmToken ?? ""
         ]
         
@@ -92,12 +95,15 @@ class AuthViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         
+        let cleanedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let cleanedPassword = password.trimmingCharacters(in: .newlines)
+        
         let body: [String: String] = [
-            "name": name,
-            "email": email,
-            "password": password,
+            "name": name.trimmingCharacters(in: .whitespacesAndNewlines),
+            "email": cleanedEmail,
+            "password": cleanedPassword,
             "role": role.rawValue,
-            "phone": phone
+            "phone": phone.trimmingCharacters(in: .whitespacesAndNewlines)
         ]
         
         do {

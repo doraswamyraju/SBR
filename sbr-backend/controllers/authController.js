@@ -18,9 +18,10 @@ const generateToken = (id) => {
 exports.register = async (req, res) => {
   try {
     const { name, email, password, role, phone, address, specialization, location } = req.body;
+    const normalizedEmail = email ? email.toLowerCase().trim() : '';
 
     // Check if user already exists
-    const userExists = await User.findOne({ email });
+    const userExists = await User.findOne({ email: normalizedEmail });
     if (userExists) {
       return res.status(400).json({ success: false, error: 'User already exists' });
     }
@@ -28,7 +29,7 @@ exports.register = async (req, res) => {
     // Create user base data
     const userData = {
       name,
-      email,
+      email: normalizedEmail,
       password,
       role: role || 'CUSTOMER',
       phone
@@ -76,8 +77,10 @@ exports.login = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Please provide email and password' });
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
+
     // Check for user (include password in selection explicitly)
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({ email: normalizedEmail }).select('+password');
     if (!user) {
       return res.status(401).json({ success: false, error: 'Invalid credentials' });
     }
