@@ -46,6 +46,7 @@ app.use('/api/referrals', require('./routes/referralRoutes'));
 app.use('/api/handovers', require('./routes/handoverRoutes'));
 app.use('/api/agent-inventory', require('./routes/agentInventoryRoutes'));
 app.use('/api/indents', require('./routes/agentInventoryRoutes'));
+app.use('/api/leads', require('./routes/leadRoutes'));
 
 
 

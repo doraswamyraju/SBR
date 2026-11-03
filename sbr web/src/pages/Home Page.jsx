@@ -250,12 +250,47 @@ const TestimonialVideosSection = () => {
 // --- HOMEPAGE COMPONENTS ---
 const HeroSlider = ({ heroSlides, productLinks, handleNavigation }) => {
     const [currentSlide, setCurrentSlide] = useState(0);
+    const [heroForm, setHeroForm] = useState({ name: '', phone: '', product: '' });
+    const [heroSubmitting, setHeroSubmitting] = useState(false);
+    const [heroStatus, setHeroStatus] = useState({ submitted: false, success: false, message: '' });
+
     useEffect(() => {
         const timer = setInterval(() => {
             setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
         }, 7000);
         return () => clearInterval(timer);
     }, [heroSlides.length]);
+
+    const handleHeroSubmit = async (e) => {
+        e.preventDefault();
+        setHeroSubmitting(true);
+        setHeroStatus({ submitted: false, success: false, message: '' });
+
+        try {
+            const res = await fetch('/api/leads/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: heroForm.name,
+                    phone: heroForm.phone,
+                    productOrService: heroForm.product || heroSlides[currentSlide]?.title || 'General Quote',
+                    source: 'Hero Quote Form'
+                })
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                setHeroStatus({ submitted: true, success: true, message: 'Thank you! Your quote request has been received.' });
+                setHeroForm({ name: '', phone: '', product: '' });
+                setTimeout(() => setHeroStatus({ submitted: false, success: false, message: '' }), 5000);
+            } else {
+                setHeroStatus({ submitted: true, success: false, message: data.error || 'Failed to submit quote request.' });
+            }
+        } catch (err) {
+            setHeroStatus({ submitted: true, success: false, message: 'Unable to connect to server. Please call us directly.' });
+        } finally {
+            setHeroSubmitting(false);
+        }
+    };
 
     return (
         <section id="home" className="relative h-[90vh] w-full overflow-hidden">
@@ -272,11 +307,51 @@ const HeroSlider = ({ heroSlides, productLinks, handleNavigation }) => {
                     </div>
                     <div className="bg-white/10 backdrop-blur-sm p-8 rounded-lg shadow-2xl border border-white/20">
                         <h3 className="text-2xl font-bold text-white mb-4 text-center">Request a Free Quote</h3>
-                        <form>
-                            <div className="mb-4"><input type="text" placeholder="Your Name" className="w-full p-3 rounded-md bg-white/20 text-white placeholder-gray-300 border-none focus:ring-2 focus:ring-brand-yellow" /></div>
-                            <div className="mb-4"><input type="tel" placeholder="Your Phone Number" className="w-full p-3 rounded-md bg-white/20 text-white placeholder-gray-300 border-none focus:ring-2 focus:ring-brand-yellow" /></div>
-                            <div className="mb-4"><select className="w-full p-3 rounded-md bg-white/20 text-white border-none focus:ring-2 focus:ring-brand-yellow appearance-none"><option className="text-black">Select a Product</option>{productLinks.map(product => (<option key={product} value={product} className="text-black">{product}</option>))}</select></div>
-                            <button type="submit" className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-brand-dark-blue font-bold py-3 px-6 rounded-md hover:from-yellow-500 hover:to-yellow-500 transition duration-300 transform hover:scale-105">Submit Now</button>
+                        <form onSubmit={handleHeroSubmit}>
+                            <div className="mb-4">
+                                <input 
+                                    type="text" 
+                                    placeholder="Your Name" 
+                                    required
+                                    value={heroForm.name}
+                                    onChange={(e) => setHeroForm({ ...heroForm, name: e.target.value })}
+                                    className="w-full p-3 rounded-md bg-white/20 text-white placeholder-gray-300 border-none focus:ring-2 focus:ring-brand-yellow outline-none" 
+                                />
+                            </div>
+                            <div className="mb-4">
+                                <input 
+                                    type="tel" 
+                                    placeholder="Your Phone Number" 
+                                    required
+                                    value={heroForm.phone}
+                                    onChange={(e) => setHeroForm({ ...heroForm, phone: e.target.value })}
+                                    className="w-full p-3 rounded-md bg-white/20 text-white placeholder-gray-300 border-none focus:ring-2 focus:ring-brand-yellow outline-none" 
+                                />
+                            </div>
+                            <div className="mb-4">
+                                <select 
+                                    value={heroForm.product}
+                                    onChange={(e) => setHeroForm({ ...heroForm, product: e.target.value })}
+                                    className="w-full p-3 rounded-md bg-white/20 text-white border-none focus:ring-2 focus:ring-brand-yellow outline-none"
+                                >
+                                    <option value="" className="text-black">Select a Product</option>
+                                    {productLinks.map(product => (
+                                        <option key={product} value={product} className="text-black">{product}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <button 
+                                type="submit" 
+                                disabled={heroSubmitting}
+                                className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-brand-dark-blue font-bold py-3 px-6 rounded-md hover:from-yellow-500 hover:to-yellow-500 transition duration-300 transform hover:scale-105 shadow-md cursor-pointer disabled:opacity-75"
+                            >
+                                {heroSubmitting ? 'Submitting...' : 'Submit Now'}
+                            </button>
+                            {heroStatus.submitted && (
+                                <p className={`mt-3 text-center text-sm p-2 rounded-md font-medium ${heroStatus.success ? 'bg-green-600/80 text-white' : 'bg-red-600/80 text-white'}`}>
+                                    {heroStatus.message}
+                                </p>
+                            )}
                         </form>
                     </div>
                 </div>
@@ -311,7 +386,7 @@ const ProductsSection = ({ productsData, handleNavigation }) => {
                                 <div className="p-6 flex-grow flex flex-col">
                                     <h3 className="text-xl font-bold text-brand-dark-blue mb-2">{product.name}</h3>
                                     <p className="text-gray-600 flex-grow">{product.description}</p>
-                                    <a href="#" onClick={() => handleNavigation('product-scalenor')} className="mt-4 inline-block bg-brand-blue text-white font-semibold py-2 px-6 rounded-full hover:bg-brand-dark-blue transition-all duration-300">Know More</a>
+                                    <a href="#" onClick={(e) => { e.preventDefault(); handleNavigation(product.route || ('product-' + product.id)); }} className="mt-4 inline-block bg-brand-blue text-white font-semibold py-2 px-6 rounded-full hover:bg-brand-dark-blue transition-all duration-300">Know More</a>
                                 </div>
                             </div>
                         </div>
@@ -349,7 +424,7 @@ const SingleProductFeature = ({ handleNavigation }) => {
                                 <p>It’s eco-friendly with no water wastage and works using an electrolysis process. The unit can be cleaned without any chemicals or salt—just with water—every 1-3 months based on usage. It is suitable for installation in both residential and commercial spaces.</p>
                             </div>
                             <div className="flex flex-col sm:flex-row gap-4 mt-8">
-                                <a href="#" onClick={() => handleNavigation('product-scalenor')} className="bg-brand-blue text-white font-bold py-3 px-8 rounded-full text-center hover:bg-brand-dark-blue transition-all duration-300 transform hover:scale-105 hover:shadow-lg">See More</a>
+                                <a href="#" onClick={(e) => { e.preventDefault(); handleNavigation('product-hmws'); }} className="bg-brand-blue text-white font-bold py-3 px-8 rounded-full text-center hover:bg-brand-dark-blue transition-all duration-300 transform hover:scale-105 hover:shadow-lg">See More</a>
                                 <a href="/blog/why-scalenors" className="bg-transparent border-2 border-brand-blue text-brand-blue font-bold py-3 px-8 rounded-full text-center hover:bg-brand-blue hover:text-white transition-all duration-300 transform hover:scale-105 hover:shadow-lg">Why Scalenors</a>
                             </div>
                         </div>
@@ -502,11 +577,31 @@ const ContactSection = () => {
     const [formData, setFormData] = useState({ name: '', email: '', phone: '', message: '' });
     const [formStatus, setFormStatus] = useState({ submitted: false, message: '' });
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        setFormStatus({ submitted: true, message: "Thank you! Your message has been sent." });
-        setFormData({ name: '', email: '', phone: '', message: '' });
-        setTimeout(() => setFormStatus({ submitted: false, message: '' }), 5000);
+        try {
+            const res = await fetch('/api/leads/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: formData.name,
+                    email: formData.email,
+                    phone: formData.phone,
+                    notes: formData.message,
+                    source: 'Contact Form'
+                })
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                setFormStatus({ submitted: true, message: "Thank you! Your message has been sent to our team." });
+                setFormData({ name: '', email: '', phone: '', message: '' });
+            } else {
+                setFormStatus({ submitted: true, message: data.error || "Submission failed. Please try again." });
+            }
+        } catch (err) {
+            setFormStatus({ submitted: true, message: "Unable to connect. Please call +91-9848182595 directly." });
+        }
+        setTimeout(() => setFormStatus({ submitted: false, message: '' }), 6000);
     };
 
     return (
@@ -602,10 +697,10 @@ const HomePage = ({ blogs, handleNavigation }) => {
         { id: 5, title: "SPC Solar Water Heaters", subtitle: "Enjoy 24/7 hot water with our high-efficiency solar water heating systems, backed by a 5-year replacement guarantee.", bgImage: "https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=1920&q=80" }
     ];
     const productsPageData = [ // Used for homepage product display
-        { id: 'p1', name: "Solar Water Heaters", description: "Harness the power of the sun for efficient, eco-friendly hot water.", image: "https://i.postimg.cc/CZp2b16T/solar-water-heater.png" },
-        { id: 'p2', name: "HM Water Scalenors", description: "Protect your pipes and appliances with our maintenance-free scalenor.", image: "https://i.postimg.cc/sQDwJZY8/scalenor.png" },
-        { id: 'p3', name: "Automatic Water Softeners", description: "Experience the luxury of soft water for healthier skin and hair.", image: "https://i.postimg.cc/BPjpr9wB/softener.png" },
-        { id: 'p4', name: "RO Water Plants", description: "Ensure pure and safe drinking water for your home or business.", image: "https://i.postimg.cc/G4ZpYZDT/ro-plant.png" },
+        { id: 'swh', route: 'product-swh', name: "Solar Water Heaters", description: "Harness the power of the sun for efficient, eco-friendly hot water.", image: "https://i.postimg.cc/CZp2b16T/solar-water-heater.png" },
+        { id: 'hmws', route: 'product-hmws', name: "HM Water Scalenors", description: "Protect your pipes and appliances with our maintenance-free scalenor.", image: "https://i.postimg.cc/sQDwJZY8/scalenor.png" },
+        { id: 'aws', route: 'product-aws', name: "Automatic Water Softeners", description: "Experience the luxury of soft water for healthier skin and hair.", image: "https://i.postimg.cc/BPjpr9wB/softener.png" },
+        { id: 'rowp', route: 'product-rowp', name: "RO Water Plants", description: "Ensure pure and safe drinking water for your home or business.", image: "https://i.postimg.cc/G4ZpYZDT/ro-plant.png" },
     ];
     const galleryLogosData = [
         { id: 'c1', name: "S.V. College of Engineering", logo: "https://i.postimg.cc/LhHjn12K/1704565987677-e-2147483647-v-beta-t-xl-Za-Kc-Ec-URa-JGjugiqh-NKL7ov-QC7ai-Rb-m-Fnm3-JAl0k.webp" },

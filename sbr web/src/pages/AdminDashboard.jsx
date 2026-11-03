@@ -1,2068 +1,2080 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { api } from '../utils/api';
-import LeafletMap from '../components/LeafletMap';
-import { 
-  LayoutDashboard, 
-  Wrench, 
-  Users, 
-  MapPin, 
-  UserPlus, 
-  Trash2, 
-  LogOut, 
-  CheckCircle, 
-  Clock, 
-  CreditCard, 
-  Plus, 
-  X, 
-  RefreshCw, 
-  Search,
-  ChevronRight,
-  TrendingUp,
-  Sliders,
-  DollarSign,
-  FileText,
-  UserCheck,
-  UploadCloud,
-  FileSpreadsheet,
-  Layers,
-  Gift,
-  Edit2,
-  Key,
-  Lock,
-  Mail,
-  ShieldAlert,
-  Eye,
-  EyeOff,
-  Package
-} from 'lucide-react';
-import OurCustomersTab from '../components/OurCustomersTab';
-import AdminProductsTab from '../components/AdminProductsTab';
-import AdminReferralsTab from '../components/AdminReferralsTab';
-import AdminPaymentsTab from '../components/AdminPaymentsTab';
-import AdminIndentsTab from '../components/AdminIndentsTab';
-import AdminSettingsTab from '../components/AdminSettingsTab';
-import './Dashboard.css';
-
-
-
-const AdminDashboard = ({ initialTab, handleNavigation }) => {
-  const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState(initialTab || 'overview');
-  const [requests, setRequests] = useState([]);
-  const [users, setUsers] = useState([]);
-  const [blogs, setBlogs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (initialTab) {
-      setActiveTab(initialTab);
-    }
-  }, [initialTab]);
-
-  const switchTab = (tabName) => {
-    handleNavigation({ pageId: 'admin-dashboard', tab: tabName });
-  };
-  
-  // Modals state
-  const [trackingRequest, setTrackingRequest] = useState(null);
-  const [isAgentModalOpen, setIsAgentModalOpen] = useState(false);
-  
-  // New Agent Form State
-  const [newAgent, setNewAgent] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    phone: '',
-    specialization: '',
-    location: ''
-  });
-  const [showNewAgentPassword, setShowNewAgentPassword] = useState(false);
-  const [showNewAgentConfirmPassword, setShowNewAgentConfirmPassword] = useState(false);
-  const [agentFormLoading, setAgentFormLoading] = useState(false);
-  const [agentFormError, setAgentFormError] = useState('');
-
-  // Edit User State
-  const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
-  const [editUserLoading, setEditUserLoading] = useState(false);
-  const [editUserError, setEditUserError] = useState('');
-
-  // Password Management State
-  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-  const [passwordUser, setPasswordUser] = useState(null);
-  const [passwordTab, setPasswordTab] = useState('manual'); // 'email' or 'manual'
-  const [manualPassword, setManualPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showManualPassword, setShowManualPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [passwordLoading, setPasswordLoading] = useState(false);
-  const [passwordMessage, setPasswordMessage] = useState('');
-  const [passwordError, setPasswordError] = useState('');
-
-  // Customer List Upload & Management States
-  const [isCustomerListUploadModalOpen, setIsCustomerListUploadModalOpen] = useState(false);
-  const [customerListFile, setCustomerListFile] = useState(null);
-  const [uploadMode, setUploadMode] = useState('replace');
-  const [uploadingCustomerList, setUploadingCustomerList] = useState(false);
-  const [uploadCustomerListError, setUploadCustomerListError] = useState('');
-
-  const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
-  const [newCustomerRecord, setNewCustomerRecord] = useState({
-    sNo: '',
-    name: '',
-    address: '',
-    product: '',
-    model: '',
-    purchaseDate: ''
-  });
-  const [addingRecordLoading, setAddingRecordLoading] = useState(false);
-  const [addingRecordError, setAddingRecordError] = useState('');
-
-  const [customerListRefreshTrigger, setCustomerListRefreshTrigger] = useState(0);
-
-  // Filters
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
-
-  const fetchData = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const requestsRes = await api.get('api/requests');
-      const usersRes = await api.get('api/users');
-      const blogsRes = await api.get('api/blogs');
-      
-      if (requestsRes.success) setRequests(requestsRes.data);
-      if (usersRes.success) setUsers(usersRes.data);
-      if (blogsRes.success) setBlogs(blogsRes.data);
-    } catch (err) {
-      setError(err.message || 'Failed to fetch dashboard data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const handleAssignAgent = async (requestId, agentId) => {
-    try {
-      const res = await api.put(`api/requests/${requestId}/assign`, { agentId });
-      if (res.success) {
-        // Refresh requests lists
-        fetchData();
-        alert('Agent assigned successfully');
-      }
-    } catch (err) {
-      alert(err.message || 'Failed to assign agent');
-    }
-  };
-
-  const handleDeleteRequest = async (requestId) => {
-    if (!window.confirm('Are you sure you want to delete this service request? This cannot be undone.')) return;
-    try {
-      const res = await api.delete(`api/requests/${requestId}`);
-      if (res.success) {
-        fetchData();
-        alert('Service request deleted successfully');
-      }
-    } catch (err) {
-      alert(err.message || 'Failed to delete request');
-    }
-  };
-
-  const handleCreateAgentSubmit = async (e) => {
-    e.preventDefault();
-    if (newAgent.password !== newAgent.confirmPassword) {
-      setAgentFormError('Passwords do not match. Please ensure both passwords match.');
-      return;
-    }
-    setAgentFormLoading(true);
-    setAgentFormError('');
-    try {
-      const { confirmPassword: _, ...agentPayload } = newAgent;
-      const data = await api.post('api/auth/register', { ...agentPayload, role: 'AGENT' });
-      
-      if (data.success) {
-        setIsAgentModalOpen(false);
-        setNewAgent({ name: '', email: '', password: '', confirmPassword: '', phone: '', specialization: '', location: '' });
-        fetchData(); // reload users
-        alert('Service agent account created successfully!');
-      } else {
-        throw new Error(data.error || 'Failed to create agent');
-      }
-    } catch (err) {
-      setAgentFormError(err.message);
-    } finally {
-      setAgentFormLoading(false);
-    }
-  };
-
-  // Edit User Handlers
-  const handleOpenEditUser = (u) => {
-    setEditingUser({
-      _id: u._id,
-      name: u.name || '',
-      email: u.email || '',
-      phone: u.phone || '',
-      role: u.role || 'CUSTOMER',
-      status: u.status || 'Active',
-      specialization: u.specialization || '',
-      location: u.location || '',
-      address: u.address || '',
-      isRecurring: u.isRecurring || false
-    });
-    setEditUserError('');
-    setIsEditUserModalOpen(true);
-  };
-
-  const handleUpdateUserSubmit = async (e) => {
-    e.preventDefault();
-    if (!editingUser) return;
-    setEditUserLoading(true);
-    setEditUserError('');
-    try {
-      const res = await api.put(`api/users/${editingUser._id}`, editingUser);
-      if (res.success) {
-        setIsEditUserModalOpen(false);
-        setEditingUser(null);
-        fetchData();
-        alert('User profile updated successfully!');
-      } else {
-        throw new Error(res.error || 'Failed to update user');
-      }
-    } catch (err) {
-      setEditUserError(err.message || 'Failed to update user');
-    } finally {
-      setEditUserLoading(false);
-    }
-  };
-
-  // Delete User Handler
-  const handleDeleteUser = async (userId, userName) => {
-    if (!window.confirm(`Are you sure you want to delete user account "${userName}"? This will permanently remove their access.`)) {
-      return;
-    }
-    try {
-      const res = await api.delete(`api/users/${userId}`);
-      if (res.success) {
-        setUsers(prev => prev.filter(u => u._id !== userId));
-        alert(`User account "${userName}" has been deleted successfully.`);
-      } else {
-        throw new Error(res.error || 'Failed to delete user');
-      }
-    } catch (err) {
-      alert(err.message || 'Failed to delete user');
-    }
-  };
-
-  // Password Reset Modal Handlers
-  const handleOpenPasswordModal = (u) => {
-    setPasswordUser(u);
-    setPasswordTab('manual'); // Default to manual as requested
-    setManualPassword('');
-    setConfirmPassword('');
-    setShowManualPassword(false);
-    setShowConfirmPassword(false);
-    setPasswordMessage('');
-    setPasswordError('');
-    setIsPasswordModalOpen(true);
-  };
-
-  const handleSendResetEmail = async () => {
-    if (!passwordUser) return;
-    setPasswordLoading(true);
-    setPasswordMessage('');
-    setPasswordError('');
-    try {
-      const res = await api.post(`api/users/${passwordUser._id}/reset-password-email`, {});
-      if (res.success) {
-        setPasswordMessage(res.message || `Password reset email sent to ${passwordUser.email}!`);
-      } else {
-        throw new Error(res.error || 'Failed to send reset email');
-      }
-    } catch (err) {
-      setPasswordError(err.message || 'Failed to send password reset email');
-    } finally {
-      setPasswordLoading(false);
-    }
-  };
-
-  const handleManualPasswordSubmit = async (e) => {
-    e.preventDefault();
-    if (!passwordUser) return;
-    if (!manualPassword || manualPassword.trim().length < 6) {
-      setPasswordError('New password must be at least 6 characters long.');
-      return;
-    }
-    if (manualPassword !== confirmPassword) {
-      setPasswordError('Passwords do not match. Please re-enter the exact same password in both fields.');
-      return;
-    }
-    setPasswordLoading(true);
-    setPasswordMessage('');
-    setPasswordError('');
-    try {
-      const res = await api.post(`api/users/${passwordUser._id}/manual-password`, { password: manualPassword.trim() });
-      if (res.success) {
-        setPasswordMessage(`Password for ${passwordUser.name} has been updated successfully.`);
-        setManualPassword('');
-        setConfirmPassword('');
-      } else {
-        throw new Error(res.error || 'Failed to update password');
-      }
-    } catch (err) {
-      setPasswordError(err.message || 'Failed to update password');
-    } finally {
-      setPasswordLoading(false);
-    }
-  };
-
-  const handleCustomerUploadSubmit = async (e) => {
-    e.preventDefault();
-    if (!customerListFile) {
-      setUploadCustomerListError('Please select an Excel (.xlsx, .xls) or CSV (.csv) file to upload.');
-      return;
-    }
-
-    setUploadingCustomerList(true);
-    setUploadCustomerListError('');
-    try {
-      const formData = new FormData();
-      formData.append('file', customerListFile);
-      formData.append('mode', uploadMode);
-
-      const res = await api.post('api/customer-list/upload', formData);
-      if (res.success) {
-        setIsCustomerListUploadModalOpen(false);
-        setCustomerListFile(null);
-        setCustomerListRefreshTrigger(prev => prev + 1);
-        alert(res.message || 'Customer list uploaded successfully!');
-      } else {
-        throw new Error(res.error || 'Failed to upload customer list');
-      }
-    } catch (err) {
-      setUploadCustomerListError(err.message || 'Upload failed');
-    } finally {
-      setUploadingCustomerList(false);
-    }
-  };
-
-  const handleAddCustomerSubmit = async (e) => {
-    e.preventDefault();
-    if (!newCustomerRecord.name || !newCustomerRecord.name.trim()) {
-      setAddingRecordError('Customer name is required.');
-      return;
-    }
-
-    setAddingRecordLoading(true);
-    setAddingRecordError('');
-    try {
-      const res = await api.post('api/customer-list', newCustomerRecord);
-      if (res.success) {
-        setIsAddCustomerModalOpen(false);
-        setNewCustomerRecord({ sNo: '', name: '', address: '', product: '', model: '', purchaseDate: '' });
-        setCustomerListRefreshTrigger(prev => prev + 1);
-        alert('Customer record added successfully!');
-      } else {
-        throw new Error(res.error || 'Failed to add record');
-      }
-    } catch (err) {
-      setAddingRecordError(err.message || 'Failed to add record');
-    } finally {
-      setAddingRecordLoading(false);
-    }
-  };
-
-  const handleClearAllCustomers = async () => {
-    if (!window.confirm('Are you sure you want to CLEAR ALL customer list records? This action cannot be undone.')) {
-      return;
-    }
-    try {
-      const res = await api.delete('api/customer-list/clear');
-      if (res.success) {
-        setCustomerListRefreshTrigger(prev => prev + 1);
-        alert('All customer records cleared successfully.');
-      }
-    } catch (err) {
-      alert(err.message || 'Failed to clear customer records');
-    }
-  };
-
-  // Calculations for Metrics
-  const totalCollections = requests
-    .filter(req => req.paymentStatus === 'Paid')
-    .reduce((sum, req) => sum + (req.paymentAmount || 0), 0);
-  
-  const pendingRequestsCount = requests.filter(req => req.status === 'Pending').length;
-  const activeRequestsCount = requests.filter(req => ['Assigned', 'Accepted', 'In Progress'].includes(req.status)).length;
-  const completedRequestsCount = requests.filter(req => req.status === 'Completed').length;
-  
-  const agents = users.filter(u => u.role === 'AGENT');
-  const customers = users.filter(u => u.role === 'CUSTOMER');
-  const onlineAgentsCount = agents.filter(a => a.status === 'Online' || a.currentLat).length;
-
-  const handleLogout = () => {
-    logout();
-    handleNavigation('auth');
-  };
-
-  // Filters for requests
-  const filteredRequests = requests.filter(req => {
-    const matchesSearch = 
-      req.serviceType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (req.customerId?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (req.assignedAgentId?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      req._id.includes(searchQuery);
-    
-    const matchesStatus = statusFilter === 'All' || req.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
-
-  return (
-    <div className="dashboard-container">
-      {/* Sidebar */}
-      <aside className="sidebar">
-        <div className="sidebar-brand">SBR ADMIN</div>
-        <div className="sidebar-menu">
-          <button 
-            className={`menu-item ${activeTab === 'overview' ? 'active' : ''}`}
-            onClick={() => switchTab('overview')}
-          >
-            <LayoutDashboard size={18} /> Overview
-          </button>
-          <button 
-            className={`menu-item ${activeTab === 'requests' ? 'active' : ''}`}
-            onClick={() => switchTab('requests')}
-          >
-            <Wrench size={18} /> Requests ({requests.length})
-          </button>
-          <button 
-            className={`menu-item ${activeTab === 'agents' ? 'active' : ''}`}
-            onClick={() => switchTab('agents')}
-          >
-            <Users size={18} /> Service Agents ({agents.length})
-          </button>
-          <button 
-            className={`menu-item ${activeTab === 'customers' ? 'active' : ''}`}
-            onClick={() => switchTab('customers')}
-          >
-            <Users size={18} /> Customers ({customers.length})
-          </button>
-          <button 
-            className={`menu-item ${activeTab === 'our-customers' ? 'active' : ''}`}
-            onClick={() => switchTab('our-customers')}
-          >
-            <UserCheck size={18} /> Our Customers List
-          </button>
-          <button 
-            className={`menu-item ${activeTab === 'blogs' ? 'active' : ''}`}
-            onClick={() => switchTab('blogs')}
-          >
-            <FileText size={18} /> Blogs ({blogs.length})
-          </button>
-          <button 
-            className={`menu-item ${activeTab === 'products' ? 'active' : ''}`}
-            onClick={() => switchTab('products')}
-          >
-            <Layers size={18} /> Products & Services
-          </button>
-          <button 
-            className={`menu-item ${activeTab === 'indents' ? 'active' : ''}`}
-            onClick={() => switchTab('indents')}
-          >
-            <Package size={18} /> Agent Indents & Van Kits
-          </button>
-          <button 
-            className={`menu-item ${activeTab === 'referrals' ? 'active' : ''}`}
-            onClick={() => switchTab('referrals')}
-          >
-            <Gift size={18} /> Referral Program
-          </button>
-          <button 
-            className={`menu-item ${activeTab === 'payments' ? 'active' : ''}`}
-            onClick={() => switchTab('payments')}
-          >
-            <CreditCard size={18} /> Payments Report
-          </button>
-          <button 
-            className={`menu-item ${activeTab === 'settings' ? 'active' : ''}`}
-            onClick={() => switchTab('settings')}
-          >
-            <Sliders size={18} /> Settings & Profile
-          </button>
-
-
-        </div>
-        <button className="menu-item logout-btn" onClick={handleLogout}>
-          <LogOut size={18} /> Sign Out
-        </button>
-      </aside>
-
-      {/* Main Content */}
-      <main className="main-content">
-        <header className="main-header">
-          <div className="header-info">
-            <h1>Admin Control Center</h1>
-            <p>Welcome back, {user?.name || 'Administrator'}</p>
-          </div>
-          <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }} onClick={fetchData}>
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh Data
-          </button>
-        </header>
-
-        {error && <div className="error-banner">{error}</div>}
-
-        {/* Tab contents */}
-        {activeTab === 'overview' && (
-          <>
-            {/* Metrics */}
-            <div className="metrics-grid">
-              <div className="metric-card">
-                <span className="metric-title">Active Requests</span>
-                <span className="metric-value">{activeRequestsCount}</span>
-                <span style={{ fontSize: '12px', color: '#10b981' }}>{pendingRequestsCount} Pending</span>
-              </div>
-              <div className="metric-card">
-                <span className="metric-title">Total Collections</span>
-                <span className="metric-value">₹{totalCollections.toLocaleString('en-IN')}</span>
-                <span style={{ fontSize: '12px', color: '#8b5cf6' }}>From completed jobs</span>
-              </div>
-              <div className="metric-card">
-                <span className="metric-title">Completed Requests</span>
-                <span className="metric-value">{completedRequestsCount}</span>
-                <span style={{ fontSize: '12px', color: '#9ca3af' }}>Total jobs finished</span>
-              </div>
-              <div className="metric-card">
-                <span className="metric-title">Agents Online</span>
-                <span className="metric-value">{onlineAgentsCount} / {agents.length}</span>
-                <span style={{ fontSize: '12px', color: '#6366f1' }}>With GPS active</span>
-              </div>
-            </div>
-
-            {/* Quick Requests View */}
-            <div className="section-card">
-              <h2 className="section-title">Recent Requests & Assignments</h2>
-              {loading ? (
-                <div style={{ color: '#9ca3af' }}>Loading requests...</div>
-              ) : (
-                <div className="table-wrapper">
-                  <table className="custom-table">
-                    <thead>
-                      <tr>
-                        <th>Request ID</th>
-                        <th>Customer</th>
-                        <th>Service Type</th>
-                        <th>Created At</th>
-                        <th>Status</th>
-                        <th>Assign Agent</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {requests.slice(0, 5).map(req => (
-                        <tr key={req._id}>
-                          <td style={{ fontSize: '11px', color: '#9ca3af' }}>#{req._id.substring(req._id.length - 8)}</td>
-                          <td>
-                            <div>{req.customerId?.name || 'Unknown'}</div>
-                            <div style={{ fontSize: '11px', color: '#9ca3af' }}>{req.customerId?.phone}</div>
-                          </td>
-                          <td>{req.serviceType}</td>
-                          <td>{new Date(req.createdAt).toLocaleDateString()}</td>
-                          <td>
-                            <span className={`badge badge-${req.status.toLowerCase().replace(' ', '-')}`}>
-                              {req.status}
-                            </span>
-                          </td>
-                          <td>
-                            {req.status === 'Pending' ? (
-                              <select 
-                                className="select-assign"
-                                onChange={(e) => handleAssignAgent(req._id, e.target.value)}
-                                defaultValue=""
-                              >
-                                <option value="" disabled>Choose Agent...</option>
-                                {agents.map(a => (
-                                  <option key={a._id} value={a._id}>{a.name} ({a.specialization || 'General'})</option>
-                                ))}
-                              </select>
-                            ) : (
-                              <span style={{ fontSize: '13px', color: '#a78bfa', fontWeight: '500' }}>
-                                {req.assignedAgentId?.name || 'Unassigned'}
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-
-        {activeTab === 'requests' && (
-          <div className="section-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
-              <h2 className="section-title" style={{ margin: 0 }}>Service Requests Directory</h2>
-              
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <Search size={16} style={{ position: 'absolute', left: '10px', color: '#64748b' }} />
-                  <input
-                    type="text"
-                    placeholder="Search type, client, agent..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    style={{
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '8px',
-                      padding: '8px 12px 8px 32px',
-                      color: '#0f172a',
-                      fontSize: '14px',
-                      outline: 'none',
-                      width: '220px'
-                    }}
-                  />
-                </div>
-                
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  style={{
-                    background: '#ffffff',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '8px',
-                    padding: '8px 12px',
-                    color: '#0f172a',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
-                >
-                  <option value="All">All Statuses</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Assigned">Assigned</option>
-                  <option value="Accepted">Accepted</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="Completed">Completed</option>
-                  <option value="Cancelled">Cancelled</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="table-wrapper">
-              <table className="custom-table">
-                <thead>
-                  <tr>
-                    <th>Request ID</th>
-                    <th>Customer Details</th>
-                    <th>Request Details</th>
-                    <th>Assigned Agent</th>
-                    <th>Status</th>
-                    <th>Payment</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRequests.length === 0 ? (
-                    <tr>
-                      <td colSpan="7" style={{ textAlign: 'center', color: '#64748b', padding: '30px' }}>No requests match the query.</td>
-                    </tr>
-                  ) : (
-                    filteredRequests.map(req => (
-                      <tr key={req._id}>
-                        <td style={{ fontSize: '11px', color: '#64748b' }}>#{req._id.substring(req._id.length - 8)}</td>
-                        <td>
-                          <div style={{ fontWeight: '600', color: '#0f172a' }}>{req.customerId?.name || 'Unknown'}</div>
-                          <div style={{ fontSize: '11px', color: '#64748b' }}>{req.customerId?.phone}</div>
-                          <div style={{ fontSize: '11px', color: '#64748b', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={req.customerAddress}>
-                            {req.customerAddress}
-                          </div>
-                        </td>
-                        <td>
-                          <div style={{ fontWeight: '600', color: '#4f46e5' }}>{req.serviceType}</div>
-                          <div style={{ fontSize: '12px', color: '#475569', marginTop: '2px' }}>{req.description}</div>
-                        </td>
-                        <td>
-                          {req.assignedAgentId ? (
-                            <div>
-                              <div style={{ color: '#0f172a', fontWeight: '500' }}>{req.assignedAgentId.name}</div>
-                              <div style={{ fontSize: '11px', color: '#64748b' }}>{req.assignedAgentId.phone}</div>
-                              {['Assigned', 'Accepted', 'In Progress'].includes(req.status) && (
-                                <button 
-                                  className="btn-secondary" 
-                                  style={{ padding: '2px 6px', fontSize: '10px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '3px' }}
-                                  onClick={() => setTrackingRequest(req)}
-                                >
-                                  <MapPin size={10} /> Track Live
-                                </button>
-                              )}
-                            </div>
-                          ) : (
-                            <select 
-                              className="select-assign"
-                              onChange={(e) => handleAssignAgent(req._id, e.target.value)}
-                              defaultValue=""
-                            >
-                              <option value="" disabled>Choose Agent...</option>
-                              {agents.map(a => (
-                                <option key={a._id} value={a._id}>{a.name}</option>
-                              ))}
-                            </select>
-                          )}
-                        </td>
-                        <td>
-                          <span className={`badge badge-${req.status.toLowerCase().replace(' ', '-')}`}>
-                            {req.status}
-                          </span>
-                        </td>
-                        <td>
-                          {req.paymentStatus === 'Paid' ? (
-                            <div>
-                              <span className="badge badge-paid">Paid: ₹{req.paymentAmount}</span>
-                              <div style={{ fontSize: '11px', color: '#475569', marginTop: '3px' }}>
-                                {req.inventoryTotal > 0 && <span style={{ display: 'block' }}>Parts: ₹{req.inventoryTotal}</span>}
-                                {req.serviceCharge > 0 && <span style={{ display: 'block' }}>Service: ₹{req.serviceCharge}</span>}
-                                {req.discount > 0 && <span style={{ display: 'block', color: '#b45309' }}>Discount: -₹{req.discount}</span>}
-                              </div>
-                              <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>{req.paymentMethod}</div>
-                            </div>
-                          ) : (
-                            <span className="badge badge-pending">Pending</span>
-                          )}
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            <button 
-                              className="btn-secondary btn-danger" 
-                              style={{ padding: '6px' }}
-                              onClick={() => handleDeleteRequest(req._id)}
-                              title="Delete Request"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'agents' && (
-          <div className="section-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 className="section-title" style={{ margin: 0 }}>Service Agent Personnel</h2>
-              <button 
-                className="btn-primary" 
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px' }}
-                onClick={() => setIsAgentModalOpen(true)}
-              >
-                <UserPlus size={16} /> Add Agent Account
-              </button>
-            </div>
-
-            <div className="table-wrapper">
-              <table className="custom-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>Specialization</th>
-                    <th>Location Area</th>
-                    <th>Status</th>
-                    <th>Completed Jobs</th>
-                    <th>Current GPS</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {agents.length === 0 ? (
-                    <tr>
-                      <td colSpan="9" style={{ textAlign: 'center', color: '#64748b', padding: '30px' }}>No service agent accounts registered.</td>
-                    </tr>
-                  ) : (
-                    agents.map(agent => (
-                      <tr key={agent._id}>
-                        <td style={{ fontWeight: '600', color: '#0f172a' }}>{agent.name}</td>
-                        <td>{agent.email}</td>
-                        <td>{agent.phone || 'N/A'}</td>
-                        <td>
-                          <span style={{ background: '#e0e7ff', color: '#4338ca', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '500' }}>
-                            {agent.specialization || 'General Technician'}
-                          </span>
-                        </td>
-                        <td>{agent.location || 'N/A'}</td>
-                        <td>
-                          <span className={`badge ${agent.status === 'Online' ? 'badge-completed' : 'badge-cancelled'}`}>
-                            {agent.status || 'Offline'}
-                          </span>
-                        </td>
-                        <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{agent.completedJobs || 0}</td>
-                        <td>
-                          {agent.currentLat ? (
-                            <span style={{ fontSize: '11px', color: '#2563eb', fontFamily: 'monospace' }}>
-                              {agent.currentLat.toFixed(5)}, {agent.currentLng.toFixed(5)}
-                            </span>
-                          ) : (
-                            <span style={{ color: '#64748b', fontSize: '12px' }}>No coordinates</span>
-                          )}
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                            <button
-                              className="btn-outline"
-                              style={{ padding: '6px 8px', borderRadius: '6px', color: '#0284c7', border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer' }}
-                              onClick={() => handleOpenEditUser(agent)}
-                              title="Edit Agent Account"
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                            <button
-                              className="btn-outline"
-                              style={{ padding: '6px 8px', borderRadius: '6px', color: '#d97706', border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer' }}
-                              onClick={() => handleOpenPasswordModal(agent)}
-                              title="Reset Password"
-                            >
-                              <Key size={14} />
-                            </button>
-                            <button
-                              className="btn-outline"
-                              style={{ padding: '6px 8px', borderRadius: '6px', color: '#dc2626', border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer' }}
-                              onClick={() => handleDeleteUser(agent._id, agent.name)}
-                              title="Delete Agent Account"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'customers' && (
-          <div className="section-card">
-            <h2 className="section-title">Client Profiles Directory</h2>
-            <div className="table-wrapper">
-              <table className="custom-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>Address</th>
-                    <th>Recurring Service</th>
-                    <th>Next Scheduled Date</th>
-                    <th>Signed Up</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {customers.length === 0 ? (
-                    <tr>
-                      <td colSpan="8" style={{ textAlign: 'center', color: '#64748b', padding: '30px' }}>No customer accounts registered.</td>
-                    </tr>
-                  ) : (
-                    customers.map(cust => (
-                      <tr key={cust._id}>
-                        <td style={{ fontWeight: '600', color: '#0f172a' }}>{cust.name}</td>
-                        <td>{cust.email}</td>
-                        <td>{cust.phone || 'N/A'}</td>
-                        <td>{cust.address || 'No address specified'}</td>
-                        <td>
-                          <span className={`badge ${cust.isRecurring ? 'badge-completed' : 'badge-pending'}`}>
-                            {cust.isRecurring ? 'Yes' : 'No'}
-                          </span>
-                        </td>
-                        <td>
-                          {cust.nextServiceDate ? new Date(cust.nextServiceDate).toLocaleDateString() : 'N/A'}
-                        </td>
-                        <td style={{ fontSize: '12px', color: '#64748b' }}>
-                          {new Date(cust.createdAt).toLocaleDateString()}
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                            <button
-                              className="btn-outline"
-                              style={{ padding: '6px 8px', borderRadius: '6px', color: '#0284c7', border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer' }}
-                              onClick={() => handleOpenEditUser(cust)}
-                              title="Edit Customer Profile"
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                            <button
-                              className="btn-outline"
-                              style={{ padding: '6px 8px', borderRadius: '6px', color: '#d97706', border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer' }}
-                              onClick={() => handleOpenPasswordModal(cust)}
-                              title="Reset Password"
-                            >
-                              <Key size={14} />
-                            </button>
-                            <button
-                              className="btn-outline"
-                              style={{ padding: '6px 8px', borderRadius: '6px', color: '#dc2626', border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer' }}
-                              onClick={() => handleDeleteUser(cust._id, cust.name)}
-                              title="Delete Customer Account"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'blogs' && (
-          <AdminBlogsSection blogs={blogs} onRefresh={fetchData} />
-        )}
-
-        {activeTab === 'our-customers' && (
-          <div>
-            {/* Admin Header Action Controls */}
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center', 
-              flexWrap: 'wrap', 
-              gap: '12px', 
-              marginBottom: '20px', 
-              backgroundColor: '#ffffff', 
-              padding: '16px 20px', 
-              borderRadius: '16px',
-              border: '1px solid #e2e8f0',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-            }}>
-              <div>
-                <h3 style={{ margin: 0, color: '#0f172a', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <FileSpreadsheet size={20} color="#0284c7" /> Admin Customer Dataset Management
-                </h3>
-                <p style={{ margin: '4px 0 0 0', fontSize: '12.5px', color: '#64748b' }}>
-                  Upload Excel/CSV customer lists (S.No., Name, Address, Model, Date of Purchase) or manage single records.
-                </p>
-              </div>
-
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  className="btn-primary"
-                  onClick={() => setIsCustomerListUploadModalOpen(true)}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', boxShadow: 'none' }}
-                >
-                  <UploadCloud size={16} /> Upload Excel / CSV
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => setIsAddCustomerModalOpen(true)}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <Plus size={16} /> Add Single Record
-                </button>
-                <button
-                  type="button"
-                  className="btn-danger"
-                  onClick={handleClearAllCustomers}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', fontSize: '13px', cursor: 'pointer' }}
-                >
-                  <Trash2 size={16} /> Clear All
-                </button>
-              </div>
-            </div>
-
-            {/* Embedded Shared Search & Filter Table */}
-            <OurCustomersTab key={customerListRefreshTrigger} isAdmin={true} />
-          </div>
-        )}
-
-        {activeTab === 'products' && (
-          <AdminProductsTab />
-        )}
-
-        {activeTab === 'indents' && (
-          <AdminIndentsTab />
-        )}
-
-        {activeTab === 'referrals' && (
-          <AdminReferralsTab />
-        )}
-
-        {activeTab === 'payments' && (
-          <AdminPaymentsTab users={users} />
-        )}
-
-        {activeTab === 'settings' && (
-          <AdminSettingsTab />
-        )}
-      </main>
-
-      {/* Map Live Location Modal */}
-      {trackingRequest && (
-        <div className="modal-backdrop" onClick={() => setTrackingRequest(null)}>
-          <div className="modal-content" style={{ maxWidth: '600px' }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>
-                Live Tracking: {trackingRequest.assignedAgentId?.name || 'Agent'}
-              </h3>
-              <button 
-                type="button" 
-                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
-                onClick={() => setTrackingRequest(null)}
-              >
-                <X size={20} />
-              </button>
-            </div>
-            
-            <LeafletMap 
-              agentLocation={
-                trackingRequest.assignedAgentId?.currentLat 
-                  ? { lat: trackingRequest.assignedAgentId.currentLat, lng: trackingRequest.assignedAgentId.currentLng }
-                  : null
-              }
-              locationPath={trackingRequest.locationPath || []}
-              customerAddress={trackingRequest.customerAddress}
-            />
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#334155', marginTop: '15px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-              <div>
-                Service: <strong style={{ color: '#0f172a' }}>{trackingRequest.serviceType}</strong>
-              </div>
-              <div>
-                Status: <span className={`badge badge-${trackingRequest.status.toLowerCase().replace(' ', '-')}`}>{trackingRequest.status}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit User Modal */}
-      {isEditUserModalOpen && editingUser && (
-        <div className="modal-backdrop" onClick={() => setIsEditUserModalOpen(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Edit2 size={18} color="#0284c7" /> Edit Account: {editingUser.name}
-              </h3>
-              <button 
-                type="button" 
-                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
-                onClick={() => setIsEditUserModalOpen(false)}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {editUserError && <div className="error-banner" style={{ marginBottom: '15px' }}>{editUserError}</div>}
-
-            <form onSubmit={handleUpdateUserSubmit} className="dashboard-form" style={{ gap: '12px' }}>
-              <div className="input-group">
-                <label>Full Name</label>
-                <input
-                  type="text"
-                  required
-                  value={editingUser.name}
-                  onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="input-group">
-                  <label>Email Address</label>
-                  <input
-                    type="email"
-                    required
-                    value={editingUser.email}
-                    onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
-                  />
-                </div>
-                <div className="input-group">
-                  <label>Phone Number</label>
-                  <input
-                    type="tel"
-                    value={editingUser.phone}
-                    onChange={(e) => setEditingUser({ ...editingUser, phone: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="input-group">
-                  <label>Role</label>
-                  <select
-                    value={editingUser.role}
-                    onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
-                  >
-                    <option value="AGENT">AGENT</option>
-                    <option value="CUSTOMER">CUSTOMER</option>
-                    <option value="STORE_INCHARGE">STORE_INCHARGE</option>
-                    <option value="ADMIN">ADMIN</option>
-                  </select>
-                </div>
-                <div className="input-group">
-                  <label>Account Status</label>
-                  <select
-                    value={editingUser.status}
-                    onChange={(e) => setEditingUser({ ...editingUser, status: e.target.value })}
-                  >
-                    <option value="Online">Online</option>
-                    <option value="Offline">Offline</option>
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                  </select>
-                </div>
-              </div>
-
-              {(editingUser.role === 'AGENT' || editingUser.role === 'agent') && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div className="input-group">
-                    <label>Specialization</label>
-                    <input
-                      type="text"
-                      value={editingUser.specialization}
-                      onChange={(e) => setEditingUser({ ...editingUser, specialization: e.target.value })}
-                      placeholder="e.g. Solar Water Heaters"
-                    />
-                  </div>
-                  <div className="input-group">
-                    <label>Assigned Location</label>
-                    <input
-                      type="text"
-                      value={editingUser.location}
-                      onChange={(e) => setEditingUser({ ...editingUser, location: e.target.value })}
-                      placeholder="e.g. Tirupati"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {(editingUser.role === 'CUSTOMER' || editingUser.role === 'customer') && (
-                <div className="input-group">
-                  <label>Address</label>
-                  <input
-                    type="text"
-                    value={editingUser.address}
-                    onChange={(e) => setEditingUser({ ...editingUser, address: e.target.value })}
-                    placeholder="Customer site address"
-                  />
-                </div>
-              )}
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-                <button 
-                  type="button" 
-                  className="btn-secondary" 
-                  onClick={() => setIsEditUserModalOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  className="btn-primary" 
-                  disabled={editUserLoading}
-                >
-                  {editUserLoading ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Password Reset Modal (Email & Manual) */}
-      {isPasswordModalOpen && passwordUser && (
-        <div className="modal-backdrop" onClick={() => setIsPasswordModalOpen(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Key size={18} color="#d97706" /> Password Management
-              </h3>
-              <button 
-                type="button" 
-                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
-                onClick={() => setIsPasswordModalOpen(false)}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* User Target Card */}
-            <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '18px' }}>
-              <div style={{ fontWeight: '700', color: '#0f172a', fontSize: '15px' }}>{passwordUser.name}</div>
-              <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
-                {passwordUser.email} &bull; <span style={{ color: '#0284c7', fontWeight: '600' }}>{passwordUser.role}</span>
-              </div>
-            </div>
-
-            {/* Tab Selector */}
-            <div style={{ display: 'flex', background: '#e2e8f0', padding: '4px', borderRadius: '8px', marginBottom: '18px' }}>
-              <button
-                type="button"
-                onClick={() => { setPasswordTab('email'); setPasswordMessage(''); setPasswordError(''); }}
-                style={{
-                  flex: 1,
-                  padding: '8px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  background: passwordTab === 'email' ? '#fff' : 'transparent',
-                  color: passwordTab === 'email' ? '#0f172a' : '#64748b',
-                  boxShadow: passwordTab === 'email' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                  transition: 'all 0.2s'
-                }}
-              >
-                <Mail size={15} /> Reset via Email
-              </button>
-              <button
-                type="button"
-                onClick={() => { setPasswordTab('manual'); setPasswordMessage(''); setPasswordError(''); }}
-                style={{
-                  flex: 1,
-                  padding: '8px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  background: passwordTab === 'manual' ? '#fff' : 'transparent',
-                  color: passwordTab === 'manual' ? '#0f172a' : '#64748b',
-                  boxShadow: passwordTab === 'manual' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                  transition: 'all 0.2s'
-                }}
-              >
-                <Lock size={15} /> Manual Password Reset
-              </button>
-            </div>
-
-            {passwordMessage && (
-              <div style={{ background: '#dcfce7', color: '#15803d', padding: '12px 16px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px', border: '1px solid #bbf7d0', fontWeight: '500' }}>
-                {passwordMessage}
-              </div>
-            )}
-
-            {passwordError && (
-              <div className="error-banner" style={{ marginBottom: '16px' }}>
-                {passwordError}
-              </div>
-            )}
-
-            {passwordTab === 'email' ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <p style={{ fontSize: '13px', color: '#475569', margin: 0, lineHeight: 1.5 }}>
-                  Clicking the button below will automatically generate a secure temporary password, update the database, and email credentials directly to <strong>{passwordUser.email}</strong>.
-                </p>
-                <button
-                  type="button"
-                  className="btn-primary"
-                  onClick={handleSendResetEmail}
-                  disabled={passwordLoading}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px' }}
-                >
-                  <Mail size={16} /> {passwordLoading ? 'Sending Reset Email...' : 'Send Password Reset Email'}
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleManualPasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div className="input-group">
-                  <label>Enter New Password</label>
-                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                    <input
-                      type={showManualPassword ? "text" : "password"}
-                      required
-                      minLength={6}
-                      placeholder="Minimum 6 characters"
-                      value={manualPassword}
-                      onChange={(e) => setManualPassword(e.target.value)}
-                      style={{ paddingRight: '40px' }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowManualPassword(!showManualPassword)}
-                      style={{
-                        position: 'absolute',
-                        right: '10px',
-                        background: 'transparent',
-                        border: 'none',
-                        color: '#64748b',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center'
-                      }}
-                      title={showManualPassword ? "Hide Password" : "View Password"}
-                    >
-                      {showManualPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="input-group">
-                  <label>Re-enter / Confirm Password</label>
-                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                    <input
-                      type={showConfirmPassword ? "text" : "password"}
-                      required
-                      minLength={6}
-                      placeholder="Re-type identical password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      style={{ paddingRight: '40px' }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      style={{
-                        position: 'absolute',
-                        right: '10px',
-                        background: 'transparent',
-                        border: 'none',
-                        color: '#64748b',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center'
-                      }}
-                      title={showConfirmPassword ? "Hide Password" : "View Password"}
-                    >
-                      {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                  {confirmPassword && manualPassword !== confirmPassword && (
-                    <span style={{ fontSize: '11px', color: '#dc2626', marginTop: '4px', fontWeight: '500' }}>
-                      Passwords do not match
-                    </span>
-                  )}
-                  {confirmPassword && manualPassword === confirmPassword && (
-                    <span style={{ fontSize: '11px', color: '#15803d', marginTop: '4px', fontWeight: '500' }}>
-                      ✓ Passwords match
-                    </span>
-                  )}
-                </div>
-
-                <button
-                  type="submit"
-                  className="btn-primary"
-                  disabled={passwordLoading || (confirmPassword && manualPassword !== confirmPassword)}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px' }}
-                >
-                  <Lock size={16} /> {passwordLoading ? 'Updating Password...' : 'Update Password Directly'}
-                </button>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Add Agent Modal */}
-      {isAgentModalOpen && (
-        <div className="modal-backdrop" onClick={() => setIsAgentModalOpen(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>Register Service Agent</h3>
-              <button 
-                type="button" 
-                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
-                onClick={() => setIsAgentModalOpen(false)}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {agentFormError && <div className="error-banner" style={{ marginBottom: '15px' }}>{agentFormError}</div>}
-
-            <form onSubmit={handleCreateAgentSubmit} className="dashboard-form" style={{ gap: '12px' }}>
-              <div className="input-group">
-                <label>Full Name</label>
-                <input
-                  type="text"
-                  required
-                  value={newAgent.name}
-                  onChange={(e) => setNewAgent({ ...newAgent, name: e.target.value })}
-                  placeholder="Agent Name"
-                />
-              </div>
-
-              <div className="input-group">
-                <label>Email Address</label>
-                <input
-                  type="email"
-                  required
-                  value={newAgent.email}
-                  onChange={(e) => setNewAgent({ ...newAgent, email: e.target.value })}
-                  placeholder="agent@sribalaji.com"
-                />
-              </div>
-
-              <div className="input-group">
-                <label>Password</label>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <input
-                    type={showNewAgentPassword ? "text" : "password"}
-                    required
-                    minLength={6}
-                    value={newAgent.password}
-                    onChange={(e) => setNewAgent({ ...newAgent, password: e.target.value })}
-                    placeholder="Minimum 6 characters"
-                    style={{ paddingRight: '40px' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewAgentPassword(!showNewAgentPassword)}
-                    style={{
-                      position: 'absolute',
-                      right: '10px',
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#64748b',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}
-                    title={showNewAgentPassword ? "Hide Password" : "View Password"}
-                  >
-                    {showNewAgentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="input-group">
-                <label>Confirm / Re-enter Password</label>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <input
-                    type={showNewAgentConfirmPassword ? "text" : "password"}
-                    required
-                    minLength={6}
-                    value={newAgent.confirmPassword}
-                    onChange={(e) => setNewAgent({ ...newAgent, confirmPassword: e.target.value })}
-                    placeholder="Re-enter password"
-                    style={{ paddingRight: '40px' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewAgentConfirmPassword(!showNewAgentConfirmPassword)}
-                    style={{
-                      position: 'absolute',
-                      right: '10px',
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#64748b',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}
-                    title={showNewAgentConfirmPassword ? "Hide Password" : "View Password"}
-                  >
-                    {showNewAgentConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-                {newAgent.confirmPassword && newAgent.password !== newAgent.confirmPassword && (
-                  <span style={{ fontSize: '11px', color: '#dc2626', marginTop: '4px', fontWeight: '500' }}>
-                    Passwords do not match
-                  </span>
-                )}
-                {newAgent.confirmPassword && newAgent.password === newAgent.confirmPassword && (
-                  <span style={{ fontSize: '11px', color: '#15803d', marginTop: '4px', fontWeight: '500' }}>
-                    ✓ Passwords match
-                  </span>
-                )}
-              </div>
-
-              <div className="input-group">
-                <label>Phone Number</label>
-                <input
-                  type="tel"
-                  required
-                  value={newAgent.phone}
-                  onChange={(e) => setNewAgent({ ...newAgent, phone: e.target.value })}
-                  placeholder="Phone number"
-                />
-              </div>
-
-              <div className="input-group">
-                <label>Specialization</label>
-                <input
-                  type="text"
-                  value={newAgent.specialization}
-                  onChange={(e) => setNewAgent({ ...newAgent, specialization: e.target.value })}
-                  placeholder="Solar Heaters, Water Softeners, etc."
-                />
-              </div>
-
-              <div className="input-group">
-                <label>Assigned Area / Location</label>
-                <input
-                  type="text"
-                  value={newAgent.location}
-                  onChange={(e) => setNewAgent({ ...newAgent, location: e.target.value })}
-                  placeholder="e.g. Bangalore North"
-                />
-              </div>
-
-              <button 
-                type="submit" 
-                className="btn-primary" 
-                disabled={agentFormLoading || (newAgent.confirmPassword && newAgent.password !== newAgent.confirmPassword) || newAgent.password.length < 6}
-                style={{ marginTop: '10px' }}
-              >
-                {agentFormLoading ? 'Creating Agent...' : 'Create Account'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Upload Excel / CSV Customer List Modal */}
-      {isCustomerListUploadModalOpen && (
-        <div className="modal-backdrop" onClick={() => setIsCustomerListUploadModalOpen(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '540px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <UploadCloud size={20} color="#0284c7" /> Upload Customer List File
-              </h3>
-              <button 
-                type="button" 
-                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
-                onClick={() => setIsCustomerListUploadModalOpen(false)}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {uploadCustomerListError && <div className="error-banner" style={{ marginBottom: '15px' }}>{uploadCustomerListError}</div>}
-
-            <form onSubmit={handleCustomerUploadSubmit} className="dashboard-form">
-              <div className="input-group">
-                <label style={{ color: '#334155', fontSize: '14px', marginBottom: '8px', display: 'block' }}>
-                  Select File (.xlsx, .xls, .csv)
-                </label>
-                <input
-                  type="file"
-                  accept=".xlsx, .xls, .csv"
-                  required
-                  onChange={(e) => setCustomerListFile(e.target.files[0])}
-                  style={{
-                    width: '100%',
-                    background: '#f8fafc',
-                    color: '#0f172a',
-                    border: '1px dashed #0284c7',
-                    padding: '16px',
-                    borderRadius: '8px',
-                    cursor: 'pointer'
-                  }}
-                />
-                <span style={{ fontSize: '12px', color: '#64748b', marginTop: '6px', display: 'block' }}>
-                  Supported headers: <strong>S.No</strong>, <strong>Name</strong>, <strong>Address</strong>, <strong>Product</strong>, <strong>Model</strong> (optional), <strong>Date of Purchase</strong> (optional).
-                </span>
-              </div>
-
-              <div className="input-group" style={{ marginTop: '16px' }}>
-                <label style={{ color: '#334155', fontSize: '14px', marginBottom: '8px', display: 'block' }}>Upload Mode</label>
-                <div style={{ display: 'flex', gap: '20px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#334155', cursor: 'pointer', fontSize: '13.5px' }}>
-                    <input
-                      type="radio"
-                      name="uploadMode"
-                      value="replace"
-                      checked={uploadMode === 'replace'}
-                      onChange={() => setUploadMode('replace')}
-                    />
-                    Replace existing customer list
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#334155', cursor: 'pointer', fontSize: '13.5px' }}>
-                    <input
-                      type="radio"
-                      name="uploadMode"
-                      value="append"
-                      checked={uploadMode === 'append'}
-                      onChange={() => setUploadMode('append')}
-                    />
-                    Append to existing list
-                  </label>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => setIsCustomerListUploadModalOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn-primary"
-                  disabled={uploadingCustomerList}
-                  style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', boxShadow: 'none' }}
-                >
-                  {uploadingCustomerList ? 'Processing File...' : 'Upload List'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Add Single Customer Record Modal */}
-      {isAddCustomerModalOpen && (
-        <div className="modal-backdrop" onClick={() => setIsAddCustomerModalOpen(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Plus size={20} color="#0284c7" /> Add Customer Record
-              </h3>
-              <button 
-                type="button" 
-                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
-                onClick={() => setIsAddCustomerModalOpen(false)}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {addingRecordError && <div className="error-banner" style={{ marginBottom: '15px' }}>{addingRecordError}</div>}
-
-            <form onSubmit={handleAddCustomerSubmit} className="dashboard-form">
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
-                <div className="input-group">
-                  <label style={{ color: '#334155', fontSize: '13px' }}>S.No.</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 1"
-                    value={newCustomerRecord.sNo}
-                    onChange={(e) => setNewCustomerRecord({ ...newCustomerRecord, sNo: e.target.value })}
-                  />
-                </div>
-                <div className="input-group">
-                  <label style={{ color: '#334155', fontSize: '13px' }}>Customer Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Ramesh Kumar"
-                    value={newCustomerRecord.name}
-                    onChange={(e) => setNewCustomerRecord({ ...newCustomerRecord, name: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="input-group" style={{ marginTop: '12px' }}>
-                <label style={{ color: '#334155', fontSize: '13px' }}>Address</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Indiranagar, Bangalore"
-                  value={newCustomerRecord.address}
-                  onChange={(e) => setNewCustomerRecord({ ...newCustomerRecord, address: e.target.value })}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
-                <div className="input-group">
-                  <label style={{ color: '#334155', fontSize: '13px' }}>Product Category</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Solar Water Heater"
-                    value={newCustomerRecord.product}
-                    onChange={(e) => setNewCustomerRecord({ ...newCustomerRecord, product: e.target.value })}
-                  />
-                </div>
-                <div className="input-group">
-                  <label style={{ color: '#334155', fontSize: '13px' }}>Model (Optional)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 200L ETC"
-                    value={newCustomerRecord.model}
-                    onChange={(e) => setNewCustomerRecord({ ...newCustomerRecord, model: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="input-group" style={{ marginTop: '12px' }}>
-                <label style={{ color: '#334155', fontSize: '13px' }}>Date of Purchase (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 2024-05-15 or N/A"
-                  value={newCustomerRecord.purchaseDate}
-                  onChange={(e) => setNewCustomerRecord({ ...newCustomerRecord, purchaseDate: e.target.value })}
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => setIsAddCustomerModalOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn-primary"
-                  disabled={addingRecordLoading}
-                  style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', boxShadow: 'none' }}
-                >
-                  {addingRecordLoading ? 'Saving...' : 'Add Record'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-
-
-
-const AdminBlogsSection = ({ blogs, onRefresh }) => {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingBlog, setEditingBlog] = useState(null);
-  const [formData, setFormData] = useState({
-    title: '',
-    slug: '',
-    category: 'Solar Power',
-    author: 'Admin',
-    image: 'https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=800&q=80',
-    summary: '',
-    content: ''
-  });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [isSlugEdited, setIsSlugEdited] = useState(false);
-
-  // Sync edit mode
-  useEffect(() => {
-    if (editingBlog) {
-      setFormData({
-        title: editingBlog.title,
-        slug: editingBlog.slug,
-        category: editingBlog.category || 'General',
-        author: editingBlog.author || 'Admin',
-        image: editingBlog.image || '',
-        summary: editingBlog.summary || '',
-        content: editingBlog.content || ''
-      });
-      setIsSlugEdited(true); // Don't auto-generate when editing
-      setModalOpen(true);
-    } else {
-      setFormData({
-        title: '',
-        slug: '',
-        category: 'Solar Power',
-        author: 'Admin',
-        image: 'https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=800&q=80',
-        summary: '',
-        content: ''
-      });
-      setIsSlugEdited(false);
-    }
-  }, [editingBlog]);
-
-  const handleTitleChange = (e) => {
-    const titleVal = e.target.value;
-    setFormData(prev => {
-      const updated = { ...prev, title: titleVal };
-      if (!isSlugEdited) {
-        // Auto-generate slug
-        updated.slug = titleVal
-          .toLowerCase()
-          .replace(/[^a-z0-9\s-]/g, '') // remove special characters
-          .replace(/\s+/g, '-')         // replace spaces with hyphens
-          .replace(/-+/g, '-');        // reduce multiple hyphens
-      }
-      return updated;
-    });
-  };
-
-  const handleSlugChange = (e) => {
-    setIsSlugEdited(true);
-    setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setSuccess('');
-
-    try {
-      let res;
-      if (editingBlog) {
-        // Update blog post
-        res = await api.put(`api/blogs/${editingBlog._id}`, {
-          ...formData,
-          _id: editingBlog._id
-        });
-      } else {
-        // Create new blog post
-        res = await api.post('api/blogs', formData);
-      }
-
-      if (res.success) {
-        setSuccess(editingBlog ? 'Blog updated successfully!' : 'Blog post created successfully!');
-        setModalOpen(false);
-        setEditingBlog(null);
-        onRefresh();
-      } else {
-        setError(res.error || 'Failed to save blog post');
-      }
-    } catch (err) {
-      setError(err.message || 'Error occurred while saving blog post');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDelete = async (blogId) => {
-    if (!window.confirm('Are you sure you want to delete this blog post?')) return;
-    try {
-      const res = await api.delete(`api/blogs/${blogId}`);
-      if (res.success) {
-        onRefresh();
-      } else {
-        alert(res.error || 'Failed to delete blog post');
-      }
-    } catch (err) {
-      alert(err.message || 'Error deleting blog post');
-    }
-  };
-
-  return (
-    <div className="section-card" style={{ marginTop: '20px' }}>
-      <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <div>
-          <h2 className="section-title" style={{ margin: 0 }}>Manage Blog Posts</h2>
-          <p style={{ color: '#64748b', fontSize: '13.5px', margin: '4px 0 0 0' }}>Create, update, and manage dynamically published articles on the SBR website.</p>
-        </div>
-        <button 
-          className="btn-primary" 
-          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-          onClick={() => {
-            setEditingBlog(null);
-            setModalOpen(true);
-          }}
-        >
-          <Plus size={16} /> Create Blog Post
-        </button>
-      </div>
-
-      <div className="table-wrapper">
-        <table className="custom-table">
-          <thead>
-            <tr>
-              <th>Title</th>
-              <th>URL Slug</th>
-              <th>Category</th>
-              <th>Author</th>
-              <th>Published Date</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {blogs.length === 0 ? (
-              <tr>
-                <td colSpan="6" style={{ textAlign: 'center', color: '#64748b', padding: '30px' }}>
-                  No blog posts found. Create your first post!
-                </td>
-              </tr>
-            ) : (
-              blogs.map((b) => (
-                <tr key={b._id}>
-                  <td style={{ fontWeight: 'bold', color: '#2563eb' }}>{b.title}</td>
-                  <td style={{ color: '#4f46e5', fontFamily: 'monospace' }}>/{b.slug}</td>
-                  <td><span className="badge badge-assigned">{b.category}</span></td>
-                  <td>{b.author}</td>
-                  <td>{new Date(b.publishedAt).toLocaleDateString()}</td>
-                  <td>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <button 
-                        className="btn-secondary" 
-                        style={{ padding: '4px 10px', fontSize: '12px' }}
-                        onClick={() => setEditingBlog(b)}
-                      >
-                        Edit
-                      </button>
-                      <button 
-                        className="btn-secondary btn-danger" 
-                        style={{ padding: '4px 10px', fontSize: '12px' }}
-                        onClick={() => handleDelete(b._id)}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Create/Edit Blog Modal Overlay */}
-      {modalOpen && (
-        <div className="modal-backdrop" onClick={() => { setModalOpen(false); setEditingBlog(null); }}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '750px', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '15px' }}>
-              <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: '#0f172a', margin: 0 }}>
-                {editingBlog ? 'Edit Blog Post' : 'Create New Blog Post'}
-              </h3>
-              <button 
-                onClick={() => {
-                  setModalOpen(false);
-                  setEditingBlog(null);
-                }} 
-                style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            {error && (
-              <div className="error-banner" style={{ marginBottom: '15px' }}>
-                {error}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="dashboard-form" style={{ maxWidth: '100%' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                <div className="input-group">
-                  <label>Article Title</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.title}
-                    onChange={handleTitleChange}
-                    placeholder="e.g. 5 Signs to Switch to Solar Water Heater"
-                  />
-                </div>
-
-                <div className="input-group">
-                  <label>URL Slug (Customizable)</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.slug}
-                    onChange={handleSlugChange}
-                    placeholder="e.g. 5-signs-switch-to-solar-water-heater"
-                    style={{ fontFamily: 'monospace' }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                <div className="input-group">
-                  <label>Category</label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  >
-                    <option value="Solar Power">Solar Power</option>
-                    <option value="Water Purification">Water Purification</option>
-                    <option value="Energy Savings">Energy Savings</option>
-                    <option value="General">General</option>
-                  </select>
-                </div>
-
-                <div className="input-group">
-                  <label>Author Name</label>
-                  <input
-                    type="text"
-                    value={formData.author}
-                    onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-                    placeholder="e.g. SBR Team"
-                  />
-                </div>
-              </div>
-
-              <div className="input-group">
-                <label>Featured Image URL</label>
-                <input
-                  type="text"
-                  value={formData.image}
-                  onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                  placeholder="https://images.unsplash.com/..."
-                />
-              </div>
-
-              <div className="input-group">
-                <label>Card Summary (Short Description)</label>
-                <textarea
-                  required
-                  rows="2"
-                  value={formData.summary}
-                  onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
-                  placeholder="A short snippet that will show up on the homepage blog card."
-                />
-              </div>
-
-              <div className="input-group">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
-                  <label>Article Body (Supports HTML markup)</label>
-                  <span style={{ fontSize: '11px', color: '#64748b' }}>Use &lt;p&gt;, &lt;h3&gt;, &lt;ul&gt;, &lt;li&gt; tags</span>
-                </div>
-                <textarea
-                  required
-                  rows="8"
-                  value={formData.content}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                  placeholder="<p>Write your detailed article body here...</p>"
-                  style={{ fontFamily: 'monospace', fontSize: '13px' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #e2e8f0', paddingTop: '20px', marginTop: '10px' }}>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => {
-                    setModalOpen(false);
-                    setEditingBlog(null);
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn-primary"
-                  disabled={loading}
-                >
-                  {loading ? 'Saving...' : 'Save Post'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-    </div>
-  );
-};
-
-export default AdminDashboard;
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { api } from '../utils/api';
+import LeafletMap from '../components/LeafletMap';
+import { 
+  LayoutDashboard, 
+  Wrench, 
+  Users, 
+  MapPin, 
+  UserPlus, 
+  Trash2, 
+  LogOut, 
+  CheckCircle, 
+  Clock, 
+  CreditCard, 
+  Plus, 
+  X, 
+  RefreshCw, 
+  Search,
+  ChevronRight,
+  TrendingUp,
+  Sliders,
+  DollarSign,
+  FileText,
+  UserCheck,
+  UploadCloud,
+  FileSpreadsheet,
+  Layers,
+  Gift,
+  Edit2,
+  Key,
+  Lock,
+  Mail,
+  ShieldAlert,
+  Eye,
+  EyeOff,
+  Package,
+  Inbox
+} from 'lucide-react';
+import OurCustomersTab from '../components/OurCustomersTab';
+import AdminProductsTab from '../components/AdminProductsTab';
+import AdminReferralsTab from '../components/AdminReferralsTab';
+import AdminPaymentsTab from '../components/AdminPaymentsTab';
+import AdminIndentsTab from '../components/AdminIndentsTab';
+import AdminSettingsTab from '../components/AdminSettingsTab';
+import AdminLeadsTab from '../components/AdminLeadsTab';
+import './Dashboard.css';
+
+
+
+const AdminDashboard = ({ initialTab, handleNavigation }) => {
+  const { user, logout } = useAuth();
+  const [activeTab, setActiveTab] = useState(initialTab || 'overview');
+  const [requests, setRequests] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [blogs, setBlogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
+  const switchTab = (tabName) => {
+    handleNavigation({ pageId: 'admin-dashboard', tab: tabName });
+  };
+  
+  // Modals state
+  const [trackingRequest, setTrackingRequest] = useState(null);
+  const [isAgentModalOpen, setIsAgentModalOpen] = useState(false);
+  
+  // New Agent Form State
+  const [newAgent, setNewAgent] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    phone: '',
+    specialization: '',
+    location: ''
+  });
+  const [showNewAgentPassword, setShowNewAgentPassword] = useState(false);
+  const [showNewAgentConfirmPassword, setShowNewAgentConfirmPassword] = useState(false);
+  const [agentFormLoading, setAgentFormLoading] = useState(false);
+  const [agentFormError, setAgentFormError] = useState('');
+
+  // Edit User State
+  const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [editUserLoading, setEditUserLoading] = useState(false);
+  const [editUserError, setEditUserError] = useState('');
+
+  // Password Management State
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [passwordUser, setPasswordUser] = useState(null);
+  const [passwordTab, setPasswordTab] = useState('manual'); // 'email' or 'manual'
+  const [manualPassword, setManualPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showManualPassword, setShowManualPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+
+  // Customer List Upload & Management States
+  const [isCustomerListUploadModalOpen, setIsCustomerListUploadModalOpen] = useState(false);
+  const [customerListFile, setCustomerListFile] = useState(null);
+  const [uploadMode, setUploadMode] = useState('replace');
+  const [uploadingCustomerList, setUploadingCustomerList] = useState(false);
+  const [uploadCustomerListError, setUploadCustomerListError] = useState('');
+
+  const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
+  const [newCustomerRecord, setNewCustomerRecord] = useState({
+    sNo: '',
+    name: '',
+    address: '',
+    product: '',
+    model: '',
+    purchaseDate: ''
+  });
+  const [addingRecordLoading, setAddingRecordLoading] = useState(false);
+  const [addingRecordError, setAddingRecordError] = useState('');
+
+  const [customerListRefreshTrigger, setCustomerListRefreshTrigger] = useState(0);
+
+  // Filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+
+  const fetchData = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const requestsRes = await api.get('api/requests');
+      const usersRes = await api.get('api/users');
+      const blogsRes = await api.get('api/blogs');
+      
+      if (requestsRes.success) setRequests(requestsRes.data);
+      if (usersRes.success) setUsers(usersRes.data);
+      if (blogsRes.success) setBlogs(blogsRes.data);
+    } catch (err) {
+      setError(err.message || 'Failed to fetch dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleAssignAgent = async (requestId, agentId) => {
+    try {
+      const res = await api.put(`api/requests/${requestId}/assign`, { agentId });
+      if (res.success) {
+        // Refresh requests lists
+        fetchData();
+        alert('Agent assigned successfully');
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to assign agent');
+    }
+  };
+
+  const handleDeleteRequest = async (requestId) => {
+    if (!window.confirm('Are you sure you want to delete this service request? This cannot be undone.')) return;
+    try {
+      const res = await api.delete(`api/requests/${requestId}`);
+      if (res.success) {
+        fetchData();
+        alert('Service request deleted successfully');
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to delete request');
+    }
+  };
+
+  const handleCreateAgentSubmit = async (e) => {
+    e.preventDefault();
+    if (newAgent.password !== newAgent.confirmPassword) {
+      setAgentFormError('Passwords do not match. Please ensure both passwords match.');
+      return;
+    }
+    setAgentFormLoading(true);
+    setAgentFormError('');
+    try {
+      const { confirmPassword: _, ...agentPayload } = newAgent;
+      const data = await api.post('api/auth/register', { ...agentPayload, role: 'AGENT' });
+      
+      if (data.success) {
+        setIsAgentModalOpen(false);
+        setNewAgent({ name: '', email: '', password: '', confirmPassword: '', phone: '', specialization: '', location: '' });
+        fetchData(); // reload users
+        alert('Service agent account created successfully!');
+      } else {
+        throw new Error(data.error || 'Failed to create agent');
+      }
+    } catch (err) {
+      setAgentFormError(err.message);
+    } finally {
+      setAgentFormLoading(false);
+    }
+  };
+
+  // Edit User Handlers
+  const handleOpenEditUser = (u) => {
+    setEditingUser({
+      _id: u._id,
+      name: u.name || '',
+      email: u.email || '',
+      phone: u.phone || '',
+      role: u.role || 'CUSTOMER',
+      status: u.status || 'Active',
+      specialization: u.specialization || '',
+      location: u.location || '',
+      address: u.address || '',
+      isRecurring: u.isRecurring || false
+    });
+    setEditUserError('');
+    setIsEditUserModalOpen(true);
+  };
+
+  const handleUpdateUserSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    setEditUserLoading(true);
+    setEditUserError('');
+    try {
+      const res = await api.put(`api/users/${editingUser._id}`, editingUser);
+      if (res.success) {
+        setIsEditUserModalOpen(false);
+        setEditingUser(null);
+        fetchData();
+        alert('User profile updated successfully!');
+      } else {
+        throw new Error(res.error || 'Failed to update user');
+      }
+    } catch (err) {
+      setEditUserError(err.message || 'Failed to update user');
+    } finally {
+      setEditUserLoading(false);
+    }
+  };
+
+  // Delete User Handler
+  const handleDeleteUser = async (userId, userName) => {
+    if (!window.confirm(`Are you sure you want to delete user account "${userName}"? This will permanently remove their access.`)) {
+      return;
+    }
+    try {
+      const res = await api.delete(`api/users/${userId}`);
+      if (res.success) {
+        setUsers(prev => prev.filter(u => u._id !== userId));
+        alert(`User account "${userName}" has been deleted successfully.`);
+      } else {
+        throw new Error(res.error || 'Failed to delete user');
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to delete user');
+    }
+  };
+
+  // Password Reset Modal Handlers
+  const handleOpenPasswordModal = (u) => {
+    setPasswordUser(u);
+    setPasswordTab('manual'); // Default to manual as requested
+    setManualPassword('');
+    setConfirmPassword('');
+    setShowManualPassword(false);
+    setShowConfirmPassword(false);
+    setPasswordMessage('');
+    setPasswordError('');
+    setIsPasswordModalOpen(true);
+  };
+
+  const handleSendResetEmail = async () => {
+    if (!passwordUser) return;
+    setPasswordLoading(true);
+    setPasswordMessage('');
+    setPasswordError('');
+    try {
+      const res = await api.post(`api/users/${passwordUser._id}/reset-password-email`, {});
+      if (res.success) {
+        setPasswordMessage(res.message || `Password reset email sent to ${passwordUser.email}!`);
+      } else {
+        throw new Error(res.error || 'Failed to send reset email');
+      }
+    } catch (err) {
+      setPasswordError(err.message || 'Failed to send password reset email');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  const handleManualPasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (!passwordUser) return;
+    if (!manualPassword || manualPassword.trim().length < 6) {
+      setPasswordError('New password must be at least 6 characters long.');
+      return;
+    }
+    if (manualPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match. Please re-enter the exact same password in both fields.');
+      return;
+    }
+    setPasswordLoading(true);
+    setPasswordMessage('');
+    setPasswordError('');
+    try {
+      const res = await api.post(`api/users/${passwordUser._id}/manual-password`, { password: manualPassword.trim() });
+      if (res.success) {
+        setPasswordMessage(`Password for ${passwordUser.name} has been updated successfully.`);
+        setManualPassword('');
+        setConfirmPassword('');
+      } else {
+        throw new Error(res.error || 'Failed to update password');
+      }
+    } catch (err) {
+      setPasswordError(err.message || 'Failed to update password');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  const handleCustomerUploadSubmit = async (e) => {
+    e.preventDefault();
+    if (!customerListFile) {
+      setUploadCustomerListError('Please select an Excel (.xlsx, .xls) or CSV (.csv) file to upload.');
+      return;
+    }
+
+    setUploadingCustomerList(true);
+    setUploadCustomerListError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', customerListFile);
+      formData.append('mode', uploadMode);
+
+      const res = await api.post('api/customer-list/upload', formData);
+      if (res.success) {
+        setIsCustomerListUploadModalOpen(false);
+        setCustomerListFile(null);
+        setCustomerListRefreshTrigger(prev => prev + 1);
+        alert(res.message || 'Customer list uploaded successfully!');
+      } else {
+        throw new Error(res.error || 'Failed to upload customer list');
+      }
+    } catch (err) {
+      setUploadCustomerListError(err.message || 'Upload failed');
+    } finally {
+      setUploadingCustomerList(false);
+    }
+  };
+
+  const handleAddCustomerSubmit = async (e) => {
+    e.preventDefault();
+    if (!newCustomerRecord.name || !newCustomerRecord.name.trim()) {
+      setAddingRecordError('Customer name is required.');
+      return;
+    }
+
+    setAddingRecordLoading(true);
+    setAddingRecordError('');
+    try {
+      const res = await api.post('api/customer-list', newCustomerRecord);
+      if (res.success) {
+        setIsAddCustomerModalOpen(false);
+        setNewCustomerRecord({ sNo: '', name: '', address: '', product: '', model: '', purchaseDate: '' });
+        setCustomerListRefreshTrigger(prev => prev + 1);
+        alert('Customer record added successfully!');
+      } else {
+        throw new Error(res.error || 'Failed to add record');
+      }
+    } catch (err) {
+      setAddingRecordError(err.message || 'Failed to add record');
+    } finally {
+      setAddingRecordLoading(false);
+    }
+  };
+
+  const handleClearAllCustomers = async () => {
+    if (!window.confirm('Are you sure you want to CLEAR ALL customer list records? This action cannot be undone.')) {
+      return;
+    }
+    try {
+      const res = await api.delete('api/customer-list/clear');
+      if (res.success) {
+        setCustomerListRefreshTrigger(prev => prev + 1);
+        alert('All customer records cleared successfully.');
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to clear customer records');
+    }
+  };
+
+  // Calculations for Metrics
+  const totalCollections = requests
+    .filter(req => req.paymentStatus === 'Paid')
+    .reduce((sum, req) => sum + (req.paymentAmount || 0), 0);
+  
+  const pendingRequestsCount = requests.filter(req => req.status === 'Pending').length;
+  const activeRequestsCount = requests.filter(req => ['Assigned', 'Accepted', 'In Progress'].includes(req.status)).length;
+  const completedRequestsCount = requests.filter(req => req.status === 'Completed').length;
+  
+  const agents = users.filter(u => u.role === 'AGENT');
+  const customers = users.filter(u => u.role === 'CUSTOMER');
+  const onlineAgentsCount = agents.filter(a => a.status === 'Online' || a.currentLat).length;
+
+  const handleLogout = () => {
+    logout();
+    handleNavigation('auth');
+  };
+
+  // Filters for requests
+  const filteredRequests = requests.filter(req => {
+    const matchesSearch = 
+      req.serviceType.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (req.customerId?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (req.assignedAgentId?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      req._id.includes(searchQuery);
+    
+    const matchesStatus = statusFilter === 'All' || req.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
+
+  return (
+    <div className="dashboard-container">
+      {/* Sidebar */}
+      <aside className="sidebar">
+        <div className="sidebar-brand">SBR ADMIN</div>
+        <div className="sidebar-menu">
+          <button 
+            className={`menu-item ${activeTab === 'overview' ? 'active' : ''}`}
+            onClick={() => switchTab('overview')}
+          >
+            <LayoutDashboard size={18} /> Overview
+          </button>
+          <button 
+            className={`menu-item ${activeTab === 'leads' ? 'active' : ''}`}
+            onClick={() => switchTab('leads')}
+          >
+            <Inbox size={18} /> Form Submissions
+          </button>
+          <button 
+            className={`menu-item ${activeTab === 'requests' ? 'active' : ''}`}
+            onClick={() => switchTab('requests')}
+          >
+            <Wrench size={18} /> Requests ({requests.length})
+          </button>
+          <button 
+            className={`menu-item ${activeTab === 'agents' ? 'active' : ''}`}
+            onClick={() => switchTab('agents')}
+          >
+            <Users size={18} /> Service Agents ({agents.length})
+          </button>
+          <button 
+            className={`menu-item ${activeTab === 'customers' ? 'active' : ''}`}
+            onClick={() => switchTab('customers')}
+          >
+            <Users size={18} /> Customers ({customers.length})
+          </button>
+          <button 
+            className={`menu-item ${activeTab === 'our-customers' ? 'active' : ''}`}
+            onClick={() => switchTab('our-customers')}
+          >
+            <UserCheck size={18} /> Our Customers List
+          </button>
+          <button 
+            className={`menu-item ${activeTab === 'blogs' ? 'active' : ''}`}
+            onClick={() => switchTab('blogs')}
+          >
+            <FileText size={18} /> Blogs ({blogs.length})
+          </button>
+          <button 
+            className={`menu-item ${activeTab === 'products' ? 'active' : ''}`}
+            onClick={() => switchTab('products')}
+          >
+            <Layers size={18} /> Products & Services
+          </button>
+          <button 
+            className={`menu-item ${activeTab === 'indents' ? 'active' : ''}`}
+            onClick={() => switchTab('indents')}
+          >
+            <Package size={18} /> Agent Indents & Van Kits
+          </button>
+          <button 
+            className={`menu-item ${activeTab === 'referrals' ? 'active' : ''}`}
+            onClick={() => switchTab('referrals')}
+          >
+            <Gift size={18} /> Referral Program
+          </button>
+          <button 
+            className={`menu-item ${activeTab === 'payments' ? 'active' : ''}`}
+            onClick={() => switchTab('payments')}
+          >
+            <CreditCard size={18} /> Payments Report
+          </button>
+          <button 
+            className={`menu-item ${activeTab === 'settings' ? 'active' : ''}`}
+            onClick={() => switchTab('settings')}
+          >
+            <Sliders size={18} /> Settings & Profile
+          </button>
+
+
+        </div>
+        <button className="menu-item logout-btn" onClick={handleLogout}>
+          <LogOut size={18} /> Sign Out
+        </button>
+      </aside>
+
+      {/* Main Content */}
+      <main className="main-content">
+        <header className="main-header">
+          <div className="header-info">
+            <h1>Admin Control Center</h1>
+            <p>Welcome back, {user?.name || 'Administrator'}</p>
+          </div>
+          <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }} onClick={fetchData}>
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh Data
+          </button>
+        </header>
+
+        {error && <div className="error-banner">{error}</div>}
+
+        {/* Tab contents */}
+        {activeTab === 'overview' && (
+          <>
+            {/* Metrics */}
+            <div className="metrics-grid">
+              <div className="metric-card">
+                <span className="metric-title">Active Requests</span>
+                <span className="metric-value">{activeRequestsCount}</span>
+                <span style={{ fontSize: '12px', color: '#10b981' }}>{pendingRequestsCount} Pending</span>
+              </div>
+              <div className="metric-card">
+                <span className="metric-title">Total Collections</span>
+                <span className="metric-value">₹{totalCollections.toLocaleString('en-IN')}</span>
+                <span style={{ fontSize: '12px', color: '#8b5cf6' }}>From completed jobs</span>
+              </div>
+              <div className="metric-card">
+                <span className="metric-title">Completed Requests</span>
+                <span className="metric-value">{completedRequestsCount}</span>
+                <span style={{ fontSize: '12px', color: '#9ca3af' }}>Total jobs finished</span>
+              </div>
+              <div className="metric-card">
+                <span className="metric-title">Agents Online</span>
+                <span className="metric-value">{onlineAgentsCount} / {agents.length}</span>
+                <span style={{ fontSize: '12px', color: '#6366f1' }}>With GPS active</span>
+              </div>
+            </div>
+
+            {/* Quick Requests View */}
+            <div className="section-card">
+              <h2 className="section-title">Recent Requests & Assignments</h2>
+              {loading ? (
+                <div style={{ color: '#9ca3af' }}>Loading requests...</div>
+              ) : (
+                <div className="table-wrapper">
+                  <table className="custom-table">
+                    <thead>
+                      <tr>
+                        <th>Request ID</th>
+                        <th>Customer</th>
+                        <th>Service Type</th>
+                        <th>Created At</th>
+                        <th>Status</th>
+                        <th>Assign Agent</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {requests.slice(0, 5).map(req => (
+                        <tr key={req._id}>
+                          <td style={{ fontSize: '11px', color: '#9ca3af' }}>#{req._id.substring(req._id.length - 8)}</td>
+                          <td>
+                            <div>{req.customerId?.name || 'Unknown'}</div>
+                            <div style={{ fontSize: '11px', color: '#9ca3af' }}>{req.customerId?.phone}</div>
+                          </td>
+                          <td>{req.serviceType}</td>
+                          <td>{new Date(req.createdAt).toLocaleDateString()}</td>
+                          <td>
+                            <span className={`badge badge-${req.status.toLowerCase().replace(' ', '-')}`}>
+                              {req.status}
+                            </span>
+                          </td>
+                          <td>
+                            {req.status === 'Pending' ? (
+                              <select 
+                                className="select-assign"
+                                onChange={(e) => handleAssignAgent(req._id, e.target.value)}
+                                defaultValue=""
+                              >
+                                <option value="" disabled>Choose Agent...</option>
+                                {agents.map(a => (
+                                  <option key={a._id} value={a._id}>{a.name} ({a.specialization || 'General'})</option>
+                                ))}
+                              </select>
+                            ) : (
+                              <span style={{ fontSize: '13px', color: '#a78bfa', fontWeight: '500' }}>
+                                {req.assignedAgentId?.name || 'Unassigned'}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {activeTab === 'requests' && (
+          <div className="section-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
+              <h2 className="section-title" style={{ margin: 0 }}>Service Requests Directory</h2>
+              
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <Search size={16} style={{ position: 'absolute', left: '10px', color: '#64748b' }} />
+                  <input
+                    type="text"
+                    placeholder="Search type, client, agent..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    style={{
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '8px',
+                      padding: '8px 12px 8px 32px',
+                      color: '#0f172a',
+                      fontSize: '14px',
+                      outline: 'none',
+                      width: '220px'
+                    }}
+                  />
+                </div>
+                
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  style={{
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    color: '#0f172a',
+                    fontSize: '14px',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="All">All Statuses</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Assigned">Assigned</option>
+                  <option value="Accepted">Accepted</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Cancelled">Cancelled</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="table-wrapper">
+              <table className="custom-table">
+                <thead>
+                  <tr>
+                    <th>Request ID</th>
+                    <th>Customer Details</th>
+                    <th>Request Details</th>
+                    <th>Assigned Agent</th>
+                    <th>Status</th>
+                    <th>Payment</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredRequests.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" style={{ textAlign: 'center', color: '#64748b', padding: '30px' }}>No requests match the query.</td>
+                    </tr>
+                  ) : (
+                    filteredRequests.map(req => (
+                      <tr key={req._id}>
+                        <td style={{ fontSize: '11px', color: '#64748b' }}>#{req._id.substring(req._id.length - 8)}</td>
+                        <td>
+                          <div style={{ fontWeight: '600', color: '#0f172a' }}>{req.customerId?.name || 'Unknown'}</div>
+                          <div style={{ fontSize: '11px', color: '#64748b' }}>{req.customerId?.phone}</div>
+                          <div style={{ fontSize: '11px', color: '#64748b', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={req.customerAddress}>
+                            {req.customerAddress}
+                          </div>
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: '600', color: '#4f46e5' }}>{req.serviceType}</div>
+                          <div style={{ fontSize: '12px', color: '#475569', marginTop: '2px' }}>{req.description}</div>
+                        </td>
+                        <td>
+                          {req.assignedAgentId ? (
+                            <div>
+                              <div style={{ color: '#0f172a', fontWeight: '500' }}>{req.assignedAgentId.name}</div>
+                              <div style={{ fontSize: '11px', color: '#64748b' }}>{req.assignedAgentId.phone}</div>
+                              {['Assigned', 'Accepted', 'In Progress'].includes(req.status) && (
+                                <button 
+                                  className="btn-secondary" 
+                                  style={{ padding: '2px 6px', fontSize: '10px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '3px' }}
+                                  onClick={() => setTrackingRequest(req)}
+                                >
+                                  <MapPin size={10} /> Track Live
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <select 
+                              className="select-assign"
+                              onChange={(e) => handleAssignAgent(req._id, e.target.value)}
+                              defaultValue=""
+                            >
+                              <option value="" disabled>Choose Agent...</option>
+                              {agents.map(a => (
+                                <option key={a._id} value={a._id}>{a.name}</option>
+                              ))}
+                            </select>
+                          )}
+                        </td>
+                        <td>
+                          <span className={`badge badge-${req.status.toLowerCase().replace(' ', '-')}`}>
+                            {req.status}
+                          </span>
+                        </td>
+                        <td>
+                          {req.paymentStatus === 'Paid' ? (
+                            <div>
+                              <span className="badge badge-paid">Paid: ₹{req.paymentAmount}</span>
+                              <div style={{ fontSize: '11px', color: '#475569', marginTop: '3px' }}>
+                                {req.inventoryTotal > 0 && <span style={{ display: 'block' }}>Parts: ₹{req.inventoryTotal}</span>}
+                                {req.serviceCharge > 0 && <span style={{ display: 'block' }}>Service: ₹{req.serviceCharge}</span>}
+                                {req.discount > 0 && <span style={{ display: 'block', color: '#b45309' }}>Discount: -₹{req.discount}</span>}
+                              </div>
+                              <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>{req.paymentMethod}</div>
+                            </div>
+                          ) : (
+                            <span className="badge badge-pending">Pending</span>
+                          )}
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button 
+                              className="btn-secondary btn-danger" 
+                              style={{ padding: '6px' }}
+                              onClick={() => handleDeleteRequest(req._id)}
+                              title="Delete Request"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'agents' && (
+          <div className="section-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 className="section-title" style={{ margin: 0 }}>Service Agent Personnel</h2>
+              <button 
+                className="btn-primary" 
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px' }}
+                onClick={() => setIsAgentModalOpen(true)}
+              >
+                <UserPlus size={16} /> Add Agent Account
+              </button>
+            </div>
+
+            <div className="table-wrapper">
+              <table className="custom-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Specialization</th>
+                    <th>Location Area</th>
+                    <th>Status</th>
+                    <th>Completed Jobs</th>
+                    <th>Current GPS</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {agents.length === 0 ? (
+                    <tr>
+                      <td colSpan="9" style={{ textAlign: 'center', color: '#64748b', padding: '30px' }}>No service agent accounts registered.</td>
+                    </tr>
+                  ) : (
+                    agents.map(agent => (
+                      <tr key={agent._id}>
+                        <td style={{ fontWeight: '600', color: '#0f172a' }}>{agent.name}</td>
+                        <td>{agent.email}</td>
+                        <td>{agent.phone || 'N/A'}</td>
+                        <td>
+                          <span style={{ background: '#e0e7ff', color: '#4338ca', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '500' }}>
+                            {agent.specialization || 'General Technician'}
+                          </span>
+                        </td>
+                        <td>{agent.location || 'N/A'}</td>
+                        <td>
+                          <span className={`badge ${agent.status === 'Online' ? 'badge-completed' : 'badge-cancelled'}`}>
+                            {agent.status || 'Offline'}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{agent.completedJobs || 0}</td>
+                        <td>
+                          {agent.currentLat ? (
+                            <span style={{ fontSize: '11px', color: '#2563eb', fontFamily: 'monospace' }}>
+                              {agent.currentLat.toFixed(5)}, {agent.currentLng.toFixed(5)}
+                            </span>
+                          ) : (
+                            <span style={{ color: '#64748b', fontSize: '12px' }}>No coordinates</span>
+                          )}
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            <button
+                              className="btn-outline"
+                              style={{ padding: '6px 8px', borderRadius: '6px', color: '#0284c7', border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer' }}
+                              onClick={() => handleOpenEditUser(agent)}
+                              title="Edit Agent Account"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                            <button
+                              className="btn-outline"
+                              style={{ padding: '6px 8px', borderRadius: '6px', color: '#d97706', border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer' }}
+                              onClick={() => handleOpenPasswordModal(agent)}
+                              title="Reset Password"
+                            >
+                              <Key size={14} />
+                            </button>
+                            <button
+                              className="btn-outline"
+                              style={{ padding: '6px 8px', borderRadius: '6px', color: '#dc2626', border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer' }}
+                              onClick={() => handleDeleteUser(agent._id, agent.name)}
+                              title="Delete Agent Account"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'customers' && (
+          <div className="section-card">
+            <h2 className="section-title">Client Profiles Directory</h2>
+            <div className="table-wrapper">
+              <table className="custom-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Address</th>
+                    <th>Recurring Service</th>
+                    <th>Next Scheduled Date</th>
+                    <th>Signed Up</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {customers.length === 0 ? (
+                    <tr>
+                      <td colSpan="8" style={{ textAlign: 'center', color: '#64748b', padding: '30px' }}>No customer accounts registered.</td>
+                    </tr>
+                  ) : (
+                    customers.map(cust => (
+                      <tr key={cust._id}>
+                        <td style={{ fontWeight: '600', color: '#0f172a' }}>{cust.name}</td>
+                        <td>{cust.email}</td>
+                        <td>{cust.phone || 'N/A'}</td>
+                        <td>{cust.address || 'No address specified'}</td>
+                        <td>
+                          <span className={`badge ${cust.isRecurring ? 'badge-completed' : 'badge-pending'}`}>
+                            {cust.isRecurring ? 'Yes' : 'No'}
+                          </span>
+                        </td>
+                        <td>
+                          {cust.nextServiceDate ? new Date(cust.nextServiceDate).toLocaleDateString() : 'N/A'}
+                        </td>
+                        <td style={{ fontSize: '12px', color: '#64748b' }}>
+                          {new Date(cust.createdAt).toLocaleDateString()}
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            <button
+                              className="btn-outline"
+                              style={{ padding: '6px 8px', borderRadius: '6px', color: '#0284c7', border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer' }}
+                              onClick={() => handleOpenEditUser(cust)}
+                              title="Edit Customer Profile"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                            <button
+                              className="btn-outline"
+                              style={{ padding: '6px 8px', borderRadius: '6px', color: '#d97706', border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer' }}
+                              onClick={() => handleOpenPasswordModal(cust)}
+                              title="Reset Password"
+                            >
+                              <Key size={14} />
+                            </button>
+                            <button
+                              className="btn-outline"
+                              style={{ padding: '6px 8px', borderRadius: '6px', color: '#dc2626', border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer' }}
+                              onClick={() => handleDeleteUser(cust._id, cust.name)}
+                              title="Delete Customer Account"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'blogs' && (
+          <AdminBlogsSection blogs={blogs} onRefresh={fetchData} />
+        )}
+
+        {activeTab === 'our-customers' && (
+          <div>
+            {/* Admin Header Action Controls */}
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              flexWrap: 'wrap', 
+              gap: '12px', 
+              marginBottom: '20px', 
+              backgroundColor: '#ffffff', 
+              padding: '16px 20px', 
+              borderRadius: '16px',
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+            }}>
+              <div>
+                <h3 style={{ margin: 0, color: '#0f172a', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <FileSpreadsheet size={20} color="#0284c7" /> Admin Customer Dataset Management
+                </h3>
+                <p style={{ margin: '4px 0 0 0', fontSize: '12.5px', color: '#64748b' }}>
+                  Upload Excel/CSV customer lists (S.No., Name, Address, Model, Date of Purchase) or manage single records.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => setIsCustomerListUploadModalOpen(true)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', boxShadow: 'none' }}
+                >
+                  <UploadCloud size={16} /> Upload Excel / CSV
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setIsAddCustomerModalOpen(true)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Plus size={16} /> Add Single Record
+                </button>
+                <button
+                  type="button"
+                  className="btn-danger"
+                  onClick={handleClearAllCustomers}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', fontSize: '13px', cursor: 'pointer' }}
+                >
+                  <Trash2 size={16} /> Clear All
+                </button>
+              </div>
+            </div>
+
+            {/* Embedded Shared Search & Filter Table */}
+            <OurCustomersTab key={customerListRefreshTrigger} isAdmin={true} />
+          </div>
+        )}
+
+        {activeTab === 'products' && (
+          <AdminProductsTab />
+        )}
+
+        {activeTab === 'indents' && (
+          <AdminIndentsTab />
+        )}
+
+        {activeTab === 'referrals' && (
+          <AdminReferralsTab />
+        )}
+
+        {activeTab === 'payments' && (
+          <AdminPaymentsTab users={users} />
+        )}
+
+        {activeTab === 'leads' && (
+          <AdminLeadsTab />
+        )}
+
+        {activeTab === 'settings' && (
+          <AdminSettingsTab />
+        )}
+      </main>
+
+      {/* Map Live Location Modal */}
+      {trackingRequest && (
+        <div className="modal-backdrop" onClick={() => setTrackingRequest(null)}>
+          <div className="modal-content" style={{ maxWidth: '600px' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>
+                Live Tracking: {trackingRequest.assignedAgentId?.name || 'Agent'}
+              </h3>
+              <button 
+                type="button" 
+                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
+                onClick={() => setTrackingRequest(null)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <LeafletMap 
+              agentLocation={
+                trackingRequest.assignedAgentId?.currentLat 
+                  ? { lat: trackingRequest.assignedAgentId.currentLat, lng: trackingRequest.assignedAgentId.currentLng }
+                  : null
+              }
+              locationPath={trackingRequest.locationPath || []}
+              customerAddress={trackingRequest.customerAddress}
+            />
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#334155', marginTop: '15px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <div>
+                Service: <strong style={{ color: '#0f172a' }}>{trackingRequest.serviceType}</strong>
+              </div>
+              <div>
+                Status: <span className={`badge badge-${trackingRequest.status.toLowerCase().replace(' ', '-')}`}>{trackingRequest.status}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {isEditUserModalOpen && editingUser && (
+        <div className="modal-backdrop" onClick={() => setIsEditUserModalOpen(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Edit2 size={18} color="#0284c7" /> Edit Account: {editingUser.name}
+              </h3>
+              <button 
+                type="button" 
+                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
+                onClick={() => setIsEditUserModalOpen(false)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {editUserError && <div className="error-banner" style={{ marginBottom: '15px' }}>{editUserError}</div>}
+
+            <form onSubmit={handleUpdateUserSubmit} className="dashboard-form" style={{ gap: '12px' }}>
+              <div className="input-group">
+                <label>Full Name</label>
+                <input
+                  type="text"
+                  required
+                  value={editingUser.name}
+                  onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="input-group">
+                  <label>Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    value={editingUser.email}
+                    onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                  />
+                </div>
+                <div className="input-group">
+                  <label>Phone Number</label>
+                  <input
+                    type="tel"
+                    value={editingUser.phone}
+                    onChange={(e) => setEditingUser({ ...editingUser, phone: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="input-group">
+                  <label>Role</label>
+                  <select
+                    value={editingUser.role}
+                    onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
+                  >
+                    <option value="AGENT">AGENT</option>
+                    <option value="CUSTOMER">CUSTOMER</option>
+                    <option value="STORE_INCHARGE">STORE_INCHARGE</option>
+                    <option value="ADMIN">ADMIN</option>
+                  </select>
+                </div>
+                <div className="input-group">
+                  <label>Account Status</label>
+                  <select
+                    value={editingUser.status}
+                    onChange={(e) => setEditingUser({ ...editingUser, status: e.target.value })}
+                  >
+                    <option value="Online">Online</option>
+                    <option value="Offline">Offline</option>
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+              </div>
+
+              {(editingUser.role === 'AGENT' || editingUser.role === 'agent') && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="input-group">
+                    <label>Specialization</label>
+                    <input
+                      type="text"
+                      value={editingUser.specialization}
+                      onChange={(e) => setEditingUser({ ...editingUser, specialization: e.target.value })}
+                      placeholder="e.g. Solar Water Heaters"
+                    />
+                  </div>
+                  <div className="input-group">
+                    <label>Assigned Location</label>
+                    <input
+                      type="text"
+                      value={editingUser.location}
+                      onChange={(e) => setEditingUser({ ...editingUser, location: e.target.value })}
+                      placeholder="e.g. Tirupati"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {(editingUser.role === 'CUSTOMER' || editingUser.role === 'customer') && (
+                <div className="input-group">
+                  <label>Address</label>
+                  <input
+                    type="text"
+                    value={editingUser.address}
+                    onChange={(e) => setEditingUser({ ...editingUser, address: e.target.value })}
+                    placeholder="Customer site address"
+                  />
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button 
+                  type="button" 
+                  className="btn-secondary" 
+                  onClick={() => setIsEditUserModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn-primary" 
+                  disabled={editUserLoading}
+                >
+                  {editUserLoading ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Password Reset Modal (Email & Manual) */}
+      {isPasswordModalOpen && passwordUser && (
+        <div className="modal-backdrop" onClick={() => setIsPasswordModalOpen(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Key size={18} color="#d97706" /> Password Management
+              </h3>
+              <button 
+                type="button" 
+                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
+                onClick={() => setIsPasswordModalOpen(false)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* User Target Card */}
+            <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '18px' }}>
+              <div style={{ fontWeight: '700', color: '#0f172a', fontSize: '15px' }}>{passwordUser.name}</div>
+              <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
+                {passwordUser.email} &bull; <span style={{ color: '#0284c7', fontWeight: '600' }}>{passwordUser.role}</span>
+              </div>
+            </div>
+
+            {/* Tab Selector */}
+            <div style={{ display: 'flex', background: '#e2e8f0', padding: '4px', borderRadius: '8px', marginBottom: '18px' }}>
+              <button
+                type="button"
+                onClick={() => { setPasswordTab('email'); setPasswordMessage(''); setPasswordError(''); }}
+                style={{
+                  flex: 1,
+                  padding: '8px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  background: passwordTab === 'email' ? '#fff' : 'transparent',
+                  color: passwordTab === 'email' ? '#0f172a' : '#64748b',
+                  boxShadow: passwordTab === 'email' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <Mail size={15} /> Reset via Email
+              </button>
+              <button
+                type="button"
+                onClick={() => { setPasswordTab('manual'); setPasswordMessage(''); setPasswordError(''); }}
+                style={{
+                  flex: 1,
+                  padding: '8px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  background: passwordTab === 'manual' ? '#fff' : 'transparent',
+                  color: passwordTab === 'manual' ? '#0f172a' : '#64748b',
+                  boxShadow: passwordTab === 'manual' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <Lock size={15} /> Manual Password Reset
+              </button>
+            </div>
+
+            {passwordMessage && (
+              <div style={{ background: '#dcfce7', color: '#15803d', padding: '12px 16px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px', border: '1px solid #bbf7d0', fontWeight: '500' }}>
+                {passwordMessage}
+              </div>
+            )}
+
+            {passwordError && (
+              <div className="error-banner" style={{ marginBottom: '16px' }}>
+                {passwordError}
+              </div>
+            )}
+
+            {passwordTab === 'email' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <p style={{ fontSize: '13px', color: '#475569', margin: 0, lineHeight: 1.5 }}>
+                  Clicking the button below will automatically generate a secure temporary password, update the database, and email credentials directly to <strong>{passwordUser.email}</strong>.
+                </p>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={handleSendResetEmail}
+                  disabled={passwordLoading}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px' }}
+                >
+                  <Mail size={16} /> {passwordLoading ? 'Sending Reset Email...' : 'Send Password Reset Email'}
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleManualPasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div className="input-group">
+                  <label>Enter New Password</label>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <input
+                      type={showManualPassword ? "text" : "password"}
+                      required
+                      minLength={6}
+                      placeholder="Minimum 6 characters"
+                      value={manualPassword}
+                      onChange={(e) => setManualPassword(e.target.value)}
+                      style={{ paddingRight: '40px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowManualPassword(!showManualPassword)}
+                      style={{
+                        position: 'absolute',
+                        right: '10px',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#64748b',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                      title={showManualPassword ? "Hide Password" : "View Password"}
+                    >
+                      {showManualPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="input-group">
+                  <label>Re-enter / Confirm Password</label>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      required
+                      minLength={6}
+                      placeholder="Re-type identical password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      style={{ paddingRight: '40px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      style={{
+                        position: 'absolute',
+                        right: '10px',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#64748b',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                      title={showConfirmPassword ? "Hide Password" : "View Password"}
+                    >
+                      {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  {confirmPassword && manualPassword !== confirmPassword && (
+                    <span style={{ fontSize: '11px', color: '#dc2626', marginTop: '4px', fontWeight: '500' }}>
+                      Passwords do not match
+                    </span>
+                  )}
+                  {confirmPassword && manualPassword === confirmPassword && (
+                    <span style={{ fontSize: '11px', color: '#15803d', marginTop: '4px', fontWeight: '500' }}>
+                      ✓ Passwords match
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={passwordLoading || (confirmPassword && manualPassword !== confirmPassword)}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px' }}
+                >
+                  <Lock size={16} /> {passwordLoading ? 'Updating Password...' : 'Update Password Directly'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Add Agent Modal */}
+      {isAgentModalOpen && (
+        <div className="modal-backdrop" onClick={() => setIsAgentModalOpen(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>Register Service Agent</h3>
+              <button 
+                type="button" 
+                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
+                onClick={() => setIsAgentModalOpen(false)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {agentFormError && <div className="error-banner" style={{ marginBottom: '15px' }}>{agentFormError}</div>}
+
+            <form onSubmit={handleCreateAgentSubmit} className="dashboard-form" style={{ gap: '12px' }}>
+              <div className="input-group">
+                <label>Full Name</label>
+                <input
+                  type="text"
+                  required
+                  value={newAgent.name}
+                  onChange={(e) => setNewAgent({ ...newAgent, name: e.target.value })}
+                  placeholder="Agent Name"
+                />
+              </div>
+
+              <div className="input-group">
+                <label>Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={newAgent.email}
+                  onChange={(e) => setNewAgent({ ...newAgent, email: e.target.value })}
+                  placeholder="agent@sribalaji.com"
+                />
+              </div>
+
+              <div className="input-group">
+                <label>Password</label>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input
+                    type={showNewAgentPassword ? "text" : "password"}
+                    required
+                    minLength={6}
+                    value={newAgent.password}
+                    onChange={(e) => setNewAgent({ ...newAgent, password: e.target.value })}
+                    placeholder="Minimum 6 characters"
+                    style={{ paddingRight: '40px' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewAgentPassword(!showNewAgentPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#64748b',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                    title={showNewAgentPassword ? "Hide Password" : "View Password"}
+                  >
+                    {showNewAgentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="input-group">
+                <label>Confirm / Re-enter Password</label>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input
+                    type={showNewAgentConfirmPassword ? "text" : "password"}
+                    required
+                    minLength={6}
+                    value={newAgent.confirmPassword}
+                    onChange={(e) => setNewAgent({ ...newAgent, confirmPassword: e.target.value })}
+                    placeholder="Re-enter password"
+                    style={{ paddingRight: '40px' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewAgentConfirmPassword(!showNewAgentConfirmPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#64748b',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                    title={showNewAgentConfirmPassword ? "Hide Password" : "View Password"}
+                  >
+                    {showNewAgentConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                {newAgent.confirmPassword && newAgent.password !== newAgent.confirmPassword && (
+                  <span style={{ fontSize: '11px', color: '#dc2626', marginTop: '4px', fontWeight: '500' }}>
+                    Passwords do not match
+                  </span>
+                )}
+                {newAgent.confirmPassword && newAgent.password === newAgent.confirmPassword && (
+                  <span style={{ fontSize: '11px', color: '#15803d', marginTop: '4px', fontWeight: '500' }}>
+                    ✓ Passwords match
+                  </span>
+                )}
+              </div>
+
+              <div className="input-group">
+                <label>Phone Number</label>
+                <input
+                  type="tel"
+                  required
+                  value={newAgent.phone}
+                  onChange={(e) => setNewAgent({ ...newAgent, phone: e.target.value })}
+                  placeholder="Phone number"
+                />
+              </div>
+
+              <div className="input-group">
+                <label>Specialization</label>
+                <input
+                  type="text"
+                  value={newAgent.specialization}
+                  onChange={(e) => setNewAgent({ ...newAgent, specialization: e.target.value })}
+                  placeholder="Solar Heaters, Water Softeners, etc."
+                />
+              </div>
+
+              <div className="input-group">
+                <label>Assigned Area / Location</label>
+                <input
+                  type="text"
+                  value={newAgent.location}
+                  onChange={(e) => setNewAgent({ ...newAgent, location: e.target.value })}
+                  placeholder="e.g. Bangalore North"
+                />
+              </div>
+
+              <button 
+                type="submit" 
+                className="btn-primary" 
+                disabled={agentFormLoading || (newAgent.confirmPassword && newAgent.password !== newAgent.confirmPassword) || newAgent.password.length < 6}
+                style={{ marginTop: '10px' }}
+              >
+                {agentFormLoading ? 'Creating Agent...' : 'Create Account'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Excel / CSV Customer List Modal */}
+      {isCustomerListUploadModalOpen && (
+        <div className="modal-backdrop" onClick={() => setIsCustomerListUploadModalOpen(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '540px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <UploadCloud size={20} color="#0284c7" /> Upload Customer List File
+              </h3>
+              <button 
+                type="button" 
+                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
+                onClick={() => setIsCustomerListUploadModalOpen(false)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {uploadCustomerListError && <div className="error-banner" style={{ marginBottom: '15px' }}>{uploadCustomerListError}</div>}
+
+            <form onSubmit={handleCustomerUploadSubmit} className="dashboard-form">
+              <div className="input-group">
+                <label style={{ color: '#334155', fontSize: '14px', marginBottom: '8px', display: 'block' }}>
+                  Select File (.xlsx, .xls, .csv)
+                </label>
+                <input
+                  type="file"
+                  accept=".xlsx, .xls, .csv"
+                  required
+                  onChange={(e) => setCustomerListFile(e.target.files[0])}
+                  style={{
+                    width: '100%',
+                    background: '#f8fafc',
+                    color: '#0f172a',
+                    border: '1px dashed #0284c7',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    cursor: 'pointer'
+                  }}
+                />
+                <span style={{ fontSize: '12px', color: '#64748b', marginTop: '6px', display: 'block' }}>
+                  Supported headers: <strong>S.No</strong>, <strong>Name</strong>, <strong>Address</strong>, <strong>Product</strong>, <strong>Model</strong> (optional), <strong>Date of Purchase</strong> (optional).
+                </span>
+              </div>
+
+              <div className="input-group" style={{ marginTop: '16px' }}>
+                <label style={{ color: '#334155', fontSize: '14px', marginBottom: '8px', display: 'block' }}>Upload Mode</label>
+                <div style={{ display: 'flex', gap: '20px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#334155', cursor: 'pointer', fontSize: '13.5px' }}>
+                    <input
+                      type="radio"
+                      name="uploadMode"
+                      value="replace"
+                      checked={uploadMode === 'replace'}
+                      onChange={() => setUploadMode('replace')}
+                    />
+                    Replace existing customer list
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#334155', cursor: 'pointer', fontSize: '13.5px' }}>
+                    <input
+                      type="radio"
+                      name="uploadMode"
+                      value="append"
+                      checked={uploadMode === 'append'}
+                      onChange={() => setUploadMode('append')}
+                    />
+                    Append to existing list
+                  </label>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setIsCustomerListUploadModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={uploadingCustomerList}
+                  style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', boxShadow: 'none' }}
+                >
+                  {uploadingCustomerList ? 'Processing File...' : 'Upload List'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Single Customer Record Modal */}
+      {isAddCustomerModalOpen && (
+        <div className="modal-backdrop" onClick={() => setIsAddCustomerModalOpen(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Plus size={20} color="#0284c7" /> Add Customer Record
+              </h3>
+              <button 
+                type="button" 
+                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
+                onClick={() => setIsAddCustomerModalOpen(false)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {addingRecordError && <div className="error-banner" style={{ marginBottom: '15px' }}>{addingRecordError}</div>}
+
+            <form onSubmit={handleAddCustomerSubmit} className="dashboard-form">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
+                <div className="input-group">
+                  <label style={{ color: '#334155', fontSize: '13px' }}>S.No.</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 1"
+                    value={newCustomerRecord.sNo}
+                    onChange={(e) => setNewCustomerRecord({ ...newCustomerRecord, sNo: e.target.value })}
+                  />
+                </div>
+                <div className="input-group">
+                  <label style={{ color: '#334155', fontSize: '13px' }}>Customer Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Ramesh Kumar"
+                    value={newCustomerRecord.name}
+                    onChange={(e) => setNewCustomerRecord({ ...newCustomerRecord, name: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="input-group" style={{ marginTop: '12px' }}>
+                <label style={{ color: '#334155', fontSize: '13px' }}>Address</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Indiranagar, Bangalore"
+                  value={newCustomerRecord.address}
+                  onChange={(e) => setNewCustomerRecord({ ...newCustomerRecord, address: e.target.value })}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
+                <div className="input-group">
+                  <label style={{ color: '#334155', fontSize: '13px' }}>Product Category</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Solar Water Heater"
+                    value={newCustomerRecord.product}
+                    onChange={(e) => setNewCustomerRecord({ ...newCustomerRecord, product: e.target.value })}
+                  />
+                </div>
+                <div className="input-group">
+                  <label style={{ color: '#334155', fontSize: '13px' }}>Model (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 200L ETC"
+                    value={newCustomerRecord.model}
+                    onChange={(e) => setNewCustomerRecord({ ...newCustomerRecord, model: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="input-group" style={{ marginTop: '12px' }}>
+                <label style={{ color: '#334155', fontSize: '13px' }}>Date of Purchase (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 2024-05-15 or N/A"
+                  value={newCustomerRecord.purchaseDate}
+                  onChange={(e) => setNewCustomerRecord({ ...newCustomerRecord, purchaseDate: e.target.value })}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setIsAddCustomerModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={addingRecordLoading}
+                  style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', boxShadow: 'none' }}
+                >
+                  {addingRecordLoading ? 'Saving...' : 'Add Record'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+
+
+const AdminBlogsSection = ({ blogs, onRefresh }) => {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingBlog, setEditingBlog] = useState(null);
+  const [formData, setFormData] = useState({
+    title: '',
+    slug: '',
+    category: 'Solar Power',
+    author: 'Admin',
+    image: 'https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=800&q=80',
+    summary: '',
+    content: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [isSlugEdited, setIsSlugEdited] = useState(false);
+
+  // Sync edit mode
+  useEffect(() => {
+    if (editingBlog) {
+      setFormData({
+        title: editingBlog.title,
+        slug: editingBlog.slug,
+        category: editingBlog.category || 'General',
+        author: editingBlog.author || 'Admin',
+        image: editingBlog.image || '',
+        summary: editingBlog.summary || '',
+        content: editingBlog.content || ''
+      });
+      setIsSlugEdited(true); // Don't auto-generate when editing
+      setModalOpen(true);
+    } else {
+      setFormData({
+        title: '',
+        slug: '',
+        category: 'Solar Power',
+        author: 'Admin',
+        image: 'https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=800&q=80',
+        summary: '',
+        content: ''
+      });
+      setIsSlugEdited(false);
+    }
+  }, [editingBlog]);
+
+  const handleTitleChange = (e) => {
+    const titleVal = e.target.value;
+    setFormData(prev => {
+      const updated = { ...prev, title: titleVal };
+      if (!isSlugEdited) {
+        // Auto-generate slug
+        updated.slug = titleVal
+          .toLowerCase()
+          .replace(/[^a-z0-9\s-]/g, '') // remove special characters
+          .replace(/\s+/g, '-')         // replace spaces with hyphens
+          .replace(/-+/g, '-');        // reduce multiple hyphens
+      }
+      return updated;
+    });
+  };
+
+  const handleSlugChange = (e) => {
+    setIsSlugEdited(true);
+    setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      let res;
+      if (editingBlog) {
+        // Update blog post
+        res = await api.put(`api/blogs/${editingBlog._id}`, {
+          ...formData,
+          _id: editingBlog._id
+        });
+      } else {
+        // Create new blog post
+        res = await api.post('api/blogs', formData);
+      }
+
+      if (res.success) {
+        setSuccess(editingBlog ? 'Blog updated successfully!' : 'Blog post created successfully!');
+        setModalOpen(false);
+        setEditingBlog(null);
+        onRefresh();
+      } else {
+        setError(res.error || 'Failed to save blog post');
+      }
+    } catch (err) {
+      setError(err.message || 'Error occurred while saving blog post');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (blogId) => {
+    if (!window.confirm('Are you sure you want to delete this blog post?')) return;
+    try {
+      const res = await api.delete(`api/blogs/${blogId}`);
+      if (res.success) {
+        onRefresh();
+      } else {
+        alert(res.error || 'Failed to delete blog post');
+      }
+    } catch (err) {
+      alert(err.message || 'Error deleting blog post');
+    }
+  };
+
+  return (
+    <div className="section-card" style={{ marginTop: '20px' }}>
+      <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div>
+          <h2 className="section-title" style={{ margin: 0 }}>Manage Blog Posts</h2>
+          <p style={{ color: '#64748b', fontSize: '13.5px', margin: '4px 0 0 0' }}>Create, update, and manage dynamically published articles on the SBR website.</p>
+        </div>
+        <button 
+          className="btn-primary" 
+          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          onClick={() => {
+            setEditingBlog(null);
+            setModalOpen(true);
+          }}
+        >
+          <Plus size={16} /> Create Blog Post
+        </button>
+      </div>
+
+      <div className="table-wrapper">
+        <table className="custom-table">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>URL Slug</th>
+              <th>Category</th>
+              <th>Author</th>
+              <th>Published Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {blogs.length === 0 ? (
+              <tr>
+                <td colSpan="6" style={{ textAlign: 'center', color: '#64748b', padding: '30px' }}>
+                  No blog posts found. Create your first post!
+                </td>
+              </tr>
+            ) : (
+              blogs.map((b) => (
+                <tr key={b._id}>
+                  <td style={{ fontWeight: 'bold', color: '#2563eb' }}>{b.title}</td>
+                  <td style={{ color: '#4f46e5', fontFamily: 'monospace' }}>/{b.slug}</td>
+                  <td><span className="badge badge-assigned">{b.category}</span></td>
+                  <td>{b.author}</td>
+                  <td>{new Date(b.publishedAt).toLocaleDateString()}</td>
+                  <td>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button 
+                        className="btn-secondary" 
+                        style={{ padding: '4px 10px', fontSize: '12px' }}
+                        onClick={() => setEditingBlog(b)}
+                      >
+                        Edit
+                      </button>
+                      <button 
+                        className="btn-secondary btn-danger" 
+                        style={{ padding: '4px 10px', fontSize: '12px' }}
+                        onClick={() => handleDelete(b._id)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Create/Edit Blog Modal Overlay */}
+      {modalOpen && (
+        <div className="modal-backdrop" onClick={() => { setModalOpen(false); setEditingBlog(null); }}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '750px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '15px' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: '#0f172a', margin: 0 }}>
+                {editingBlog ? 'Edit Blog Post' : 'Create New Blog Post'}
+              </h3>
+              <button 
+                onClick={() => {
+                  setModalOpen(false);
+                  setEditingBlog(null);
+                }} 
+                style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {error && (
+              <div className="error-banner" style={{ marginBottom: '15px' }}>
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="dashboard-form" style={{ maxWidth: '100%' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                <div className="input-group">
+                  <label>Article Title</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.title}
+                    onChange={handleTitleChange}
+                    placeholder="e.g. 5 Signs to Switch to Solar Water Heater"
+                  />
+                </div>
+
+                <div className="input-group">
+                  <label>URL Slug (Customizable)</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.slug}
+                    onChange={handleSlugChange}
+                    placeholder="e.g. 5-signs-switch-to-solar-water-heater"
+                    style={{ fontFamily: 'monospace' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                <div className="input-group">
+                  <label>Category</label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  >
+                    <option value="Solar Power">Solar Power</option>
+                    <option value="Water Purification">Water Purification</option>
+                    <option value="Energy Savings">Energy Savings</option>
+                    <option value="General">General</option>
+                  </select>
+                </div>
+
+                <div className="input-group">
+                  <label>Author Name</label>
+                  <input
+                    type="text"
+                    value={formData.author}
+                    onChange={(e) => setFormData({ ...formData, author: e.target.value })}
+                    placeholder="e.g. SBR Team"
+                  />
+                </div>
+              </div>
+
+              <div className="input-group">
+                <label>Featured Image URL</label>
+                <input
+                  type="text"
+                  value={formData.image}
+                  onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                  placeholder="https://images.unsplash.com/..."
+                />
+              </div>
+
+              <div className="input-group">
+                <label>Card Summary (Short Description)</label>
+                <textarea
+                  required
+                  rows="2"
+                  value={formData.summary}
+                  onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
+                  placeholder="A short snippet that will show up on the homepage blog card."
+                />
+              </div>
+
+              <div className="input-group">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                  <label>Article Body (Supports HTML markup)</label>
+                  <span style={{ fontSize: '11px', color: '#64748b' }}>Use &lt;p&gt;, &lt;h3&gt;, &lt;ul&gt;, &lt;li&gt; tags</span>
+                </div>
+                <textarea
+                  required
+                  rows="8"
+                  value={formData.content}
+                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                  placeholder="<p>Write your detailed article body here...</p>"
+                  style={{ fontFamily: 'monospace', fontSize: '13px' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #e2e8f0', paddingTop: '20px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    setModalOpen(false);
+                    setEditingBlog(null);
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={loading}
+                >
+                  {loading ? 'Saving...' : 'Save Post'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+};
+
+export default AdminDashboard;
