@@ -547,7 +547,7 @@ const ProductDetail = ({ productId, handleNavigation, openContactModal }) => {
 
                                     {submitStatus === 'error' && (
                                         <div className="bg-red-500/25 border border-red-500 text-red-300 rounded-lg p-3 text-center text-xs font-semibold mt-2">
-                                            Booking failed. Please call +91-9848182595 directly.
+                                            Booking failed. Please call +91-9849099800 directly.
                                         </div>
                                     )}
                                 </form>

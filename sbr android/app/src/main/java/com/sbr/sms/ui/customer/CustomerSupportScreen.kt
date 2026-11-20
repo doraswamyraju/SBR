@@ -62,7 +62,7 @@ fun CustomerSupportScreen(navController: NavHostController) {
 @Composable
 private fun ContactOptionsSection() {
     val context = LocalContext.current
-    val supportPhoneNumber = "18001234567" // Placeholder phone number
+    val supportPhoneNumber = "+919849099800"
     val supportEmail = "support@SBR.com" // Placeholder email
 
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
@@ -99,7 +99,7 @@ private fun ContactOptionsSection() {
                 onClick = {
                     try {
                         val whatsappIntent = Intent(Intent.ACTION_VIEW).apply {
-                            data = Uri.parse("https://api.whatsapp.com/send?phone=+919900000000&text=Hello%20SBR%20Support,%20I%20need%20assistance.")
+                            data = Uri.parse("https://api.whatsapp.com/send?phone=+919849099800&text=Hello%20SBR%20Support,%20I%20need%20assistance.")
                         }
                         context.startActivity(whatsappIntent)
                     } catch (e: Exception) {

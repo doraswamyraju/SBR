@@ -382,7 +382,7 @@ const AdminSettingsTab = () => {
                     className="custom-input"
                     value={supportPhone}
                     onChange={(e) => setSupportPhone(e.target.value)}
-                    placeholder="+91 99000 00000"
+                    placeholder="+91 98490 99800"
                     style={{ width: '100%', padding: '10px 12px 10px 36px', fontSize: '13px' }}
                   />
                 </div>

@@ -31,7 +31,7 @@ class AdminSettingsViewModel @Inject constructor(
     private val apiService: ApiService
 ) : ViewModel() {
     val reviewUrl = MutableStateFlow("")
-    val supportPhone = MutableStateFlow("+91 99000 00000")
+    val supportPhone = MutableStateFlow("+91 98490 99800")
     val supportEmail = MutableStateFlow("support@sbr.sriddha.com")
     val isLoading = MutableStateFlow(false)
     val saveMessage = MutableStateFlow<String?>(null)

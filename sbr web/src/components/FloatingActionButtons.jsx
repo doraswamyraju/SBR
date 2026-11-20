@@ -10,7 +10,7 @@ const IconArrowUp = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" c
 
 // Floating Action Buttons Component
 const FloatingActionButtons = ({ openContactModal, openChatbotModal }) => {
-    const whatsappNumber = "919848182595"; // Replace with your actual WhatsApp number
+    const whatsappNumber = "919849099800"; // Replace with your actual WhatsApp number
 
     // Function to scroll to the top of the page
     const scrollToTop = () => {

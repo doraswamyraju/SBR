@@ -599,7 +599,7 @@ const ContactSection = () => {
                 setFormStatus({ submitted: true, message: data.error || "Submission failed. Please try again." });
             }
         } catch (err) {
-            setFormStatus({ submitted: true, message: "Unable to connect. Please call +91-9848182595 directly." });
+            setFormStatus({ submitted: true, message: "Unable to connect. Please call +91-9849099800 directly." });
         }
         setTimeout(() => setFormStatus({ submitted: false, message: '' }), 6000);
     };
@@ -614,7 +614,7 @@ const ContactSection = () => {
                             <h3 className="text-2xl font-bold text-brand-dark-blue mb-4">Contact Information</h3>
                             <div className="space-y-4 text-gray-700">
                                 <p className="flex items-start"><IconLocation className="h-6 w-6 text-brand-blue mt-1 mr-4 flex-shrink-0" /> #18-1-6/E, Beside Ramanaidu Kalyana Mandapam, Tirumala Bye Pass Road, Tirupati - 517501, A.P.</p>
-                                <p className="flex items-center"><IconPhone className="h-6 w-6 text-brand-blue mr-4" /> <a href="tel:+919848182595" className="hover:text-brand-blue">+91 98481 82595</a></p>
+                                <p className="flex items-center"><IconPhone className="h-6 w-6 text-brand-blue mr-4" /> <a href="tel:+919849099800" className="hover:text-brand-blue">+91 98490 99800</a></p>
                                 <p className="flex items-center"><IconEmail className="h-6 w-6 text-brand-blue mr-4" /> <a href="mailto:info@sribalajirenewables.com" className="hover:text-brand-blue">info@sribalajirenewables.com</a></p>
                             </div>
                         </div>

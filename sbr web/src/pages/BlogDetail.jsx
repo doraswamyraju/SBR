@@ -234,7 +234,7 @@ const BlogDetail = ({ slug, handleNavigation }) => {
 
                   {submitStatus === 'error' && (
                     <div className="bg-red-500/25 border border-red-500 text-red-300 rounded-lg p-3 text-center text-xs font-semibold mt-2">
-                      Submission failed. Please call +91-9848182595 directly.
+                      Submission failed. Please call +91-9849099800 directly.
                     </div>
                   )}
                 </form>

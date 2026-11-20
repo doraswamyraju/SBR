@@ -50,7 +50,7 @@ struct CustomerSupportView: View {
                         subtitle: "Speak directly with our team",
                         buttonText: "Call Now",
                         action: {
-                            if let url = URL(string: "tel:18001234567") {
+                            if let url = URL(string: "tel:+919849099800") {
                                 UIApplication.shared.open(url)
                             }
                         }

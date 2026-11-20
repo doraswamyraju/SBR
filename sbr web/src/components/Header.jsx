@@ -41,7 +41,7 @@ const Header = ({ navLinks, productLinks, projectImages, openContactModal, handl
                     </div>
                     <div className="w-full md:w-1/3 flex-grow flex justify-center items-center">
                         <IconPhone className="h-4 w-4 mr-2" />
-                        <a href="tel:+919848182595" className="hover:text-brand-yellow">+91 98481 82595</a>
+                        <a href="tel:+919849099800" className="hover:text-brand-yellow">+91 98490 99800</a>
                     </div>
                     <div className="w-1/3 hidden md:flex items-center justify-end space-x-4">
                         <a href="#" aria-label="Facebook" className="hover:text-brand-yellow"><IconFacebook className="h-5 w-5" /></a>
